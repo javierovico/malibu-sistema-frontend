@@ -53,6 +53,7 @@ const CreateAntField = Component => ({
                     type={type}
                     onBlur={onBlur}
                     onChange={type ? onInputChange : onChange}
+                    suffix={(<span/>)}
                 >
                     {selectOptions &&
                     map(selectOptions, name => <Option key={name}>{name}</Option>)}

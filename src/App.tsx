@@ -97,8 +97,8 @@ function App() {
                     }
                 </Breadcrumb>
                 <div className="site-layout-content">
-                    {/*<Routes/>*/}
-                    <SignIn/>
+                    <Routes/>
+                    {/*<SignIn/>*/}
                 </div>
             </Content>
             <Footer style={{textAlign: 'center'}}>

@@ -7,6 +7,7 @@ import {
     HOME_PAGE,
     LOGIN_PAGE, SUBORDINADOS_PAGE,
 } from './settings/constant';
+import SignIn from "./container/SignIn/SignIn";
 // import {Col, Row} from "antd";
 
 /**
@@ -66,7 +67,10 @@ export const routes: TipoRuta[] = [
 const Rutas = () => {
     const {loggedIn} = useContext(AuthContext);
     const rutasUsadas = useMemo<RouteObject[]>(() => {
-        const rutasDesplegadas: RouteObject[] = []
+        const rutasDesplegadas: RouteObject[] = [{
+            path: LOGIN_PAGE + '2',
+            element: <SignIn/>
+        }]
         const funcionHijas = (basePath: string, r: TipoRuta) => {
             if (r.import) {
                 const Componente = Loadable({

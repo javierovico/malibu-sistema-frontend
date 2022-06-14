@@ -31,7 +31,7 @@ const SignIn = () => {
                         }
                     })
                 }}>
-                {({handleSubmit, submitCount, values}) =>
+                {({handleSubmit, submitCount, values, handleChange, handleBlur}) =>
                     <Form onSubmit={handleSubmit}>
                         <Field
                             component={AntInput}
@@ -42,6 +42,9 @@ const SignIn = () => {
                             placeholder="Usuario"
                             submitCount={submitCount}
                             hasFeedback
+                            onChange={handleChange}
+                            onBlur={handleBlur}
+                            value={values.user}
                         />
                         <Field
                             component={AntInput}
@@ -53,6 +56,9 @@ const SignIn = () => {
                             submitCount={submitCount}
                             hasFeedback
                             autoComplete={'on'}
+                            onChange={handleChange}
+                            onBlur={handleBlur}
+                            value={values.password}
                         />
                         <Button
                             className="signin-btn"
