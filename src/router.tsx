@@ -1,14 +1,11 @@
 import React, {useContext, useMemo} from 'react';
 import {Navigate, RouteObject, useRoutes} from 'react-router-dom';
-// import Loadable from 'react-loadable';
-import Loadable from 'react-loadable';
 import {AuthContext} from './context/AuthProvider';
 import {
     HOME_PAGE,
     LOGIN_PAGE, SUBORDINADOS_PAGE,
 } from './settings/constant';
-import SignIn from "./container/SignIn/SignIn";
-// import {Col, Row} from "antd";
+import loadable from '@loadable/component'
 
 /**
  *
@@ -44,6 +41,12 @@ export const routes: TipoRuta[] = [
                 import: 'container/Usuarios/Subordinados',
                 protected: true,
             },
+            {
+                nombre: 'Subordinados2',
+                link: SUBORDINADOS_PAGE + '2',
+                import: 'container/Dummy/Dummy',
+                protected: false,
+            },
         ],
         protected: true,
     },
@@ -62,26 +65,26 @@ export const routes: TipoRuta[] = [
         ocultarOpcion: true,
         redirectOnLoggedIn: HOME_PAGE
     },
+    {
+        nombre: 'Dummy Sesion',
+        link: '/dumy',
+        import: 'container/Home/Home',
+        protected: false,
+    },
 ];
 
 const Rutas = () => {
     const {loggedIn} = useContext(AuthContext);
     const rutasUsadas = useMemo<RouteObject[]>(() => {
-        const rutasDesplegadas: RouteObject[] = [{
-            path: LOGIN_PAGE + '2',
-            element: <SignIn/>
-        }]
+        const rutasDesplegadas: RouteObject[] = []
         const funcionHijas = (basePath: string, r: TipoRuta) => {
             if (r.import) {
-                const Componente = Loadable({
-                    loader: () => import('./' + r.import ),
-                    loading: Loading
-                })
                 /** Redirecciona a Login si es una ruta protegida y si no esta logueado, si esta logueado y si esta activa la redireccion, redirecciona tambien*/
                 const redirect = (r.protected && !loggedIn) ? LOGIN_PAGE : ((loggedIn && r.redirectOnLoggedIn) ? r.redirectOnLoggedIn : null)
+                const OtherComponent = loadable(() => import('./' + r.import))
                 rutasDesplegadas.push({
                     path: basePath + r.link,
-                    element: redirect ? <Navigate to={redirect}/> : <Componente/>
+                    element: redirect ? <Navigate to={redirect}/> : <OtherComponent/>
                 })
             }
             r.hijos?.forEach(i => funcionHijas(r.link, i))

@@ -4,18 +4,7 @@ import {BsXOctagonFill} from 'react-icons/bs';
 
 const openNotification = (e, duracion = 30) => {
     console.error(e)
-    let titulo
-    if (e?.titulo) {
-        titulo = e.titulo
-    } else if (e?.response?.data?.message) {
-        titulo = e.response.data.message
-    } else if (e?.response?.data?.exception) {
-        titulo = e.response.data.exception
-    } else if (e?.name) {
-        titulo = e.name
-    } else {
-        titulo = 'Error'
-    }
+    let titulo = getTitleFromException(e)
     let contenido
     if (e?.mensaje) {
         contenido = <p>{e.mensaje}</p>
@@ -39,6 +28,8 @@ const openNotification = (e, duracion = 30) => {
                 </List.Item>
             )}
         />
+    } else if(e?.response?.data?.message) {
+        contenido = <p>{e.response.data.message}</p>
     } else if(e?.response?.data?.detail) {
         contenido = <p>{e.response.data.detail}</p>
     } else if (e?.message) {
@@ -54,4 +45,23 @@ const openNotification = (e, duracion = 30) => {
     });
 };
 
+const getTitleFromException = (e) => {
+    let titulo
+    if (e?.titulo) {
+        titulo = e.titulo
+    } else if (e?.response?.data?.title) {
+        titulo = e.response.data.title
+    } else if (e?.response?.data?.message) {
+        titulo = e.response.data.message
+    } else if (e?.response?.data?.exception) {
+        titulo = e.response.data.exception
+    } else if (e?.name) {
+        titulo = e.name
+    } else {
+        titulo = 'Error'
+    }
+    return titulo
+}
+
 export default openNotification
+export {getTitleFromException};

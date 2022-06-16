@@ -7,7 +7,7 @@ import {AiFillCaretDown} from 'react-icons/ai';
 
 // zona de menus
 import './App.css'
-import {Dropdown, Layout, Menu, Breadcrumb} from 'antd';
+import {Dropdown, Layout, Menu, Breadcrumb, MenuProps} from 'antd';
 import {Row, Col} from "antd";
 import {AuthContext} from "./context/AuthProvider";
 import {ItemType} from "antd/lib/menu/hooks/useItems";
@@ -46,26 +46,22 @@ function App() {
     const {menuSelected} = useMenuSelected(pathname, menus);
     const {user, loggedIn, logOut} = useContext(AuthContext)
     const items = useMemo<ItemType[]>(()=>menus.filter(m=>!m.ocultarOpcion).map(m => ({
-        label:m.nombre,
+        label: !m.hijos ? (<Link to={{pathname:m.link , search}}>{m.nombre}</Link>) : m.nombre,
         key: m.link,
         children: m.hijos && m.hijos.map((h) => ({
-            label: h.nombre,
-            key: h.link
+            label: (<Link to={{pathname:m.link + h.link, search}}>{h.nombre}</Link>),
+            key: m.link + h.link
         }))
-    })),[])
-    const menuUsuario = (
-        <Menu>
-            <Menu.Item key='cerrar-sesion'>
-                {loggedIn &&
-                    <a target="_blank" rel="noopener noreferrer" href="https://www.antgroup.com" onClick={(e) => {
-                        e.preventDefault()
-                        logOut()
-                    }}>
-                        Cerrar Sesion
-                    </a>}
-            </Menu.Item>
-        </Menu>
-    );
+    })),[search])
+    const itemsMenuUsuario = useMemo<ItemType[]>(()=>([{
+        label: (<a target="_blank" rel="noopener noreferrer" href="https://www.antgroup.com" onClick={(e) => {
+            e.preventDefault()
+            logOut()
+        }}>
+            Cerrar Sesion
+        </a>),
+        key: 'cerrar-sesion'
+    }]),[logOut])
     return (
         <Layout className="layout">
             <Header>
@@ -80,7 +76,7 @@ function App() {
                         />
                     </Col>
                     <Col span={8}>
-                        {loggedIn && user && <Dropdown overlay={menuUsuario}>
+                        {loggedIn && user && <Dropdown overlay={<Menu items={itemsMenuUsuario}/>}>
                             <a href={'no'} className="ant-dropdown-link" onClick={e => e.preventDefault()}
                                style={{float: 'right'}}>
                                 {user.user}<AiFillCaretDown/>
@@ -102,7 +98,7 @@ function App() {
                 </div>
             </Content>
             <Footer style={{textAlign: 'center'}}>
-                Fuente Unica de Contactos ©2021 Created by Skytel
+                Malibu System ©2021 Created by javierovico@gmail.com
             </Footer>
         </Layout>
     );
