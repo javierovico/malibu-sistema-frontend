@@ -3,7 +3,7 @@ import {Navigate, RouteObject, useRoutes} from 'react-router-dom';
 import {AuthContext} from './context/AuthProvider';
 import {
     HOME_PAGE,
-    LOGIN_PAGE, SUBORDINADOS_PAGE,
+    LOGIN_PAGE, PRODUCTO_ADMINISTRAR_PRODUCTO, ROL_ADMIN_PRODUCTOS, SUBORDINADOS_PAGE,
 } from './settings/constant';
 import loadable from '@loadable/component'
 
@@ -22,6 +22,7 @@ export interface TipoRuta {
     protected: boolean,
     ocultarOpcion?: boolean, // le decimos si queremos que esta ruta este oculta del menu
     redirectOnLoggedIn?: string,    //le decimos a donde redirigir si el usuario esta logueado
+    rolRequerido?: string
 }
 
 export const routes: TipoRuta[] = [
@@ -32,14 +33,15 @@ export const routes: TipoRuta[] = [
         protected: true,
     },
     {
-        nombre: "Usuarios",
-        link: "/usuario",
+        nombre: "Productos",
+        link: "/producto",
         hijos: [
             {
-                nombre: 'Subordinados',
-                link: SUBORDINADOS_PAGE,
-                import: 'container/Usuarios/Subordinados',
+                nombre: 'Administrar Productos',
+                link: PRODUCTO_ADMINISTRAR_PRODUCTO,
+                import: 'container/Dummy/Dummy',
                 protected: true,
+                rolRequerido: ROL_ADMIN_PRODUCTOS
             },
             {
                 nombre: 'Subordinados2',
@@ -64,24 +66,23 @@ export const routes: TipoRuta[] = [
         protected: false,
         ocultarOpcion: true,
         redirectOnLoggedIn: HOME_PAGE
-    },
-    {
-        nombre: 'Dummy Sesion',
-        link: '/dumy',
-        import: 'container/Home/Home',
-        protected: false,
-    },
+    }
 ];
 
 const Rutas = () => {
-    const {loggedIn} = useContext(AuthContext);
+    const {loggedIn, user} = useContext(AuthContext);
     const rutasUsadas = useMemo<RouteObject[]>(() => {
         const rutasDesplegadas: RouteObject[] = []
         const funcionHijas = (basePath: string, r: TipoRuta) => {
             if (r.import) {
                 /** Redirecciona a Login si es una ruta protegida y si no esta logueado, si esta logueado y si esta activa la redireccion, redirecciona tambien*/
                 const redirect = (r.protected && !loggedIn) ? LOGIN_PAGE : ((loggedIn && r.redirectOnLoggedIn) ? r.redirectOnLoggedIn : null)
-                const OtherComponent = loadable(() => import('./' + r.import))
+                let OtherComponent
+                if (r.rolRequerido && !user?.roles.find((rol) => rol.codigo === r.rolRequerido)) {  // si se requiere un rol y si el usuario no tiene ese rol
+                    OtherComponent = loadable(() => import('./container/404/SinPermiso'))
+                } else {
+                    OtherComponent = loadable(() => import('./' + r.import))
+                }
                 rutasDesplegadas.push({
                     path: basePath + r.link,
                     element: redirect ? <Navigate to={redirect}/> : <OtherComponent/>
@@ -91,7 +92,7 @@ const Rutas = () => {
         }
         routes.forEach(i => funcionHijas('', i))
         return rutasDesplegadas;
-    }, [loggedIn])
+    }, [loggedIn, user?.roles])
     const ProjectRoutes = () => useRoutes(rutasUsadas);
     return (
         <ProjectRoutes/>
