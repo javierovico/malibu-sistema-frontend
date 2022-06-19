@@ -1,11 +1,14 @@
 import React, {useContext, useMemo} from 'react';
-import {Navigate, RouteObject, useRoutes} from 'react-router-dom';
+import {Routes, Route, Navigate, RouteObject, useRoutes} from 'react-router-dom';
 import {AuthContext} from './context/AuthProvider';
 import {
     HOME_PAGE,
     LOGIN_PAGE, PRODUCTO_ADMINISTRAR_PRODUCTO, ROL_ADMIN_PRODUCTOS, SUBORDINADOS_PAGE,
 } from './settings/constant';
 import loadable from '@loadable/component'
+import {comprobarRol} from "./modelos/Usuario";
+import AdminProducto from "./container/Administracion/AdminProducto";
+import Dummy2 from "./container/Dummy/Dummy2";
 
 /**
  *
@@ -39,7 +42,7 @@ export const routes: TipoRuta[] = [
             {
                 nombre: 'Administrar Productos',
                 link: PRODUCTO_ADMINISTRAR_PRODUCTO,
-                import: 'container/Dummy/Dummy',
+                import: 'container/Administracion/AdminProducto',
                 protected: true,
                 rolRequerido: ROL_ADMIN_PRODUCTOS
             },
@@ -48,6 +51,15 @@ export const routes: TipoRuta[] = [
                 link: SUBORDINADOS_PAGE + '2',
                 import: 'container/Dummy/Dummy',
                 protected: false,
+                hijos: [
+                    {
+                        nombre: 'Administrar Productos',
+                        link: PRODUCTO_ADMINISTRAR_PRODUCTO,
+                        import: 'container/Dummy/Dummy',
+                        protected: true,
+                        rolRequerido: ROL_ADMIN_PRODUCTOS
+                    },
+                ]
             },
         ],
         protected: true,
@@ -78,7 +90,7 @@ const Rutas = () => {
                 /** Redirecciona a Login si es una ruta protegida y si no esta logueado, si esta logueado y si esta activa la redireccion, redirecciona tambien*/
                 const redirect = (r.protected && !loggedIn) ? LOGIN_PAGE : ((loggedIn && r.redirectOnLoggedIn) ? r.redirectOnLoggedIn : null)
                 let OtherComponent
-                if (r.rolRequerido && !user?.roles.find((rol) => rol.codigo === r.rolRequerido)) {  // si se requiere un rol y si el usuario no tiene ese rol
+                if (r.rolRequerido && user && !comprobarRol(user,r.rolRequerido)) {  // si se requiere un rol y si el usuario no tiene ese rol
                     OtherComponent = loadable(() => import('./container/404/SinPermiso'))
                 } else {
                     OtherComponent = loadable(() => import('./' + r.import))
@@ -92,11 +104,8 @@ const Rutas = () => {
         }
         routes.forEach(i => funcionHijas('', i))
         return rutasDesplegadas;
-    }, [loggedIn, user?.roles])
-    const ProjectRoutes = () => useRoutes(rutasUsadas);
-    return (
-        <ProjectRoutes/>
-    );
+    }, [loggedIn, user])
+    return useRoutes(rutasUsadas);
 };
 
 export default Rutas;

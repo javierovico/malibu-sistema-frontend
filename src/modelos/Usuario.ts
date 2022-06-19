@@ -1,5 +1,3 @@
-
-
 const URL_USUARIO_PROPIO: string = `/auth/user`;
 const URL_LOGIN: string = '/auth/login';
 
@@ -32,3 +30,6 @@ export interface SubordinadosResponse {
 export {URL_USUARIO_PROPIO, URL_LOGIN};
 export type {TokenUsuarioResponse, UsuarioResponse, IUsuario};
 
+export function comprobarRol(user: IUsuario, rolCode: string) {
+    return !!user.roles.find((rol) => rol.codigo === rolCode)
+}

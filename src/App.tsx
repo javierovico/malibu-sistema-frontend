@@ -7,13 +7,12 @@ import {AiFillCaretDown} from 'react-icons/ai';
 
 // zona de menus
 import './App.css'
-import {Dropdown, Layout, Menu, Breadcrumb, MenuProps} from 'antd';
+import {Dropdown, Layout, Menu, Breadcrumb} from 'antd';
 import {Row, Col} from "antd";
 import {AuthContext} from "./context/AuthProvider";
 import {ItemType} from "antd/lib/menu/hooks/useItems";
-import SignIn from "./container/SignIn/SignIn";
+import {comprobarRol} from "./modelos/Usuario";
 
-const {SubMenu} = Menu;
 const {Header, Content, Footer} = Layout;
 
 
@@ -45,16 +44,27 @@ function App() {
     // const menus = routes
     const {menuSelected} = useMenuSelected(pathname, menus);
     const {user, loggedIn, logOut} = useContext(AuthContext)
-    const items = useMemo<ItemType[]>(()=>menus
-        .filter(m=>!m.ocultarOpcion)
-        .map(m => ({
-            label: !m.hijos ? (<Link to={{pathname:m.link , search}}>{m.nombre}</Link>) : m.nombre,
-            key: m.link,
-            children: m.hijos && m.hijos.map((h) => ({
-                label: (<Link to={{pathname:m.link + h.link, search}}>{h.nombre}</Link>),
-                key: m.link + h.link
-            }))
-    })),[search])
+    const items = useMemo<ItemType[]>(()=>{
+        const funcionHijas = (basePath: string, m: TipoRuta): ItemType=> {
+            const urlActual = basePath + m.link
+            return {
+                label: !m.hijos ?
+                    ((user && (!m.rolRequerido || comprobarRol(user,m.rolRequerido))) ?
+                        <Link to={{pathname:urlActual , search}}>{m.nombre}</Link>
+                        : m.nombre
+                    )
+                    : m.nombre,
+                key: urlActual,
+                disabled: (!user || !!(m.rolRequerido && !comprobarRol(user,m.rolRequerido))),
+                children: m.hijos && m.hijos
+                    .filter(i => !i.ocultarOpcion)
+                    .map(i => funcionHijas(urlActual, i))
+            }
+        }
+        return menus
+            .filter(m=>!m.ocultarOpcion)
+            .map( i => funcionHijas('',i))
+    },[search, user])
     const itemsMenuUsuario = useMemo<ItemType[]>(()=>([{
         label: (<a target="_blank" rel="noopener noreferrer" href="https://www.antgroup.com" onClick={(e) => {
             e.preventDefault()
