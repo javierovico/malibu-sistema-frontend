@@ -36,6 +36,12 @@ export const routes: TipoRuta[] = [
         protected: true,
     },
     {
+        nombre: 'Dummy',
+        link: 'test',
+        import: 'container/Dummy/Dummy2',
+        protected: false,
+    },
+    {
         nombre: "Productos",
         link: "/producto",
         hijos: [
@@ -90,7 +96,7 @@ const Rutas = () => {
                 /** Redirecciona a Login si es una ruta protegida y si no esta logueado, si esta logueado y si esta activa la redireccion, redirecciona tambien*/
                 const redirect = (r.protected && !loggedIn) ? LOGIN_PAGE : ((loggedIn && r.redirectOnLoggedIn) ? r.redirectOnLoggedIn : null)
                 let OtherComponent
-                if (r.rolRequerido && user && !comprobarRol(user,r.rolRequerido)) {  // si se requiere un rol y si el usuario no tiene ese rol
+                if (!user || (r.rolRequerido && !comprobarRol(user,r.rolRequerido))) {  // si se requiere un rol y si el usuario no tiene ese rol
                     OtherComponent = loadable(() => import('./container/404/SinPermiso'))
                 } else {
                     OtherComponent = loadable(() => import('./' + r.import))

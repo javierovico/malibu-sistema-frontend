@@ -47,15 +47,17 @@ function App() {
     const items = useMemo<ItemType[]>(()=>{
         const funcionHijas = (basePath: string, m: TipoRuta): ItemType=> {
             const urlActual = basePath + m.link
+            const innaccesible = (m.protected && (!user || !!(m.rolRequerido && !comprobarRol(user,m.rolRequerido))))
+            const protegido = m.protected && !loggedIn
             return {
                 label: !m.hijos ?
-                    ((user && (!m.rolRequerido || comprobarRol(user,m.rolRequerido))) ?
+                    ((!innaccesible || protegido) ?
                         <Link to={{pathname:urlActual , search}}>{m.nombre}</Link>
                         : m.nombre
                     )
                     : m.nombre,
                 key: urlActual,
-                disabled: (!user || !!(m.rolRequerido && !comprobarRol(user,m.rolRequerido))),
+                disabled: innaccesible && !protegido,
                 children: m.hijos && m.hijos
                     .filter(i => !i.ocultarOpcion)
                     .map(i => funcionHijas(urlActual, i))
@@ -64,7 +66,7 @@ function App() {
         return menus
             .filter(m=>!m.ocultarOpcion)
             .map( i => funcionHijas('',i))
-    },[search, user])
+    },[loggedIn, search, user])
     const itemsMenuUsuario = useMemo<ItemType[]>(()=>([{
         label: (<a target="_blank" rel="noopener noreferrer" href="https://www.antgroup.com" onClick={(e) => {
             e.preventDefault()
