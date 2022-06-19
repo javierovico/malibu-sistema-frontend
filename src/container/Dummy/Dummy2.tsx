@@ -99,6 +99,8 @@ interface ParametrosAdminProducto {
     busqueda: string
 }
 
+type Parametros = Record<string, ItemQuery<any>>
+
 interface IAccion {
     type: string,
     payload: any
@@ -106,7 +108,10 @@ interface IAccion {
 
 const reducidor = (state: ParametrosAdminProducto, action: IAccion): ParametrosAdminProducto => {
     return {...state, ...action.payload}
+}
 
+function reducidor2<T>(state: T, action: IAccion): T {
+    return {...state, ...action.payload}
 }
 
 const useParametros = (searchParams: URLSearchParams) => {
@@ -128,6 +133,25 @@ const useParametros = (searchParams: URLSearchParams) => {
     return state
 }
 
+function getCurrentFromSearch<T>(searchParams: URLSearchParams, itemsList: Record<string, ItemQuery<any>>): Record<keyof T,any> {
+    const value: Record<any, any> = {}
+    for (const key in itemsList) {
+        value[itemsList[key].nombre] = searchToItem(itemsList[key], searchParams)
+    }
+    return value
+}
+
+function useParametros2<T>(searchParams: URLSearchParams, itemsList: Record<string, ItemQuery<any>>): Record<keyof T,any> {
+    const value = getCurrentFromSearch<T>(searchParams, itemsList)
+    const [state, dispatch] = useReducer<Reducer<T,IAccion>>(reducidor2,value)
+    useEffect(()=>{
+        dispatch({
+            type: 'all',
+            payload:getCurrentFromSearch<T>(searchParams, itemsList)
+        })
+    },[itemsList, searchParams])
+    return state
+}
 export default function Dummy2() {
     const {user} = useContext(AuthContext)
     const [searchParams, setSearchParams] = useSearchParams();
@@ -136,10 +160,16 @@ export default function Dummy2() {
         console.log("CLICK BUTTON")
         setSearchParams({perPage:window.prompt("perPage") || ''})
     }
+    // const {
+    //     busqueda,
+    //     perPage,
+    // } = useParametros(searchParams)
+    const itemList = useMemo(()=>({itemBusqueda,itemPage,itemPerPage}),[])
     const {
         busqueda,
-        perPage
-    } = useParametros(searchParams)
+        perPage,
+        page
+    } = useParametros2<IPruebaOriginal>(searchParams,itemList)
     useEffect(()=>{
         console.log({busqueda})
     },[busqueda])
