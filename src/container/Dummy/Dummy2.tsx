@@ -1,8 +1,6 @@
 import {Button} from "antd";
-import { useContext, useEffect, useMemo, useState} from "react";
-import {AuthContext} from "../../context/AuthProvider";
-import {useSearchParams} from "react-router-dom";
-import {ItemQuery, useParametros} from "../../hook/hookQuery";
+import {useEffect, useMemo} from "react";
+import {createItemNumber, createItemString, ItemQuery, useParametros} from "../../hook/hookQuery";
 
 interface ParametrosAdminProducto{
     page: number,
@@ -10,37 +8,26 @@ interface ParametrosAdminProducto{
     busqueda: string,
 }
 
-const itemPerPage: ItemQuery<number> = {
-    defaultValue: 10,
-    nombre: 'perPage',
-    quertyToValue: a =>  parseInt(a),
-    valueToQuery: a => '' + a
-}
-const itemPage: ItemQuery<number> = {
-    defaultValue: 1,
-    nombre: 'page',
-    quertyToValue: a =>  parseInt(a),
-    valueToQuery: a => '' + a
-}
-const itemBusqueda: ItemQuery<string> = {
-    defaultValue: '',
-    nombre: 'busqueda',
-    quertyToValue: a =>  a,
-    valueToQuery: a => a
-}
+const itemPerPage = createItemNumber(10)
+const itemPage = createItemNumber()
+const itemBusqueda = createItemString()
+
 
 export default function Dummy2() {
-    const [searchParams, setSearchParams] = useSearchParams();
-    const click = () => {
-        console.log("CLICK BUTTON")
-        setSearchParams({perPage:window.prompt("perPage") || ''})
-    }
-    const itemList = useMemo(()=>({itemBusqueda,itemPage,itemPerPage}),[])
+    const itemList: Record<keyof ParametrosAdminProducto,ItemQuery<any>> = useMemo<Record<keyof ParametrosAdminProducto,ItemQuery<any>>>(()=>({
+        busqueda: itemBusqueda,
+        page: itemPage,
+        perPage: itemPerPage,
+    }),[])
+    const {
+        paramsURL,
+        setParamsToURL
+    } = useParametros<ParametrosAdminProducto>(itemList)
     const {
         busqueda,
         perPage,
         page,
-    } = useParametros<ParametrosAdminProducto>(searchParams,itemList)
+    } = paramsURL
     useEffect(()=>{
         console.log({busqueda})
     },[busqueda])
@@ -51,6 +38,9 @@ export default function Dummy2() {
         console.log({perPage})
     },[perPage])
     return <>
-        <Button onClick={click}>PUSH</Button>
+        <Button onClick={()=>setParamsToURL({...paramsURL, perPage:parseInt(window.prompt('perPage') || ''+itemPerPage.defaultValue),page:parseInt(window.prompt('page') || ''+itemPage.defaultValue)})}>perPage</Button>
+        {/*<Button onClick={()=>click2('perPage')}>perPage</Button>*/}
+        {/*<Button onClick={()=>click('page')}>page</Button>*/}
+        <Button onClick={()=>setParamsToURL({...paramsURL, busqueda: window.prompt('busqueda') || itemBusqueda.defaultValue})}>busqueda</Button>
     </>
 }
