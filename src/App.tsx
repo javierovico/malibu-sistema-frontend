@@ -52,7 +52,7 @@ function App() {
             return {
                 label: !m.hijos ?
                     ((!innaccesible || protegido) ?
-                        <Link to={{pathname:urlActual , search}}>{m.nombre}</Link>
+                        <Link to={{pathname:urlActual}}>{m.nombre}</Link>
                         : m.nombre
                     )
                     : m.nombre,
