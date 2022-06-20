@@ -50,8 +50,15 @@ export const routes: TipoRuta[] = [
                 protected: false,
                 hijos: [
                     {
-                        nombre: 'Administrar Productos',
+                        nombre: 'Administrar Productos v2',
                         link: PRODUCTO_ADMINISTRAR_PRODUCTO,
+                        import: 'container/Administracion/AdminProducto',
+                        protected: true,
+                        rolRequerido: ROL_ADMIN_PRODUCTOS
+                    },
+                    {
+                        nombre: 'Administrar Productos Dummi',
+                        link: PRODUCTO_ADMINISTRAR_PRODUCTO+'2',
                         import: 'container/Dummy/Dummy',
                         protected: true,
                         rolRequerido: ROL_ADMIN_PRODUCTOS
@@ -99,7 +106,7 @@ const Rutas = () => {
                     element: redirect ? <Navigate to={redirect}/> : <OtherComponent/>
                 })
             }
-            r.hijos?.forEach(i => funcionHijas(r.link, i))
+            r.hijos?.forEach(i => funcionHijas(basePath + r.link, i))
         }
         routes.forEach(i => funcionHijas('', i))
         return rutasDesplegadas;
