@@ -1,4 +1,4 @@
-import {Reducer, useCallback, useEffect, useReducer, useState} from "react";
+import {Reducer, useCallback, useEffect, useReducer} from "react";
 import {useSearchParams} from "react-router-dom";
 
 
@@ -9,6 +9,9 @@ export interface ItemQuery<T> {
     valueToQuery: {(a:T): string},
     comparador?: { (arg1: T, arg2:T): boolean } //retornar true si son iguales
 }
+
+export type ParamsQuerys<T> = Record<keyof T, ItemQuery<any>>
+type ParamValue<T> = Record<keyof T,any>
 
 function searchToItem<T>(itemBusqueda: ItemQuery<T>, search: URLSearchParams, nombre: string): T {
     const valueString: string|null =search.get(nombre)
@@ -21,8 +24,9 @@ function searchToItem<T>(itemBusqueda: ItemQuery<T>, search: URLSearchParams, no
  * @param itemsList
  * @param items se compara con estos items, si es undefined se toma que todos son nuevos
  */
-function getCurrentFromSearch<T>(searchParams: URLSearchParams, itemsList: Record<keyof T, ItemQuery<any>>, items: Record<keyof T,any>|undefined = undefined): Record<keyof T,any> {
-    const value: Record<any, any> = {}
+function getCurrentFromSearch<T>(searchParams: URLSearchParams, itemsList: ParamsQuerys<T>, items: ParamValue<T>|undefined = undefined): ParamValue<T> {
+    // @ts-ignore
+    const value: ParamValue<T> = {}
     for (const key in itemsList) {
         const nuevoValor = searchToItem(itemsList[key], searchParams, key)
         const comparador = itemsList[key].comparador
@@ -34,8 +38,8 @@ function getCurrentFromSearch<T>(searchParams: URLSearchParams, itemsList: Recor
     return value
 }
 
-function setSearchFromCurrent<T>(items: T, itemsList: Record<keyof T, ItemQuery<any>>): Record<keyof T,string> {
-    const value: Record<any, string> = {}
+function setSearchFromCurrent<T>(items: T, itemsList: ParamsQuerys<T>): Record<string,string> {
+    const value: Record<string,string> = {}
     for (const key in itemsList) {
         const valActual = items[key]
         if (valActual !== itemsList[key].defaultValue) {
@@ -47,7 +51,7 @@ function setSearchFromCurrent<T>(items: T, itemsList: Record<keyof T, ItemQuery<
 
 interface ReducerArg<T> {
     searchParams: URLSearchParams,
-    itemsList: Record<keyof T, ItemQuery<any>>
+    itemsList: ParamsQuerys<T>
 }
 
 function reducerUrl<T>(a:T, b: ReducerArg<T>): T{
@@ -59,7 +63,7 @@ function reducerUrl<T>(a:T, b: ReducerArg<T>): T{
     return {...a, ...nuevos}
 }
 
-export function useParametros<T>(itemsList: Record<keyof T, ItemQuery<any>>): { paramsURL: T, setParamsToURL: {(arg: T):void} } {
+export function useParametros<T>(itemsList: ParamsQuerys<T>): { paramsURL: T, setParamsToURL: {(arg: T):void} } {
     const [searchParams, setSearchParams] = useSearchParams();
     const value = getCurrentFromSearch<T>(searchParams, itemsList)
     const [paramsURL, dispatchParamsUrl] = useReducer<Reducer<T,ReducerArg<T>>>(reducerUrl,value)
