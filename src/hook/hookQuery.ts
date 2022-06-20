@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useState} from "react";
+import {Reducer, useCallback, useEffect, useReducer, useState} from "react";
 import {useSearchParams} from "react-router-dom";
 
 
@@ -15,11 +15,21 @@ function searchToItem<T>(itemBusqueda: ItemQuery<T>, search: URLSearchParams, no
     return valueString ? itemBusqueda.queryToValue(valueString) : itemBusqueda.defaultValue
 }
 
-
-function getCurrentFromSearch<T>(searchParams: URLSearchParams, itemsList: Record<keyof T, ItemQuery<any>>): Record<keyof T,any> {
+/**
+ * Deberia traer solo los cambios, no todx todx
+ * @param searchParams
+ * @param itemsList
+ * @param items se compara con estos items, si es undefined se toma que todos son nuevos
+ */
+function getCurrentFromSearch<T>(searchParams: URLSearchParams, itemsList: Record<keyof T, ItemQuery<any>>, items: Record<keyof T,any>|undefined = undefined): Record<keyof T,any> {
     const value: Record<any, any> = {}
     for (const key in itemsList) {
-        value[key] = searchToItem(itemsList[key], searchParams, key)
+        const nuevoValor = searchToItem(itemsList[key], searchParams, key)
+        const comparador = itemsList[key].comparador
+        if (!items || !(comparador ? comparador(nuevoValor, items[key]) : items[key] === nuevoValor)) {
+            //Si no es igual al que ya estaba
+            value[key] = nuevoValor
+        }
     }
     return value
 }
@@ -35,12 +45,26 @@ function setSearchFromCurrent<T>(items: T, itemsList: Record<keyof T, ItemQuery<
     return value
 }
 
+interface ReducerArg<T> {
+    searchParams: URLSearchParams,
+    itemsList: Record<keyof T, ItemQuery<any>>
+}
+
+function reducerUrl<T>(a:T, b: ReducerArg<T>): T{
+    const {
+        searchParams,
+        itemsList
+    } = b
+    const nuevos = getCurrentFromSearch<T>(searchParams, itemsList,a)
+    return {...a, ...nuevos}
+}
+
 export function useParametros<T>(itemsList: Record<keyof T, ItemQuery<any>>): { paramsURL: T, setParamsToURL: {(arg: T):void} } {
     const [searchParams, setSearchParams] = useSearchParams();
     const value = getCurrentFromSearch<T>(searchParams, itemsList)
-    const [paramsURL, setParamsURL] = useState<T>(value)
+    const [paramsURL, dispatchParamsUrl] = useReducer<Reducer<T,ReducerArg<T>>>(reducerUrl,value)
     useEffect(()=>{
-        setParamsURL(getCurrentFromSearch<T>(searchParams, itemsList))
+        dispatchParamsUrl({searchParams, itemsList})
     },[itemsList, searchParams])
     const setParamsToURL = useCallback<{ (arg: T): void }>((arg)=>{
         setSearchParams(setSearchFromCurrent(arg, itemsList))
