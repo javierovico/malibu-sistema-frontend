@@ -1,15 +1,12 @@
 import { LikeOutlined, MessageOutlined, StarOutlined } from '@ant-design/icons';
 import {Avatar, Col, Divider, List, Result, Row, Space} from 'antd';
-import React, {Reducer, useContext, useEffect, useMemo, useReducer, useState} from "react";
+import React, {useEffect, useMemo, useState} from "react";
 import {IProducto, URL_GET_PRODUCTOS} from "../../modelos/Producto";
 import axios from "axios";
 import {PaginacionVacia, ResponseAPIPaginado} from "../../modelos/ResponseAPI";
 import openNotification, {getTitleFromException} from "../../components/UI/Antd/Notification";
-import {AuthContext} from "../../context/AuthProvider";
-import {comprobarRol} from "../../modelos/Usuario";
-import {ROL_ADMIN_PRODUCTOS} from "../../settings/constant";
 import Search from "antd/es/input/Search";
-import {useNavigate, useParams, useSearchParams} from "react-router-dom";
+import {createItemNumber, createItemString, useParametros} from "../../hook/hookQuery";
 
 
 const IconText = ({ icon, text }: { icon: React.FC; text: string }) => (
@@ -19,58 +16,35 @@ const IconText = ({ icon, text }: { icon: React.FC; text: string }) => (
     </Space>
 );
 
-const useProductos = () => {
+const useProductos = (busqueda: string, page: number, perPage: number) => {
     const [paginacion, setPaginacion] = useState<ResponseAPIPaginado<IProducto>>(PaginacionVacia);
     const [isProductosLoading, setIsProductoLoading] = useState<boolean>(true)
     const [errorProductos, setErrorProductos] = useState<string|undefined>();
-    const {user} = useContext(AuthContext)
-
-    useEffect(()=>{
-        console.log("El usuario cambios",user)
-    },[user])
-
     useEffect(()=>{
         setIsProductoLoading(true)
         setPaginacion(PaginacionVacia)
         setErrorProductos(undefined)
-        if (user && comprobarRol(user, ROL_ADMIN_PRODUCTOS)) {
-            axios.get<ResponseAPIPaginado<IProducto>>(URL_GET_PRODUCTOS,{
-                params:{
-                    'perPage': 2,
-                }
+        axios.get<ResponseAPIPaginado<IProducto>>(URL_GET_PRODUCTOS,{
+            params:{
+                nombre: busqueda,
+                page,
+                perPage
+            }
+        })
+            .then(({data}) => {
+                setPaginacion(data)
             })
-                .then(({data}) => {
-                    setPaginacion(data)
-                })
-                .catch(e=> {
-                    openNotification(e)
-                    setErrorProductos(getTitleFromException(e))
-                    setPaginacion(PaginacionVacia)
-                })
-                .finally(()=>setIsProductoLoading(false))
-        } else {
-            setIsProductoLoading(false)
-            setErrorProductos(!user ? "Carga de usuario Pendiente" : "Rol " + ROL_ADMIN_PRODUCTOS + " ausente en usuario actual")
-            setPaginacion(PaginacionVacia)
-        }
-    },[user])
-
+            .catch(e=> {
+                openNotification(e)
+                setErrorProductos(getTitleFromException(e))
+                setPaginacion(PaginacionVacia)
+            })
+            .finally(()=>setIsProductoLoading(false))
+    },[busqueda, page, perPage])
     return {
         paginacion,
         isProductosLoading,
         errorProductos
-    }
-}
-
-const reducerQuery: Reducer<ParametrosAdminProducto, IAccion> = (state, action): ParametrosAdminProducto => {
-    switch (action.type) {
-        case 'all':
-            return action.payload
-        case 'page':
-        case 'perPage':
-            return {...state,[action.type]:action.payload}
-        default:
-            throw new Error('anarako')
     }
 }
 
@@ -80,66 +54,38 @@ interface ParametrosAdminProducto {
     busqueda: string
 }
 
-interface IAccion {
-    type: string,
-    payload: any
-}
 
-const useQueryParamsAdminProducto = (searchParams: URLSearchParams) => {
-    const searchToParametros = (s: URLSearchParams) => ({
-        page: parseInt(s.get('page') || '1') ,
-        perPage: parseInt(s.get('perPage') || '10'),
-        busqueda: s.get('busqueda') || '',
-    })
-    const [state, dispatch] = useReducer<Reducer<ParametrosAdminProducto,IAccion>>(reducerQuery, searchToParametros(searchParams));
-    useEffect(() => {
-        // dispatch({type: 'page', payload: parseInt(searchParams.get('page') || '1')})
-        dispatch({type: 'all', payload: searchToParametros(searchParams)})
-    }, [searchParams])
-    return state
-}
+const itemPerPage = createItemNumber(10)
+const itemPage = createItemNumber()
+const itemBusqueda = createItemString()
 
 export default function AdminProducto() {
+    const itemList = useMemo(()=>({
+        busqueda: itemBusqueda,
+        page: itemPage,
+        perPage: itemPerPage,
+    }),[])
+    const {
+        paramsURL,
+        setParamsToURL
+    } = useParametros<ParametrosAdminProducto>(itemList)
+    const {
+        busqueda,
+        perPage,
+        page,
+    } = paramsURL
     const {
         paginacion,
         isProductosLoading,
         errorProductos
-    } = useProductos()
-    // const queryActual = useMemo(()=>Array.from(searchParams.entries()),[searchParams])
-    // const busqueda = useMemo(()=>searchParams.get('busqueda') || '',[searchParams])
-    // const page = useMemo(()=>parseInt(searchParams.get('page') || '1'),[searchParams])
-    const [searchParams, setSearchParams] = useSearchParams();
-    const params = useQueryParamsAdminProducto(searchParams)
-    const {
-        page,
-        perPage,
-        busqueda
-    } = params
+    } = useProductos(busqueda, page, perPage)
     useEffect(()=>{
-        console.log({busqueda})
-    },[busqueda])
-    useEffect(()=>{
-        console.log({page})
-    },[page])
-    useEffect(()=>{
-        console.log({perPage})
-    },[perPage])
-    // useEffect(()=>{
-    //     console.log({queryActual})
-    // },[queryActual])
-    const onSearch = (e: string) => {
-        handleChangeGroup({busqueda:e});
-    }
-    const handleChangeGroup = (e: any) => {
-        // console.log(typeof e)
-        const paramse = {
-            perPage: (e.perPage && e.perPage !== 1) ? e.perPage : perPage,
-            page: (e.page && e.page !== 1) ? e.page : page,
-            busqueda: (e.busqueda && e.busqueda !== '') ? e.busqueda : busqueda,
+        if (!isProductosLoading && (page > paginacion.last_page)) {
+            setParamsToURL({...paramsURL,page:paginacion.last_page})
         }
-        setSearchParams({...paramse})
-        // searchParams.append('hola', 'si')
-        // setSearchParams(searchParams)
+    },[isProductosLoading, page, paginacion.last_page, paramsURL, setParamsToURL])
+    const onSearch = (e: string) => {
+        setParamsToURL({...paramsURL, busqueda:e});
     }
     const vistaNormal = <>
         <Divider>Filtrado</Divider>
@@ -154,12 +100,13 @@ export default function AdminProducto() {
             itemLayout="vertical"
             size="large"
             pagination={{
+                pageSizeOptions:[4,10,20,50],
                 showQuickJumper:true,
                 showSizeChanger:true,
                 pageSize:perPage,
                 current:page,
                 onChange:(page,perPage)=>{
-                    handleChangeGroup({page,perPage})
+                    setParamsToURL({...paramsURL,page,perPage})
                 },
                 total:paginacion.total}}
             dataSource={paginacion.data}

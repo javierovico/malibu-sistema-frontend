@@ -1,5 +1,5 @@
 import React, {useContext, useMemo} from 'react';
-import {Routes, Route, Navigate, RouteObject, useRoutes} from 'react-router-dom';
+import {Navigate, RouteObject, useRoutes} from 'react-router-dom';
 import {AuthContext} from './context/AuthProvider';
 import {
     HOME_PAGE,
@@ -7,15 +7,6 @@ import {
 } from './settings/constant';
 import loadable from '@loadable/component'
 import {comprobarRol} from "./modelos/Usuario";
-import AdminProducto from "./container/Administracion/AdminProducto";
-import Dummy2 from "./container/Dummy/Dummy2";
-
-/**
- *
- * Public Routes
- *
- */
-const Loading = () => <p>...Cargando</p>;
 
 export interface TipoRuta {
     nombre: string,
@@ -94,10 +85,11 @@ const Rutas = () => {
         const funcionHijas = (basePath: string, r: TipoRuta) => {
             if (r.import) {
                 /** Redirecciona a Login si es una ruta protegida y si no esta logueado, si esta logueado y si esta activa la redireccion, redirecciona tambien*/
+                const sinPermiso: boolean = !!(r.rolRequerido && (!user || !comprobarRol(user,r.rolRequerido)))
                 const protegido = r.protected && !loggedIn
                 const redirect = protegido ? LOGIN_PAGE : ((loggedIn && r.redirectOnLoggedIn) ? r.redirectOnLoggedIn : null)
                 let OtherComponent
-                if (protegido && (!user || (r.rolRequerido && !comprobarRol(user,r.rolRequerido)))) {  // si se requiere un rol y si el usuario no tiene ese rol
+                if (sinPermiso) {  // si se requiere un rol y si el usuario no tiene ese rol
                     OtherComponent = loadable(() => import('./container/404/SinPermiso'))
                 } else {
                     OtherComponent = loadable(() => import('./' + r.import))
