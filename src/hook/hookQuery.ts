@@ -5,13 +5,14 @@ import {useSearchParams} from "react-router-dom";
 export interface ItemQuery<T> {
     // nombre: string,
     defaultValue: T,
-    quertyToValue: { (a: string): T },
-    valueToQuery: {(a:T): string}
+    queryToValue: { (a: string): T },
+    valueToQuery: {(a:T): string},
+    comparador?: { (arg1: T, arg2:T): boolean } //retornar true si son iguales
 }
 
 function searchToItem<T>(itemBusqueda: ItemQuery<T>, search: URLSearchParams, nombre: string): T {
     const valueString: string|null =search.get(nombre)
-    return valueString ? itemBusqueda.quertyToValue(valueString) : itemBusqueda.defaultValue
+    return valueString ? itemBusqueda.queryToValue(valueString) : itemBusqueda.defaultValue
 }
 
 
@@ -52,12 +53,21 @@ export function useParametros<T>(itemsList: Record<keyof T, ItemQuery<any>>): { 
 
 export const createItemNumber = (defaultValue: number = 1): ItemQuery<number> => ({
     defaultValue: defaultValue,
-    quertyToValue: a =>  parseInt(a),
+    queryToValue: a =>  parseInt(a),
     valueToQuery: a => '' + a
 })
 
 export const createItemString = (defaultValue: string = ''): ItemQuery<string> => ({
     defaultValue: defaultValue,
-    quertyToValue: a =>  a,
+    queryToValue: a =>  a,
     valueToQuery: a => a
 })
+
+export const createItemArray = function<T>(defaultValue: T[] = [], item: ItemQuery<T>, separator: string = ','): ItemQuery<T[]> {
+    return {
+        defaultValue: defaultValue,
+        queryToValue: a =>  a.split(separator).map((s: string) => item.queryToValue(s)),
+        valueToQuery: a => a.map(i => item.valueToQuery(i)).join(separator),
+        comparador: (arg1,arg2) => !((arg1.length !== arg2.length) || (arg1.some(i => !arg2.find(i2 => (item.comparador) ? item.comparador(i2, i) : (i2 === i)))))
+    }
+}
