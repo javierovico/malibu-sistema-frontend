@@ -40,7 +40,7 @@ function useMenuSelected(pathname: string, menus: TipoRuta[]) {
 
 function App() {
     const location = useLocation();
-    const {search, pathname} = location
+    const {pathname} = location     //TODO ver si se puede agregar opcionalmente el search de acuerdo al rotue
     // const menus = routes
     const {menuSelected} = useMenuSelected(pathname, menus);
     const {user, loggedIn, logOut} = useContext(AuthContext)
@@ -66,7 +66,7 @@ function App() {
         return menus
             .filter(m=>!m.ocultarOpcion)
             .map( i => funcionHijas('',i))
-    },[loggedIn, search, user])
+    },[loggedIn, user])
     const itemsMenuUsuario = useMemo<ItemType[]>(()=>([{
         label: (<a target="_blank" rel="noopener noreferrer" href="https://www.antgroup.com" onClick={(e) => {
             e.preventDefault()

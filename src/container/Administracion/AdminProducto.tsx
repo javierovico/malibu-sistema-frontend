@@ -6,7 +6,7 @@ import axios from "axios";
 import {PaginacionVacia, ResponseAPIPaginado} from "../../modelos/ResponseAPI";
 import openNotification, {getTitleFromException} from "../../components/UI/Antd/Notification";
 import Search from "antd/es/input/Search";
-import {createItemArray, createItemNumber, createItemString, ParamsQuerys, useParametros} from "../../hook/hookQuery";
+import {createItemNumber, createItemString, ParamsQuerys, useParametros} from "../../hook/hookQuery";
 
 
 const IconText = ({ icon, text }: { icon: React.FC; text: string }) => (
@@ -52,24 +52,18 @@ interface ParametrosAdminProducto {
     page: number,
     perPage: number,
     busqueda: string,
-    opciones: number[],
-    opcionesDeOpciones: number[]
 }
 
 
 const itemPerPage = createItemNumber(10)
 const itemPage = createItemNumber()
 const itemBusqueda = createItemString()
-const itemOpciones = createItemArray([], createItemNumber(0))
-const itemOpcionesDeOpciones = createItemArray([[1,2,3],[4,5,6]], itemOpciones,';')
 
 export default function AdminProducto() {
     const itemList = useMemo<ParamsQuerys<ParametrosAdminProducto>>(()=>({
         busqueda: itemBusqueda,
         page: itemPage,
         perPage: itemPerPage,
-        opciones: itemOpciones,
-        opcionesDeOpciones: itemOpcionesDeOpciones
     }),[])
     const {
         paramsURL,
@@ -79,19 +73,12 @@ export default function AdminProducto() {
         busqueda,
         perPage,
         page,
-        opciones,
     } = paramsURL
     const {
         paginacion,
         isProductosLoading,
         errorProductos
     } = useProductos(busqueda, page, perPage)
-    useEffect(()=>{
-        console.log({opciones})
-    },[opciones])
-    useEffect(()=>{
-        console.log({page})
-    },[page])
     useEffect(()=>{
         if (!isProductosLoading && (page > paginacion.last_page)) {
             setParamsToURL({...paramsURL,page:paginacion.last_page})
@@ -100,27 +87,11 @@ export default function AdminProducto() {
     const onSearch = (e: string) => {
         setParamsToURL({...paramsURL, busqueda:e});
     }
-    const children: React.ReactNode[] = [];
-    for (let i = 10; i < 36; i++) {
-        children.push(<Select.Option key={i} value={i}>{'Item ' + i}</Select.Option>);
-    }
     const vistaNormal = <>
         <Divider>Filtrado</Divider>
         <Row justify="space-around">
             <Col span={10}>
                 <Search placeholder="Nombre de producto a buscar..." onSearch={onSearch} enterButton defaultValue={busqueda} />
-            </Col>
-            <Col span={10}>
-                <Select
-                    mode="multiple"
-                    allowClear
-                    style={{ width: '100%' }}
-                    placeholder="Please select"
-                    value={opciones}
-                    onChange={(e)=>setParamsToURL({...paramsURL,opciones:e})}
-                >
-                    {children}
-                </Select>
             </Col>
         </Row>
         <Divider plain>Productos</Divider>

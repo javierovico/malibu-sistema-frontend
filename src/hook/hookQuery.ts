@@ -42,7 +42,8 @@ function setSearchFromCurrent<T>(items: T, itemsList: ParamsQuerys<T>): Record<s
     const value: Record<string,string> = {}
     for (const key in itemsList) {
         const valActual = items[key]
-        if (valActual !== itemsList[key].defaultValue) {
+        const comparador = itemsList[key].comparador
+        if (!(comparador ? comparador(valActual,itemsList[key].defaultValue) : valActual === itemsList[key].defaultValue)) {
             value[key] = itemsList[key].valueToQuery(items[key])
         }
     }
