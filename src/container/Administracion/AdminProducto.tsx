@@ -1,12 +1,18 @@
 import { LikeOutlined, MessageOutlined, StarOutlined } from '@ant-design/icons';
-import {Avatar, Col, Divider, List, Result, Row, Select, Space} from 'antd';
+import {Avatar, Col, Divider, List, Result, Row, Space} from 'antd';
 import React, {useEffect, useMemo, useState} from "react";
 import {IProducto, URL_GET_PRODUCTOS} from "../../modelos/Producto";
 import axios from "axios";
 import {PaginacionVacia, ResponseAPIPaginado} from "../../modelos/ResponseAPI";
 import openNotification, {getTitleFromException} from "../../components/UI/Antd/Notification";
 import Search from "antd/es/input/Search";
-import {createItemNumber, createItemString, ParamsQuerys, useParametros} from "../../hook/hookQuery";
+import {
+    createItemNumber,
+    createItemNumberOrNull,
+    createItemString,
+    ParamsQuerys,
+    useParametros
+} from "../../hook/hookQuery";
 
 
 const IconText = ({ icon, text }: { icon: React.FC; text: string }) => (
@@ -16,7 +22,7 @@ const IconText = ({ icon, text }: { icon: React.FC; text: string }) => (
     </Space>
 );
 
-const useProductos = (busqueda: string, page: number, perPage: number) => {
+const useProductos = (busqueda: string, page: number, perPage: number, codigo: string, id: number|null) => {
     const [paginacion, setPaginacion] = useState<ResponseAPIPaginado<IProducto>>(PaginacionVacia);
     const [isProductosLoading, setIsProductoLoading] = useState<boolean>(true)
     const [errorProductos, setErrorProductos] = useState<string|undefined>();
@@ -28,7 +34,9 @@ const useProductos = (busqueda: string, page: number, perPage: number) => {
             params:{
                 nombre: busqueda,
                 page,
-                perPage
+                perPage,
+                codigo,
+                id,
             }
         })
             .then(({data}) => {
@@ -40,7 +48,7 @@ const useProductos = (busqueda: string, page: number, perPage: number) => {
                 setPaginacion(PaginacionVacia)
             })
             .finally(()=>setIsProductoLoading(false))
-    },[busqueda, page, perPage])
+    },[busqueda, codigo, id, page, perPage])
     return {
         paginacion,
         isProductosLoading,
@@ -52,6 +60,8 @@ interface ParametrosAdminProducto {
     page: number,
     perPage: number,
     busqueda: string,
+    codigo: string,
+    id: number|null
 }
 
 
@@ -64,6 +74,8 @@ export default function AdminProducto() {
         busqueda: itemBusqueda,
         page: itemPage,
         perPage: itemPerPage,
+        codigo: createItemString(),
+        id: createItemNumberOrNull(1)
     }),[])
     const {
         paramsURL,
@@ -73,25 +85,30 @@ export default function AdminProducto() {
         busqueda,
         perPage,
         page,
+        codigo,
+        id,
     } = paramsURL
     const {
         paginacion,
         isProductosLoading,
         errorProductos
-    } = useProductos(busqueda, page, perPage)
+    } = useProductos(busqueda, page, perPage, codigo, id)
     useEffect(()=>{
         if (!isProductosLoading && (page > paginacion.last_page)) {
             setParamsToURL({...paramsURL,page:paginacion.last_page})
         }
     },[isProductosLoading, page, paginacion.last_page, paramsURL, setParamsToURL])
-    const onSearch = (e: string) => {
-        setParamsToURL({...paramsURL, busqueda:e});
-    }
     const vistaNormal = <>
         <Divider>Filtrado</Divider>
         <Row justify="space-around">
             <Col span={10}>
-                <Search placeholder="Nombre de producto a buscar..." onSearch={onSearch} enterButton defaultValue={busqueda} />
+                <Search placeholder="Nombre de producto a buscar..." onSearch={(e)=>setParamsToURL({...paramsURL, busqueda:e})} enterButton defaultValue={busqueda} />
+            </Col>
+            <Col span={6}>
+                <Search placeholder="Codigo del producto" onSearch={(e)=>setParamsToURL({...paramsURL, codigo:e})} enterButton defaultValue={codigo} />
+            </Col>
+            <Col span={4}>
+                <Search placeholder="ID del producto" onSearch={(e)=>setParamsToURL({...paramsURL, id:parseInt(e) || null})} enterButton defaultValue={id?''+id:''} />
             </Col>
         </Row>
         <Divider plain>Productos</Divider>

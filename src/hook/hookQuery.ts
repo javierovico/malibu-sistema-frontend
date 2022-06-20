@@ -43,8 +43,13 @@ function setSearchFromCurrent<T>(items: T, itemsList: ParamsQuerys<T>): Record<s
     for (const key in itemsList) {
         const valActual = items[key]
         const comparador = itemsList[key].comparador
+        const stringAppend = itemsList[key].valueToQuery(items[key])
         if (!(comparador ? comparador(valActual,itemsList[key].defaultValue) : valActual === itemsList[key].defaultValue)) {
-            value[key] = itemsList[key].valueToQuery(items[key])
+            if (stringAppend) {
+                value[key] = stringAppend
+            } else {
+                delete(value[key])
+            }
         }
     }
     return value
@@ -84,6 +89,12 @@ export const createItemNumber = (defaultValue: number = 1): ItemQuery<number> =>
     defaultValue: defaultValue,
     queryToValue: a =>  parseInt(a),
     valueToQuery: a => '' + a
+})
+
+export const createItemNumberOrNull = (defaultValue: number|null = null): ItemQuery<number|null> => ({
+    defaultValue: defaultValue,
+    queryToValue: a =>  parseInt(a),
+    valueToQuery: a => a? '' + a:''
 })
 
 export const createItemString = (defaultValue: string = ''): ItemQuery<string> => ({
