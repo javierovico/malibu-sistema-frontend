@@ -1,10 +1,9 @@
 import { LikeOutlined, MessageOutlined, EditOutlined } from '@ant-design/icons';
-import {Avatar, Button, Col, Divider, List, Modal, Result, Row, Space} from 'antd';
-import React, {useCallback, useEffect, useMemo, useState} from "react";
+import {Avatar, Button, Col, Divider, List, Modal, Row, Space} from 'antd';
+import React, {useCallback, useContext, useEffect, useMemo, useState} from "react";
 import {IProducto, URL_GET_PRODUCTOS} from "../../modelos/Producto";
 import axios from "axios";
 import {PaginacionVacia, ResponseAPIPaginado} from "../../modelos/ResponseAPI";
-import openNotification, {getTitleFromException} from "../../components/UI/Antd/Notification";
 import Search from "antd/es/input/Search";
 import {
     createItemNumber,
@@ -14,6 +13,8 @@ import {
     useParametros
 } from "../../hook/hookQuery";
 import ModificarProducto from "./ModificarProducto";
+import {AuthContext} from "../../context/AuthProvider";
+import {errorRandomToIError} from "../../modelos/ErrorModel";
 import VistaError from "../../components/UI/VistaError";
 
 
@@ -27,7 +28,8 @@ const IconText = ({ icon, text }: { icon: React.FC; text: string }) => (
 const useProductos = (busqueda: string, page: number, perPage: number, codigo: string, id: number|null) => {
     const [paginacion, setPaginacion] = useState<ResponseAPIPaginado<IProducto>>(PaginacionVacia);
     const [isProductosLoading, setIsProductoLoading] = useState<boolean>(true)
-    const [errorProductos, setErrorProductos] = useState<string|undefined>();
+    const [errorProductos, setErrorProductos] = useState<JSX.Element|undefined>();
+    const {setError} = useContext(AuthContext)
     useEffect(()=>{
         setIsProductoLoading(true)
         setPaginacion(PaginacionVacia)
@@ -45,12 +47,12 @@ const useProductos = (busqueda: string, page: number, perPage: number, codigo: s
                 setPaginacion(data)
             })
             .catch(e=> {
-                openNotification(e)
-                setErrorProductos(getTitleFromException(e))
+                setError(errorRandomToIError(e))
+                setErrorProductos(<VistaError error={errorRandomToIError(e)}/>)
                 setPaginacion(PaginacionVacia)
             })
             .finally(()=>setIsProductoLoading(false))
-    },[busqueda, codigo, id, page, perPage])
+    },[busqueda, codigo, id, page, perPage, setError])
     return {
         paginacion,
         isProductosLoading,
@@ -100,7 +102,7 @@ export default function AdminProducto() {
             setParamsToURL({...paramsURL,page:paginacion.last_page})
         }
     },[isProductosLoading, page, paginacion.last_page, paramsURL, setParamsToURL])
-    const [isModalVisible, setIsModalVisible] = useState(true)  //todo: activado para pruebas
+    const [isModalVisible, setIsModalVisible] = useState(false)  //todo: activado para pruebas
     const [idModificando, setIdModificando] = useState<number|undefined>(1) //todo modificado para pruebas
     const handleAgregarNuevoProducto = useCallback(()=>{
         setIdModificando(undefined)
@@ -116,24 +118,7 @@ export default function AdminProducto() {
     const VistaModal = <Modal footer={null} closable={false} visible={isModalVisible} onOk={handleOk} onCancel={()=>setIsModalVisible(false)}>
         <ModificarProducto productoId={idModificando}/>
     </Modal>
-    const vistaNormal = <>
-        <Divider>Opciones</Divider>
-        <Button type="primary" onClick={handleAgregarNuevoProducto}>
-            Agregar Nuevo Producto
-        </Button>
-        <Divider>Filtrado</Divider>
-        <Row justify="space-around">
-            <Col span={10}>
-                <Search placeholder="Nombre de producto a buscar..." onSearch={(e)=>setParamsToURL({...paramsURL, busqueda:e})} enterButton defaultValue={busqueda} />
-            </Col>
-            <Col span={6}>
-                <Search placeholder="Codigo del producto" onSearch={(e)=>setParamsToURL({...paramsURL, codigo:e})} enterButton defaultValue={codigo} />
-            </Col>
-            <Col span={4}>
-                <Search placeholder="ID del producto" onSearch={(e)=>setParamsToURL({...paramsURL, id:parseInt(e) || null})} enterButton defaultValue={id?''+id:''} />
-            </Col>
-        </Row>
-        <Divider plain>Productos</Divider>
+    const listaProductos = (
         <List
             loading={isProductosLoading}
             itemLayout="vertical"
@@ -181,7 +166,26 @@ export default function AdminProducto() {
                 </List.Item>
             )}
         />
+    )
+    return <>
+        <Divider>Opciones</Divider>
+        <Button type="primary" onClick={handleAgregarNuevoProducto}>
+            Agregar Nuevo Producto
+        </Button>
+        <Divider>Filtrado</Divider>
+        <Row justify="space-around">
+            <Col span={10}>
+                <Search placeholder="Nombre de producto a buscar..." onSearch={(e)=>setParamsToURL({...paramsURL, busqueda:e})} enterButton defaultValue={busqueda} />
+            </Col>
+            <Col span={6}>
+                <Search placeholder="Codigo del producto" onSearch={(e)=>setParamsToURL({...paramsURL, codigo:e})} enterButton defaultValue={codigo} />
+            </Col>
+            <Col span={4}>
+                <Search placeholder="ID del producto" onSearch={(e)=>setParamsToURL({...paramsURL, id:parseInt(e) || null})} enterButton defaultValue={id?''+id:''} />
+            </Col>
+        </Row>
+        <Divider plain>Productos</Divider>
+        {errorProductos || listaProductos}
         {VistaModal}
     </>
-    return errorProductos ? <VistaError error={errorProductos}/> : vistaNormal
 }

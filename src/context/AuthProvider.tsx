@@ -1,9 +1,12 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import axios from 'axios';
 import {ERROR_CODE_NO_AUTENTICADO, ERROR_CODE_NO_VALIDO, ERROR_CODE_SIN_ACCESO_SSO} from "../settings/constant";
 import openNotification from "../components/UI/Antd/Notification";
 import {IUsuario,UsuarioResponse, TokenUsuarioResponse, URL_USUARIO_PROPIO, URL_LOGIN} from "../modelos/Usuario";
 import ResponseAPI from "../modelos/ResponseAPI";
+import {IError} from "../modelos/ErrorModel";
+import VistaError from "../components/UI/VistaError";
+
 
 interface AuthValues {
     loggedIn: boolean,
@@ -12,6 +15,8 @@ interface AuthValues {
     user?: IUsuario,
     token?: string,
     analizarError: (e: any) => void,
+    setError: (e?: IError) => void,
+    errorView?: JSX.Element,
 }
 
 const authValues: AuthValues = {
@@ -23,6 +28,8 @@ const authValues: AuthValues = {
     }),
     analizarError: () => {
     },
+    setError: () => {
+    }
 }
 
 interface SignInParams {
@@ -109,6 +116,10 @@ const AuthProvider = (props: any) => {
                 break;
         }
     }, [logOut]);
+    const [error, setError] = useState<IError|undefined>()
+    const errorView = useMemo(()=>{
+        return error ? <VistaError error={error}/> : undefined
+    },[error])
 
     return (
         <AuthContext.Provider
@@ -119,6 +130,8 @@ const AuthProvider = (props: any) => {
                 user,
                 token,
                 analizarError,
+                setError,
+                errorView
             }}
         >
             <>{props.children}</>

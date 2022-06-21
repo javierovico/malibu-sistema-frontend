@@ -32,5 +32,5 @@ export default function ModificarProducto (arg: ArgumentosModificarProducto) {
     const vistaNormal = <>
         <p> Modificacion de producto</p>
     </>
-    return errorProducto ? <VistaError error={errorProducto}/> : vistaNormal
+    return errorProducto ? <></> : vistaNormal
 }

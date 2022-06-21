@@ -7,11 +7,12 @@ import {AiFillCaretDown} from 'react-icons/ai';
 
 // zona de menus
 import './App.css'
-import {Dropdown, Layout, Menu, Breadcrumb} from 'antd';
+import {Dropdown, Layout, Menu, Breadcrumb, Modal, Button} from 'antd';
 import {Row, Col} from "antd";
 import {AuthContext} from "./context/AuthProvider";
 import {ItemType} from "antd/lib/menu/hooks/useItems";
 import {comprobarRol} from "./modelos/Usuario";
+import ModificarProducto from "./container/Administracion/ModificarProducto";
 
 const {Header, Content, Footer} = Layout;
 
@@ -43,7 +44,7 @@ function App() {
     const {pathname} = location     //TODO ver si se puede agregar opcionalmente el search de acuerdo al rotue
     // const menus = routes
     const {menuSelected} = useMenuSelected(pathname, menus);
-    const {user, loggedIn, logOut} = useContext(AuthContext)
+    const {user, loggedIn, logOut, errorView, setError} = useContext(AuthContext)
     const items = useMemo<ItemType[]>(()=>{
         const funcionHijas = (basePath: string, m: TipoRuta): ItemType=> {
             const urlActual = basePath + m.link
@@ -108,12 +109,14 @@ function App() {
                 </Breadcrumb>
                 <div className="site-layout-content">
                     <Routes/>
-                    {/*<SignIn/>*/}
                 </div>
             </Content>
             <Footer style={{textAlign: 'center'}}>
                 Malibu System ©2021 Created by javierovico@gmail.com
             </Footer>
+            <Modal title={'Error'} visible={!!errorView} onOk={()=>setError()} onCancel={()=>setError()} footer={[<Button key='1' type="primary" onClick={()=>setError()}>Cerrar</Button>]} >
+                {errorView}
+            </Modal>
         </Layout>
     );
 }
