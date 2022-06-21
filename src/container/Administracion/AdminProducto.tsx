@@ -1,6 +1,6 @@
-import { LikeOutlined, MessageOutlined, StarOutlined } from '@ant-design/icons';
-import {Avatar, Col, Divider, List, Result, Row, Space} from 'antd';
-import React, {useEffect, useMemo, useState} from "react";
+import { LikeOutlined, MessageOutlined, EditOutlined } from '@ant-design/icons';
+import {Avatar, Button, Col, Divider, List, Modal, Result, Row, Space} from 'antd';
+import React, {useCallback, useEffect, useMemo, useState} from "react";
 import {IProducto, URL_GET_PRODUCTOS} from "../../modelos/Producto";
 import axios from "axios";
 import {PaginacionVacia, ResponseAPIPaginado} from "../../modelos/ResponseAPI";
@@ -13,6 +13,8 @@ import {
     ParamsQuerys,
     useParametros
 } from "../../hook/hookQuery";
+import ModificarProducto from "./ModificarProducto";
+import VistaError from "../../components/UI/VistaError";
 
 
 const IconText = ({ icon, text }: { icon: React.FC; text: string }) => (
@@ -75,7 +77,7 @@ export default function AdminProducto() {
         page: itemPage,
         perPage: itemPerPage,
         codigo: createItemString(),
-        id: createItemNumberOrNull(1)
+        id: createItemNumberOrNull()
     }),[])
     const {
         paramsURL,
@@ -98,7 +100,27 @@ export default function AdminProducto() {
             setParamsToURL({...paramsURL,page:paginacion.last_page})
         }
     },[isProductosLoading, page, paginacion.last_page, paramsURL, setParamsToURL])
+    const [isModalVisible, setIsModalVisible] = useState(true)  //todo: activado para pruebas
+    const [idModificando, setIdModificando] = useState<number|undefined>(1) //todo modificado para pruebas
+    const handleAgregarNuevoProducto = useCallback(()=>{
+        setIdModificando(undefined)
+        setIsModalVisible(true)
+    },[])
+    const handleModificarProducto = useCallback((id: number)=>{
+        setIdModificando(id)
+        setIsModalVisible(true)
+    },[])
+    const handleOk = useCallback((...e:any)=>{
+        console.log(e)
+    },[])
+    const VistaModal = <Modal footer={null} closable={false} visible={isModalVisible} onOk={handleOk} onCancel={()=>setIsModalVisible(false)}>
+        <ModificarProducto productoId={idModificando}/>
+    </Modal>
     const vistaNormal = <>
+        <Divider>Opciones</Divider>
+        <Button type="primary" onClick={handleAgregarNuevoProducto}>
+            Agregar Nuevo Producto
+        </Button>
         <Divider>Filtrado</Divider>
         <Row justify="space-around">
             <Col span={10}>
@@ -136,7 +158,9 @@ export default function AdminProducto() {
                 <List.Item
                     key={item.id}
                     actions={[
-                        <IconText icon={StarOutlined} text="156" key="list-vertical-star-o" />,
+                        <Button type="link" onClick={()=>handleModificarProducto(item.id)}>
+                            <IconText icon={EditOutlined} text="Modificar" key="modificar" />
+                        </Button>,
                         <IconText icon={LikeOutlined} text="156" key="list-vertical-like-o" />,
                         <IconText icon={MessageOutlined} text="2" key="list-vertical-message" />,
                     ]}
@@ -157,10 +181,7 @@ export default function AdminProducto() {
                 </List.Item>
             )}
         />
+        {VistaModal}
     </>
-    const vistaError = <Result
-        status="error"
-        title={errorProductos || "Error realizando la operacion, revise el log"}
-    />
-    return errorProductos ? vistaError : vistaNormal
+    return errorProductos ? <VistaError error={errorProductos}/> : vistaNormal
 }

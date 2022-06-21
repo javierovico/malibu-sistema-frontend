@@ -63,6 +63,13 @@ export const routes: TipoRuta[] = [
                         protected: true,
                         rolRequerido: ROL_ADMIN_PRODUCTOS
                     },
+                    {
+                        nombre: 'Editor Producto',
+                        link: 'editor',
+                        import: 'container/Administracion/ModificarProducto',
+                        protected: true,
+                        rolRequerido: ROL_ADMIN_PRODUCTOS
+                    },
                 ]
             },
         ],
