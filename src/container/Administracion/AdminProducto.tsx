@@ -115,7 +115,7 @@ export default function AdminProducto() {
     const handleOk = useCallback((...e:any)=>{
         console.log(e)
     },[])
-    const VistaModal = <Modal footer={null} closable={false} visible={isModalVisible} onOk={handleOk} onCancel={()=>setIsModalVisible(false)}>
+    const VistaModal = <Modal width={'85%'} footer={null} closable={false} visible={isModalVisible} onOk={handleOk} onCancel={()=>setIsModalVisible(false)}>
         <ModificarProducto productoId={idModificando}/>
     </Modal>
     const listaProductos = (

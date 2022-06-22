@@ -4,10 +4,11 @@ import VistaError from "../../components/UI/VistaError";
 import {errorRandomToIError, IError} from "../../modelos/ErrorModel";
 import axios from "axios";
 import ResponseAPI from "../../modelos/ResponseAPI";
-import {Button, Divider, Input, Space} from "antd";
-import {Formik, Form, Field, FormikValues, FormikProps, withFormik, FormikErrors, FieldProps} from "formik";
-import TextArea from "antd/lib/input/TextArea";
-import { Image } from 'antd';
+import {Button, Col, Row, Spin} from "antd";
+import {Form, Field, FormikProps, withFormik, FormikErrors} from "formik";
+import { FormTitle } from './ModificarProducto.style';
+import {AntInput, AntTextArea} from "../../components/UI/Antd/AntdInputWithFormik";
+import {AntFileSelect} from "../../components/UI/Antd/AntdInputWithFormikTypescript";
 
 interface ArgumentosModificarProducto {
     productoId?: number,        //si esta definido, es el producto a editar
@@ -43,25 +44,9 @@ function useProducto(productoId: number|undefined) {
     }
 }
 
-// Shape of form values
-interface FormValues {
-    email: string;
-    password: string;
-}
-
 interface PropFormulario {
     productoEditando?: IProducto,
     nuevoProducto?: boolean
-}
-
-interface OtherProps {
-    message: string;
-}
-
-// The type of props MyForm receives
-interface MyFormProps {
-    initialEmail?: string;
-    message: string; // if this passed all the way through you might do this or make a union type
 }
 
 export default function ModificarProducto (arg: ArgumentosModificarProducto) {
@@ -73,34 +58,85 @@ export default function ModificarProducto (arg: ArgumentosModificarProducto) {
         isProductoLoading,
         vistaError
     } = useProducto(productoId)
-    useEffect(()=>{
-        console.log({producto})
-    },[producto])
     const InnerForm = (props: FormikProps<IProducto>) => {
-        const { touched, errors, isSubmitting, handleSubmit } = props;
+        const { isSubmitting, submitCount } = props;
         return (
-            <Form>
-                <Space direction="vertical" size="small" style={{ display: 'flex' }}>
-                    <Field name="nombre" as={Input} addonBefore="Nombre" />
-                    <Field name="codigo" as={Input} addonBefore="Codigo Unico" />
-                    <Input.Group compact>
-                        <Field name="precio" as={Input} addonBefore="Precio" addonAfter={"Gs."} style={{ width: '50%' }} type={"number"}/>
-                        <Field name="costo" as={Input} addonBefore="Costo" addonAfter={"Gs."} style={{ width: '50%' }} type={"number"}/>
-                    </Input.Group>
-                    <Divider>Descripcion</Divider>
-                    <Field name="descripcion" as={TextArea} rows={4}/>
-                    <Divider>Imagen</Divider>
-                    <Space direction="vertical" size="small" style={{ display: 'flex' }} align={'center'}>
-                        <Image
-                            width={200}
-                            src="https://zos.alipayobjects.com/rmsportal/jkjgkEfvpUPVyRjUImniVslZfWPnJuuZ.png"
-                        />
-                    </Space>
-                    {touched.nombre && errors.nombre && <div>{errors.nombre}</div>}
-                    <Divider/>
-                    <Button onClick={()=>handleSubmit()} loading={isSubmitting}>Guardar</Button>
-                </Space>
-            </Form>
+            <Spin spinning={isSubmitting}>
+                <Form className='form-container'>
+                    <Row gutter={30}>
+                        <Col lg={12}>
+                            <Field
+                                component={AntInput}
+                                name='nombre'
+                                type='text'
+                                label='Nombre'
+                                submitCount={submitCount}
+                                hasFeedback
+                            />
+                        </Col>
+                        <Col lg={12}>
+                            <Field
+                                component={AntInput}
+                                name='codigo'
+                                type='text'
+                                label='Codigo'
+                                submitCount={submitCount}
+                                hasFeedback
+                            />
+                        </Col>
+                    </Row>
+                    <Row gutter={30}>
+                        <Col lg={8}>
+                            <Field
+                                component={AntInput}
+                                name='precio'
+                                type='number'
+                                label='Precio'
+                                submitCount={submitCount}
+                                hasFeedback
+                            />
+                        </Col>
+                        <Col lg={8}>
+                            <Field
+                                component={AntInput}
+                                name='costo'
+                                type='number'
+                                label='Costo'
+                                submitCount={submitCount}
+                                hasFeedback
+                            />
+                        </Col>
+                    </Row>
+
+                    <Row gutter={30}>
+                        <Col lg={16}>
+                            <Field
+                                component={AntTextArea}
+                                name='descripcion'
+                                type='text'
+                                label='Descripcion'
+                                submitCount={submitCount}
+                                hasFeedback
+                                rows={4}
+                            />
+                        </Col>
+                        <Col lg={8}>
+                            <Field
+                                name='url'
+                                component={AntFileSelect}
+                                label='Imagen'
+                                submitCount={submitCount}
+                                hasFeedback
+                            />
+                        </Col>
+                    </Row>
+                    <div className='submit-container'>
+                        <Button htmlType='submit' type='primary'  loading={isSubmitting}>
+                            Guardar
+                        </Button>
+                    </div>
+                </Form>
+            </Spin>
         );
     };
     const MyForm = withFormik<PropFormulario, IProducto>({
@@ -120,78 +156,14 @@ export default function ModificarProducto (arg: ArgumentosModificarProducto) {
             return errors;
         },
 
-        handleSubmit: values => {
+        handleSubmit: (values, formikBag) => {
+
             console.log({values})
+            setTimeout(()=>formikBag.setSubmitting(false),500)
         },
     })(InnerForm);
-
-    const MyForm2 = (props: FormikProps<IProducto>) => {
-        const {
-            values,
-            touched,
-            errors,
-            handleChange,
-            handleBlur,
-            handleSubmit,
-        } = props;
-        return (
-            <form onSubmit={(e)=> {
-                e.preventDefault()
-                console.log('submit')
-                handleSubmit()
-            }}>
-                <input
-                    type="text"
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    value={values.nombre}
-                    name="nombre"
-                />
-                {errors.nombre && touched.nombre && <div id="feedback">{errors.nombre}</div>}
-                <button type="submit">Submit</button>
-            </form>
-        );
-    }
-
-    const MyEnhancedForm = withFormik<{ producto: IProducto },IProducto>({
-        mapPropsToValues: (e) => (e.producto),
-
-        // Custom sync validation
-        validate: (values: IProducto): FormikErrors<IProducto> => {
-            const errors = {
-                nombre:'',
-                nombref: ''
-            };
-
-            if (!values.nombre) {
-                errors.nombref = 'Required';
-            }
-
-            return errors;
-        },
-
-        handleSubmit: (values, { setSubmitting }) => {
-            console.log('submition')
-            setTimeout(() => {
-                alert(JSON.stringify(values, null, 2));
-                setSubmitting(false);
-            }, 1000);
-        },
-
-        displayName: 'BasicForm',
-    })(MyForm);
-
-    const formikForm = useMemo(()=>(<Formik
-        initialValues={producto}
-        onSubmit={(e) => { console.log(e)}}
-    >
-        {(formikProp)=>{
-            console.log(formikProp.values.nombre)
-            return <></>
-        }}
-    </Formik>),[producto])
     const vistaNormal = <>
-        <Divider>Modificacion de producto</Divider>
+        <FormTitle>Informacion Basica</FormTitle>
         <MyForm productoEditando={producto} nuevoProducto={!productoId} />
     </>
     return vistaError ? vistaError : vistaNormal

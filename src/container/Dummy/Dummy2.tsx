@@ -1,6 +1,6 @@
 import {Button} from "antd";
 import {useEffect, useMemo} from "react";
-import {createItemNumber, createItemString, ItemQuery, ParamsQuerys, useParametros} from "../../hook/hookQuery";
+import {createItemNumber, createItemString, ParamsQuerys, useParametros} from "../../hook/hookQuery";
 
 interface ParametrosAdminProducto{
     page: number,

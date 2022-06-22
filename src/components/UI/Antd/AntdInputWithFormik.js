@@ -12,11 +12,12 @@ import {
     Checkbox,
 } from 'antd';
 
+
 const {RangePicker} = DatePicker;
 const FormItem = Form.Item;
 const {Option} = Select;
 
-const CreateAntField = Component => ({
+export const CreateAntField = Component => ({
                                          field,
                                          form,
                                          hasFeedback,
@@ -42,7 +43,7 @@ const CreateAntField = Component => ({
                 label={label}
                 colon={false}
                 hasFeedback={
-                    (hasFeedback && submitted) || (hasFeedback && touched) ? true : false
+                    !!((hasFeedback && submitted) || (hasFeedback && touched))
                 }
                 help={submittedError || touchedError ? hasError : false}
                 validateStatus={submittedError || touchedError ? 'error' : 'success'}

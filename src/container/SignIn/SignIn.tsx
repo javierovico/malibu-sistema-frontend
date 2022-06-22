@@ -8,7 +8,7 @@ import {AuthContext} from "../../context/AuthProvider";
 const required = (value: any) => (value ? undefined : 'Requerido');
 
 const SignIn = () => {
-    const { signIn, loggedIn } = useContext(AuthContext);
+    const { signIn } = useContext(AuthContext);
     //TODO: Si esta logueado, le deberia redirigir a la pagina pedida
     return (
         <>
