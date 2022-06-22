@@ -74,12 +74,12 @@ const itemPage = createItemNumber()
 const itemBusqueda = createItemString()
 
 export default function AdminProducto() {
-    const itemList = useMemo<ParamsQuerys<ParametrosAdminProducto>>(()=>({
+    const itemList = useMemo((): ParamsQuerys<ParametrosAdminProducto> =>({
         busqueda: itemBusqueda,
         page: itemPage,
         perPage: itemPerPage,
         codigo: createItemString(),
-        id: createItemNumberOrNull()
+        id: createItemNumberOrNull(),
     }),[])
     const {
         paramsURL,

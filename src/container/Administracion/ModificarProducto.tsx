@@ -4,8 +4,10 @@ import VistaError from "../../components/UI/VistaError";
 import {errorRandomToIError, IError} from "../../modelos/ErrorModel";
 import axios from "axios";
 import ResponseAPI from "../../modelos/ResponseAPI";
-import {Divider} from "antd";
-import {Formik, Form, Field, FormikValues, FormikProps, withFormik, FormikErrors} from "formik";
+import {Button, Divider, Input, Space} from "antd";
+import {Formik, Form, Field, FormikValues, FormikProps, withFormik, FormikErrors, FieldProps} from "formik";
+import TextArea from "antd/lib/input/TextArea";
+import { Image } from 'antd';
 
 interface ArgumentosModificarProducto {
     productoId?: number,        //si esta definido, es el producto a editar
@@ -41,6 +43,27 @@ function useProducto(productoId: number|undefined) {
     }
 }
 
+// Shape of form values
+interface FormValues {
+    email: string;
+    password: string;
+}
+
+interface PropFormulario {
+    productoEditando?: IProducto,
+    nuevoProducto?: boolean
+}
+
+interface OtherProps {
+    message: string;
+}
+
+// The type of props MyForm receives
+interface MyFormProps {
+    initialEmail?: string;
+    message: string; // if this passed all the way through you might do this or make a union type
+}
+
 export default function ModificarProducto (arg: ArgumentosModificarProducto) {
     const {
         productoId
@@ -53,7 +76,56 @@ export default function ModificarProducto (arg: ArgumentosModificarProducto) {
     useEffect(()=>{
         console.log({producto})
     },[producto])
-    const MyForm = (props: FormikProps<IProducto>) => {
+    const InnerForm = (props: FormikProps<IProducto>) => {
+        const { touched, errors, isSubmitting, handleSubmit } = props;
+        return (
+            <Form>
+                <Space direction="vertical" size="small" style={{ display: 'flex' }}>
+                    <Field name="nombre" as={Input} addonBefore="Nombre" />
+                    <Field name="codigo" as={Input} addonBefore="Codigo Unico" />
+                    <Input.Group compact>
+                        <Field name="precio" as={Input} addonBefore="Precio" addonAfter={"Gs."} style={{ width: '50%' }} type={"number"}/>
+                        <Field name="costo" as={Input} addonBefore="Costo" addonAfter={"Gs."} style={{ width: '50%' }} type={"number"}/>
+                    </Input.Group>
+                    <Divider>Descripcion</Divider>
+                    <Field name="descripcion" as={TextArea} rows={4}/>
+                    <Divider>Imagen</Divider>
+                    <Space direction="vertical" size="small" style={{ display: 'flex' }} align={'center'}>
+                        <Image
+                            width={200}
+                            src="https://zos.alipayobjects.com/rmsportal/jkjgkEfvpUPVyRjUImniVslZfWPnJuuZ.png"
+                        />
+                    </Space>
+                    {touched.nombre && errors.nombre && <div>{errors.nombre}</div>}
+                    <Divider/>
+                    <Button onClick={()=>handleSubmit()} loading={isSubmitting}>Guardar</Button>
+                </Space>
+            </Form>
+        );
+    };
+    const MyForm = withFormik<PropFormulario, IProducto>({
+        // Transform outer props into form values
+        mapPropsToValues: ({productoEditando, nuevoProducto}) => {
+            return (nuevoProducto || !productoEditando) ? productoVacio : productoEditando;
+        },
+
+        // Add a custom validation function (this can be async too!)
+        validate: (values: IProducto) => {
+            let errors: FormikErrors<IProducto> = {};
+            if (!values.nombre) {
+                errors.nombre = 'Required';
+            } else if (values.nombre === 'no') {
+                errors.nombre = 'Invalid email address';
+            }
+            return errors;
+        },
+
+        handleSubmit: values => {
+            console.log({values})
+        },
+    })(InnerForm);
+
+    const MyForm2 = (props: FormikProps<IProducto>) => {
         const {
             values,
             touched,
@@ -63,7 +135,11 @@ export default function ModificarProducto (arg: ArgumentosModificarProducto) {
             handleSubmit,
         } = props;
         return (
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={(e)=> {
+                e.preventDefault()
+                console.log('submit')
+                handleSubmit()
+            }}>
                 <input
                     type="text"
                     onChange={handleChange}
@@ -95,7 +171,7 @@ export default function ModificarProducto (arg: ArgumentosModificarProducto) {
         },
 
         handleSubmit: (values, { setSubmitting }) => {
-            console.log(values)
+            console.log('submition')
             setTimeout(() => {
                 alert(JSON.stringify(values, null, 2));
                 setSubmitting(false);
@@ -116,9 +192,7 @@ export default function ModificarProducto (arg: ArgumentosModificarProducto) {
     </Formik>),[producto])
     const vistaNormal = <>
         <Divider>Modificacion de producto</Divider>
-        <MyEnhancedForm
-            producto={producto}
-        />
+        <MyForm productoEditando={producto} nuevoProducto={!productoId} />
     </>
     return vistaError ? vistaError : vistaNormal
 }
