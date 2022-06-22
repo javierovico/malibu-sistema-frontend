@@ -38,9 +38,9 @@ export default function Dummy2() {
         console.log({perPage})
     },[perPage])
     return <>
-        <Button onClick={()=>setParamsToURL({...paramsURL, perPage:parseInt(window.prompt('perPage') || ''+itemPerPage.defaultValue),page:parseInt(window.prompt('page') || ''+itemPage.defaultValue)})}>perPage</Button>
+        <Button onClick={()=>setParamsToURL({perPage:parseInt(window.prompt('perPage') || ''+itemPerPage.defaultValue),page:parseInt(window.prompt('page') || ''+itemPage.defaultValue)})}>perPage</Button>
         {/*<Button onClick={()=>click2('perPage')}>perPage</Button>*/}
         {/*<Button onClick={()=>click('page')}>page</Button>*/}
-        <Button onClick={()=>setParamsToURL({...paramsURL, busqueda: window.prompt('busqueda') || itemBusqueda.defaultValue})}>busqueda</Button>
+        <Button onClick={()=>setParamsToURL({ busqueda: window.prompt('busqueda') || itemBusqueda.defaultValue})}>busqueda</Button>
     </>
 }

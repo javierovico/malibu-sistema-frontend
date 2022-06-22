@@ -102,7 +102,7 @@ export default function AdminProducto() {
             setParamsToURL({...paramsURL,page:paginacion.last_page})
         }
     },[isProductosLoading, page, paginacion.last_page, paramsURL, setParamsToURL])
-    const [isModalVisible, setIsModalVisible] = useState(false)  //todo: activado para pruebas
+    const [isModalVisible, setIsModalVisible] = useState(true)  //todo: activado para pruebas
     const [idModificando, setIdModificando] = useState<number|undefined>(1) //todo modificado para pruebas
     const handleAgregarNuevoProducto = useCallback(()=>{
         setIdModificando(undefined)
@@ -143,7 +143,7 @@ export default function AdminProducto() {
                 <List.Item
                     key={item.id}
                     actions={[
-                        <Button type="link" onClick={()=>handleModificarProducto(item.id)}>
+                        <Button type="link" onClick={()=>item.id && handleModificarProducto(item.id)}>
                             <IconText icon={EditOutlined} text="Modificar" key="modificar" />
                         </Button>,
                         <IconText icon={LikeOutlined} text="156" key="list-vertical-like-o" />,
@@ -175,13 +175,18 @@ export default function AdminProducto() {
         <Divider>Filtrado</Divider>
         <Row justify="space-around">
             <Col span={10}>
-                <Search placeholder="Nombre de producto a buscar..." onSearch={(e)=>setParamsToURL({...paramsURL, busqueda:e})} enterButton defaultValue={busqueda} />
+                {/*<Search placeholder="Nombre de producto a buscar..." onSearch={(e)=>setParamsToURL({...paramsURL, busqueda:e})} enterButton defaultValue={busqueda} />*/}
+                <Search placeholder="Nombre de producto a buscar..." onSearch={(e)=>setParamsToURL({busqueda:e})} enterButton defaultValue={busqueda} />
             </Col>
             <Col span={6}>
-                <Search placeholder="Codigo del producto" onSearch={(e)=>setParamsToURL({...paramsURL, codigo:e})} enterButton defaultValue={codigo} />
+                {/*<Search placeholder="Codigo del producto" onSearch={(e)=>setParamsToURL({...paramsURL, codigo:e})} enterButton defaultValue={codigo} />*/}
+                <Search placeholder="Codigo del producto" onSearch={(e)=>setParamsToURL({codigo:e})} enterButton defaultValue={codigo} />
+                {/*<Search placeholder="Codigo del producto" onSearch={(e)=>setParamsToURL({codigo3:e})} enterButton defaultValue={codigo} />*/}
+                {/*<Search placeholder="Codigo del producto" onSearch={(e)=>setParamsToURL({codigo:3})} enterButton defaultValue={codigo} />*/}
             </Col>
             <Col span={4}>
-                <Search placeholder="ID del producto" onSearch={(e)=>setParamsToURL({...paramsURL, id:parseInt(e) || null})} enterButton defaultValue={id?''+id:''} />
+                {/*<Search placeholder="ID del producto" onSearch={(e)=>setParamsToURL({...paramsURL, id:parseInt(e) || null})} enterButton defaultValue={id?''+id:''} />*/}
+                <Search placeholder="ID del producto" onSearch={(e)=>setParamsToURL({id:parseInt(e) || null})} enterButton defaultValue={id?''+id:''} />
             </Col>
         </Row>
         <Divider plain>Productos</Divider>

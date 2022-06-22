@@ -68,17 +68,21 @@ function reducerUrl<T>(a:T, b: ReducerArg<T>): T{
     const nuevos = getCurrentFromSearch<T>(searchParams, itemsList,a)
     return {...a, ...nuevos}
 }
+type AlgunosPar<Values> = {
+    // [K in keyof Values]?: Values[K] extends any[] ? Values[K][number] extends object ? AlgunosPar<Values[K][number]>[] | string | string[] : string | string[] : Values[K] extends object ? AlgunosPar<Values[K]> : string;
+    [K in keyof Values]?: Values[K];
+};
 
-export function useParametros<T>(itemsList: ParamsQuerys<T>): { paramsURL: T, setParamsToURL: {(arg: T):void} } {
+export function useParametros<T>(itemsList: ParamsQuerys<T>): { paramsURL: T, setParamsToURL: {(arg: AlgunosPar<T>):void} } {
     const [searchParams, setSearchParams] = useSearchParams();
     const value = getCurrentFromSearch<T>(searchParams, itemsList)
     const [paramsURL, dispatchParamsUrl] = useReducer<Reducer<T,ReducerArg<T>>>(reducerUrl,value)
     useEffect(()=>{
         dispatchParamsUrl({searchParams, itemsList})
     },[itemsList, searchParams])
-    const setParamsToURL = useCallback<{ (arg: T): void }>((arg)=>{
-        setSearchParams(setSearchFromCurrent(arg, itemsList))
-    },[itemsList, setSearchParams])
+    const setParamsToURL = useCallback<{ (arg: AlgunosPar<T>): void }>((arg)=>{
+        setSearchParams(setSearchFromCurrent<T>({...paramsURL, ...arg}, itemsList))
+    },[itemsList, paramsURL, setSearchParams])
     return {
         paramsURL,
         setParamsToURL
@@ -87,13 +91,13 @@ export function useParametros<T>(itemsList: ParamsQuerys<T>): { paramsURL: T, se
 
 export const createItemNumber = (defaultValue: number = 1): ItemQuery<number> => ({
     defaultValue: defaultValue,
-    queryToValue: a =>  parseInt(a),
+    queryToValue: a =>  isNaN(parseInt(a)) ? defaultValue : parseInt(a),
     valueToQuery: a => '' + a
 })
 
 export const createItemNumberOrNull = (defaultValue: number|null = null): ItemQuery<number|null> => ({
     defaultValue: defaultValue,
-    queryToValue: a =>  parseInt(a),
+    queryToValue: a =>  isNaN(parseInt(a)) ? defaultValue : parseInt(a),
     valueToQuery: a => a? '' + a:''
 })
 
