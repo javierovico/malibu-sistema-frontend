@@ -10,7 +10,11 @@ export interface ItemQuery<T> {
     comparador?: { (arg1: T, arg2:T): boolean } //retornar true si son iguales
 }
 
-export type ParamsQuerys<T> = Record<keyof T, ItemQuery<any>>
+export type ParamsQuerys<Values> = {
+    // [K in keyof Values]?: Values[K] extends any[] ? Values[K][number] extends object ? AlgunosPar<Values[K][number]>[] | string | string[] : string | string[] : Values[K] extends object ? AlgunosPar<Values[K]> : string;
+    [K in keyof Values]: ItemQuery<Values[K]>;
+};
+
 type ParamValue<T> = Record<keyof T,any>
 
 function searchToItem<T>(itemBusqueda: ItemQuery<T>, search: URLSearchParams, nombre: string): T {

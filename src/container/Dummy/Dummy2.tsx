@@ -1,23 +1,24 @@
 import {Button} from "antd";
 import {useEffect, useMemo} from "react";
-import {createItemNumber, createItemString, useParametros} from "../../hook/hookQuery";
+import {createItemNumber, createItemString, ItemQuery, ParamsQuerys, useParametros} from "../../hook/hookQuery";
 
 interface ParametrosAdminProducto{
     page: number,
     perPage: number,
     busqueda: string,
+    nuevo: number,
 }
 
 const itemPerPage = createItemNumber(10)
 const itemPage = createItemNumber()
 const itemBusqueda = createItemString()
 
-
 export default function Dummy2() {
-    const itemList = useMemo(()=>({
+    const itemList = useMemo((): ParamsQuerys<ParametrosAdminProducto> =>({
         busqueda: itemBusqueda,
         page: itemPage,
         perPage: itemPerPage,
+        nuevo: createItemNumber(),
     }),[])
     const {
         paramsURL,
