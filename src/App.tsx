@@ -114,7 +114,7 @@ function App() {
             <Footer style={{textAlign: 'center'}}>
                 Malibu System ©2021 Created by javierovico@gmail.com
             </Footer>
-            <Modal title={'Error'} visible={!!errorView} onOk={()=>setError()} onCancel={()=>setError()} footer={[<Button key='1' type="primary" onClick={()=>setError()}>Cerrar</Button>]} >
+            <Modal zIndex={9000} title={'Error'} visible={!!errorView} onOk={()=>setError()} onCancel={()=>setError()} footer={[<Button key='1' type="primary" onClick={()=>setError()}>Cerrar</Button>]} >
                 {errorView}
             </Modal>
         </Layout>
