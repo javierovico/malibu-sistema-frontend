@@ -1,4 +1,4 @@
-import React, {useCallback, useContext, useEffect} from "react";
+import React, {useCallback, useContext, useEffect, useMemo} from "react";
 import {IProducto, productoVacio} from "../../modelos/Producto";
 import {Button, Col, Row, Spin} from "antd";
 import {Form, Field, FormikProps, withFormik, FormikErrors, FormikBag} from "formik";
@@ -7,6 +7,7 @@ import {AntInput, AntTextArea} from "../../components/UI/Antd/AntdInputWithFormi
 import {AntFileSelect} from "../../components/UI/Antd/AntdInputWithFormikTypescript";
 import {AuthContext} from "../../context/AuthProvider";
 import {mostrarMensaje} from "../../utils/utils";
+import {errorToFormik} from "../../modelos/ErrorModel";
 
 interface ArgumentosModificarProducto {
     producto?: IProducto,       //si esta definido es el producto a editar (se usa para notificar al padre)
@@ -152,7 +153,10 @@ export default function ModificarProducto ({producto, productoChange}: Argumento
     },[])
     const MyForm = withFormik<PropFormulario, IProducto>({
         // Transform outer props into form values
-        mapPropsToValues: ({productoEditando}) => productoEditando || productoVacio,
+        mapPropsToValues: ({productoEditando} : PropFormulario) => {
+            console.log("reprocesando valores")
+            return productoEditando || productoVacio
+        },
 
         // Add a custom validation function (this can be async too!)
         validate: (values: IProducto) => {
@@ -178,8 +182,15 @@ export default function ModificarProducto ({producto, productoChange}: Argumento
                 result.then(()=>mostrarMensaje(`Se guardaron los cambios`))
                     .catch((e)=> {
                         mostrarMensaje(`Error Guadando`, 'error')
-                        setErrorException(e)
-                    }).finally(()=> setSubmitting(false))
+                        const errorFormik = errorToFormik(e)
+                        if (errorFormik) {
+                            setErrors(errorFormik)
+                        } else {
+                            setErrorException(e)
+                        }
+                    }).finally(()=> {
+                        setSubmitting(false)
+                    })
             } else if(result instanceof Error) {
                 setErrorException(result)
                 setSubmitting(false)

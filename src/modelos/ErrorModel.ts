@@ -12,6 +12,19 @@ export interface IError {
     items: ItemError[]
 }
 
+export function errorToFormik(e: any): Record<string, string>|null {
+    const errorEstandar: IError = errorRandomToIError(e)
+    if (errorEstandar.items.length) {
+        const errorFormik: Record<string, string> = {}
+        for (const key in errorEstandar.items) {
+            errorFormik[errorEstandar.items[key].name] = errorEstandar.items[key].errors.join(', ')
+        }
+        return errorFormik
+    } else {
+        return null
+    }
+}
+
 export function errorRandomToIError(e: any): IError {
     let title: string
     let code: string
