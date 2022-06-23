@@ -3,7 +3,7 @@ import {Avatar, Button, Col, Divider, List, Modal, Row, Space, Image} from 'antd
 import React, {useCallback, useContext, useEffect, useMemo, useState} from "react";
 import {IProducto, URL_GET_PRODUCTOS} from "../../modelos/Producto";
 import axios from "axios";
-import {PaginacionVacia, ResponseAPIPaginado} from "../../modelos/ResponseAPI";
+import ResponseAPI, {PaginacionVacia, ResponseAPIPaginado} from "../../modelos/ResponseAPI";
 import Search from "antd/es/input/Search";
 import {
     createItemNumber,
@@ -24,6 +24,16 @@ const IconText = ({ icon, text }: { icon: React.FC; text: string }) => (
         {text}
     </Space>
 );
+
+export const useEditorProducto = () => useCallback((productoSubiendo: IProducto)=>{
+    return new Promise<void>((resolve,reject)=> {
+        axios.put<ResponseAPI<{producto:IProducto}>>(`${URL_GET_PRODUCTOS}/${productoSubiendo.id}?XDEBUG_SESSION_START=PHPSTORM`, {...productoSubiendo, url: (productoSubiendo.imagen?.url?.includes("base64"))?productoSubiendo.imagen?.url:null})
+            .then(({data}) => {
+                resolve()
+            })
+            .catch(reject)
+    })
+},[])
 
 const useProductos = (busqueda: string, page: number, perPage: number, codigo: string, id: number|null) => {
     const [paginacion, setPaginacion] = useState<ResponseAPIPaginado<IProducto>>(PaginacionVacia);
@@ -53,10 +63,30 @@ const useProductos = (busqueda: string, page: number, perPage: number, codigo: s
             })
             .finally(()=>setIsProductoLoading(false))
     },[busqueda, codigo, id, page, perPage, setErrorException])
+    const editorProducto = useEditorProducto();
+    const [productoModificando, setProductoModificando] = useState<IProducto>() //todo modificado para pruebas
+    const productoChange = useCallback((p: IProducto)=>{
+        return new Promise<void>((res,rej) => {
+            editorProducto(p)
+                .then(()=>{
+                    const nuevaPaginacion = {...paginacion}
+                    const posicionItem: number = paginacion.data.findIndex(pItem => pItem.id === p.id)
+                    nuevaPaginacion.data.splice((posicionItem<0)?0:posicionItem,(posicionItem<0)?0:1,p)
+                    setPaginacion(nuevaPaginacion)
+                    setProductoModificando(p)
+                    res()
+                })
+                .catch(rej)
+        });
+    },[editorProducto, paginacion])
+
     return {
         paginacion,
         isProductosLoading,
-        errorProductos
+        errorProductos,
+        productoChange,
+        productoModificando,
+        setProductoModificando
     }
 }
 
@@ -95,28 +125,30 @@ export default function AdminProducto() {
     const {
         paginacion,
         isProductosLoading,
-        errorProductos
+        errorProductos,
+        productoChange,
+        productoModificando,
+        setProductoModificando
     } = useProductos(busqueda, page, perPage, codigo, id)
     useEffect(()=>{
         if (!isProductosLoading && (page > paginacion.last_page)) {
             setParamsToURL({...paramsURL,page:paginacion.last_page})
         }
     },[isProductosLoading, page, paginacion.last_page, paramsURL, setParamsToURL])
-    const [isModalVisible, setIsModalVisible] = useState(true)  //todo: activado para pruebas
-    const [idModificando, setIdModificando] = useState<number|undefined>(1) //todo modificado para pruebas
+    const [isModalVisible, setIsModalVisible] = useState(false)  //todo: activado para pruebas
     const handleAgregarNuevoProducto = useCallback(()=>{
-        setIdModificando(undefined)
+        setProductoModificando(undefined)
         setIsModalVisible(true)
-    },[])
-    const handleModificarProducto = useCallback((id: number)=>{
-        setIdModificando(id)
+    },[setProductoModificando])
+    const handleModificarProducto = useCallback((p?: IProducto)=>{
+        setProductoModificando(p)
         setIsModalVisible(true)
-    },[])
+    },[setProductoModificando])
     const handleOk = useCallback((...e:any)=>{
         console.log(e)
     },[])
     const VistaModal = <Modal width={'85%'} footer={null} closable={false} visible={isModalVisible} onOk={handleOk} onCancel={()=>setIsModalVisible(false)}>
-        <ModificarProducto productoId={idModificando}/>
+        <ModificarProducto producto={productoModificando} productoChange={productoChange}/>
     </Modal>
     const listaProductos = (
         <List
@@ -143,7 +175,7 @@ export default function AdminProducto() {
                 <List.Item
                     key={item.id}
                     actions={[
-                        <Button type="link" onClick={()=>item.id && handleModificarProducto(item.id)}>
+                        <Button type="link" onClick={()=>item.id && handleModificarProducto(item)}>
                             <IconText icon={EditOutlined} text="Modificar" key="modificar" />
                         </Button>,
                         <IconText icon={LikeOutlined} text="156" key="list-vertical-like-o" />,
