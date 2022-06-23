@@ -1,9 +1,9 @@
-import { LikeOutlined, MessageOutlined, EditOutlined } from '@ant-design/icons';
-import {Avatar, Button, Col, Divider, List, Modal, Row, Space, Image} from 'antd';
+import { LikeOutlined, MessageOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import {Avatar, Button, Col, Divider, List, Modal, Row, Space, Image, Popconfirm} from 'antd';
 import React, {useCallback, useContext, useEffect, useMemo, useState} from "react";
 import {IProducto, URL_GET_PRODUCTOS} from "../../modelos/Producto";
 import axios from "axios";
-import ResponseAPI, {PaginacionVacia, ResponseAPIPaginado} from "../../modelos/ResponseAPI";
+import {PaginacionVacia, ResponseAPIPaginado} from "../../modelos/ResponseAPI";
 import Search from "antd/es/input/Search";
 import {
     createItemNumber,
@@ -26,11 +26,26 @@ const IconText = ({ icon, text }: { icon: React.FC; text: string }) => (
 );
 
 export const useEditorProducto = () => useCallback((productoSubiendo: IProducto)=>{
+    return new Promise<IProducto>((resolve,reject)=> {
+        axios.request({
+            data: {...productoSubiendo, imagen: {
+                    url: (productoSubiendo.imagen?.url?.includes("base64"))?productoSubiendo.imagen?.url:null
+            }},
+            url: `${URL_GET_PRODUCTOS}${(productoSubiendo.id)?`/${productoSubiendo.id}`:''}?XDEBUG_SESSION_START=PHPSTORM`,
+            method: productoSubiendo.id ? 'put' : 'post'
+        })
+            .then(({data}) => resolve(data.data.producto))
+            .catch(reject)
+    })
+},[])
+
+export const useEliminarProducto = () => useCallback((productoBorrar: IProducto)=>{
     return new Promise<void>((resolve,reject)=> {
-        axios.put<ResponseAPI<{producto:IProducto}>>(`${URL_GET_PRODUCTOS}/${productoSubiendo.id}?XDEBUG_SESSION_START=PHPSTORM`, {...productoSubiendo, url: (productoSubiendo.imagen?.url?.includes("base64"))?productoSubiendo.imagen?.url:null})
-            .then(({data}) => {
-                resolve()
-            })
+        axios.request({
+            url: `${URL_GET_PRODUCTOS}/${productoBorrar.id}?XDEBUG_SESSION_START=PHPSTORM`,
+            method: 'delete'
+        })
+            .then(()=>resolve())
             .catch(reject)
     })
 },[])
@@ -64,21 +79,38 @@ const useProductos = (busqueda: string, page: number, perPage: number, codigo: s
             .finally(()=>setIsProductoLoading(false))
     },[busqueda, codigo, id, page, perPage, setErrorException])
     const editorProducto = useEditorProducto();
+    const eliminarProducto = useEliminarProducto()
     const [productoModificando, setProductoModificando] = useState<IProducto>() //todo modificado para pruebas
     const productoChange = useCallback((p: IProducto)=>{
         return new Promise<void>((res,rej) => {
             editorProducto(p)
-                .then(()=>{
+                .then((productoSubido)=>{
                     const nuevaPaginacion = {...paginacion}
-                    const posicionItem: number = paginacion.data.findIndex(pItem => pItem.id === p.id)
-                    nuevaPaginacion.data.splice((posicionItem<0)?0:posicionItem,(posicionItem<0)?0:1,p)
+                    const posicionItem: number = paginacion.data.findIndex(pItem => pItem.id === productoSubido.id)
+                    nuevaPaginacion.data.splice((posicionItem<0)?0:posicionItem,(posicionItem<0)?0:1,productoSubido)
                     setPaginacion(nuevaPaginacion)
-                    setProductoModificando(p)
+                    setProductoModificando(productoSubido)
                     res()
                 })
                 .catch(rej)
         });
     },[editorProducto, paginacion])
+
+    const handleBorrarProducto = useCallback((p: IProducto) => {
+        return new Promise<void>(res=>{
+            eliminarProducto(p)
+                .then(()=>{
+                    const nuevaPaginacion = {...paginacion}
+                    const posicionItem: number = paginacion.data.findIndex(pItem => pItem.id === p.id)
+                    nuevaPaginacion.data.splice(posicionItem,1)
+                    setPaginacion(nuevaPaginacion)
+                })
+                .catch((e)=>{
+                    setErrorException(e)
+                })
+                .finally(res)
+        })
+    },[eliminarProducto, paginacion, setErrorException])
 
     return {
         paginacion,
@@ -86,7 +118,8 @@ const useProductos = (busqueda: string, page: number, perPage: number, codigo: s
         errorProductos,
         productoChange,
         productoModificando,
-        setProductoModificando
+        setProductoModificando,
+        handleBorrarProducto,
     }
 }
 
@@ -128,7 +161,8 @@ export default function AdminProducto() {
         errorProductos,
         productoChange,
         productoModificando,
-        setProductoModificando
+        setProductoModificando,
+        handleBorrarProducto
     } = useProductos(busqueda, page, perPage, codigo, id)
     useEffect(()=>{
         if (!isProductosLoading && (page > paginacion.last_page)) {
@@ -141,13 +175,15 @@ export default function AdminProducto() {
         setIsModalVisible(true)
     },[setProductoModificando])
     const handleModificarProducto = useCallback((p?: IProducto)=>{
+        setIsModalVisible(!!p)
         setProductoModificando(p)
-        setIsModalVisible(true)
+        // setTimeout(()=>{setIsModalVisible(!!p)},1000)
     },[setProductoModificando])
     const handleOk = useCallback((...e:any)=>{
         console.log(e)
     },[])
-    const VistaModal = <Modal width={'85%'} footer={null} closable={false} visible={isModalVisible} onOk={handleOk} onCancel={()=>setIsModalVisible(false)}>
+    // useEffect(()=>console.log('productoModificando cambio'),[productoModificando])
+    const VistaModal = <Modal destroyOnClose={true} width={'85%'} footer={null} closable={false} visible={isModalVisible} onOk={handleOk} onCancel={()=>handleModificarProducto()}>
         <ModificarProducto producto={productoModificando} productoChange={productoChange}/>
     </Modal>
     const listaProductos = (
@@ -159,7 +195,7 @@ export default function AdminProducto() {
                 pageSizeOptions:[4,10,20,50],
                 showQuickJumper:true,
                 showSizeChanger:true,
-                pageSize:perPage,
+                // pageSize:perPage,
                 current:page,
                 onChange:(page,perPage)=>{
                     setParamsToURL({...paramsURL,page,perPage})
@@ -175,9 +211,20 @@ export default function AdminProducto() {
                 <List.Item
                     key={item.id}
                     actions={[
-                        <Button type="link" onClick={()=>item.id && handleModificarProducto(item)}>
-                            <IconText icon={EditOutlined} text="Modificar" key="modificar" />
+                        <Button type="link" onClick={()=>handleModificarProducto(item)}  key="modificar">
+                            <IconText icon={EditOutlined} text="Modificar" />
                         </Button>,
+                        <Popconfirm
+                            key="borrar"
+                            okText="Si"
+                            cancelText="No"
+                            title="Seguro que desea borrar?"
+                            onConfirm={()=>handleBorrarProducto(item)}
+                        >
+                            <Button type="link" >
+                                <IconText icon={DeleteOutlined} text="Borrar"/>
+                            </Button>
+                        </Popconfirm>,
                         <IconText icon={LikeOutlined} text="156" key="list-vertical-like-o" />,
                         <IconText icon={MessageOutlined} text="2" key="list-vertical-message" />,
                     ]}
@@ -194,7 +241,9 @@ export default function AdminProducto() {
                         title={<a href={`${URL_GET_PRODUCTOS}/${item.id}`}>{item.nombre}</a>}
                         description={item.descripcion}
                     />
-                    {item.precio.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")} Gs.
+                    Precio: {item.precio.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")} Gs.
+                    <br/>
+                    Costo: {item.costo.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")} Gs.
                 </List.Item>
             )}
         />

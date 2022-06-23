@@ -1,10 +1,11 @@
-import {Upload, UploadProps} from "antd";
-import React, {useMemo} from "react";
-import { LoadingOutlined, PlusOutlined } from '@ant-design/icons';
+import {Button, Upload, UploadProps} from "antd";
+import React, {useContext, useMemo} from "react";
+import { LoadingOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons';
 import {CreateAntField} from "./AntdInputWithFormik";
 import type { UploadRequestOption } from 'rc-upload/lib/interface';
 import {UploadChangeParam, UploadFile} from "antd/lib/upload/interface";
 import {convertAndResizeImage} from "../../../utils/utils";
+import {AuthContext} from "../../../context/AuthProvider";
 
 interface ArchivoSubible {
     base64: string
@@ -17,6 +18,7 @@ interface FileSelectParams {
 }
 
 const FileSelect = ({ value, onChange }: FileSelectParams) => {
+    const {setErrorException} = useContext(AuthContext)
     const loading = false;
     const uploadButton = (
         <div>
@@ -42,6 +44,8 @@ const FileSelect = ({ value, onChange }: FileSelectParams) => {
         listType:'picture-card',
         className:'avatar-uploader',
         showUploadList: false,
+        type: 'drag',
+        accept:'image/*',
         onChange: (info: UploadChangeParam<UploadFile<ArchivoSubible>>) => {
             switch (info.file.status) {
                 case "done":
@@ -50,15 +54,22 @@ const FileSelect = ({ value, onChange }: FileSelectParams) => {
                 case "removed":     //TODO: deberia estar contemplado en la vista
                     onChange(undefined)
                     break;
+                case "error":
+                    setErrorException(info.file.error)
                 // LOS demas son ignorados (no mostramos progressbar)
             }
         },
-    }),[onChange])
+    }),[onChange, setErrorException])
 
     return (
         <Upload {...uploadProps}>
             {value ? (
-                <img src={value} alt='avatar' style={{ width: '100%' }} />
+                <div>
+                    <img src={value} alt='avatar' style={{ width: '100%' }} />
+                    <Button icon={<UploadOutlined />} type="dashed">
+                        Actualizar
+                    </Button>
+                </div>
             ) : (
                 uploadButton
             )}
