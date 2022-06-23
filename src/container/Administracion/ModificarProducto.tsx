@@ -1,20 +1,25 @@
-import React, {useEffect, useMemo, useState} from "react";
+import React, {useCallback, useContext, useEffect, useMemo, useState} from "react";
 import {IProducto, productoVacio, URL_GET_PRODUCTOS} from "../../modelos/Producto";
 import VistaError from "../../components/UI/VistaError";
 import {errorRandomToIError, IError} from "../../modelos/ErrorModel";
 import axios from "axios";
 import ResponseAPI from "../../modelos/ResponseAPI";
-import {Button, Col, Row, Spin} from "antd";
-import {Form, Field, FormikProps, withFormik, FormikErrors} from "formik";
+import {Button, Col, message, Row, Spin} from "antd";
+import {Form, Field, FormikProps, withFormik, FormikErrors, FormikBag} from "formik";
 import { FormTitle } from './ModificarProducto.style';
 import {AntInput, AntTextArea} from "../../components/UI/Antd/AntdInputWithFormik";
 import {AntFileSelect} from "../../components/UI/Antd/AntdInputWithFormikTypescript";
+import {AuthContext} from "../../context/AuthProvider";
+import {mostrarMensaje} from "../../utils/utils";
 
 interface ArgumentosModificarProducto {
     productoId?: number,        //si esta definido, es el producto a editar
 }
 
 function useProducto(productoId: number|undefined) {
+    const {
+        setErrorException
+    } = useContext(AuthContext)
     const [producto, setProducto] = useState<IProducto>(productoVacio)
     const [isProductoLoading, setIsProductoLoading] = useState<boolean>(true)
     const [errorProducto, setErrorProducto] = useState<IError|undefined>(undefined);
@@ -37,10 +42,24 @@ function useProducto(productoId: number|undefined) {
             .finally(()=>setIsProductoLoading(false))
 
     },[productoId])
+    const guardarProducto = useCallback((productoSubiendo: IProducto)=>{
+        return new Promise<void>((resolve,reject)=> {
+            axios.put<ResponseAPI<{producto:IProducto}>>(`${URL_GET_PRODUCTOS}/${productoId}?XDEBUG_SESSION_START=PHPSTORM`, {...productoSubiendo, url: (productoSubiendo.imagen?.url?.includes("base64"))?productoSubiendo.imagen?.url:null})
+                .then(({data}) => {
+                    resolve()
+                    setProducto(data.data.producto)
+                })
+                .catch((e)=>{
+                    reject(e)
+                    setErrorException(e)
+                })
+        })
+    },[productoId, setErrorException])
     return {
         producto,
         isProductoLoading,
-        vistaError
+        vistaError,
+        guardarProducto
     }
 }
 
@@ -56,12 +75,14 @@ export default function ModificarProducto (arg: ArgumentosModificarProducto) {
     const {
         producto,
         isProductoLoading,
-        vistaError
+        vistaError,
+        guardarProducto
     } = useProducto(productoId)
-    const InnerForm = (props: FormikProps<IProducto>) => {
+    useEffect(()=>console.log(producto),[producto])
+    const InnerForm = useCallback((props: FormikProps<IProducto>) => {
         const { isSubmitting, submitCount } = props;
         return (
-            <Spin spinning={isSubmitting}>
+            <Spin spinning={isSubmitting||isProductoLoading}>
                 <Form className='form-container'>
                     <Row gutter={30}>
                         <Col lg={12}>
@@ -122,7 +143,7 @@ export default function ModificarProducto (arg: ArgumentosModificarProducto) {
                         </Col>
                         <Col lg={8}>
                             <Field
-                                name='url'
+                                name='imagen.url'
                                 component={AntFileSelect}
                                 label='Imagen'
                                 submitCount={submitCount}
@@ -138,8 +159,8 @@ export default function ModificarProducto (arg: ArgumentosModificarProducto) {
                 </Form>
             </Spin>
         );
-    };
-    const MyForm = withFormik<PropFormulario, IProducto>({
+    },[isProductoLoading])
+    const MyForm = useMemo(()=>(withFormik<PropFormulario, IProducto>({
         // Transform outer props into form values
         mapPropsToValues: ({productoEditando, nuevoProducto}) => {
             return (nuevoProducto || !productoEditando) ? productoVacio : productoEditando;
@@ -156,15 +177,19 @@ export default function ModificarProducto (arg: ArgumentosModificarProducto) {
             return errors;
         },
 
-        handleSubmit: (values, formikBag) => {
-
-            console.log({values})
-            setTimeout(()=>formikBag.setSubmitting(false),500)
+        handleSubmit: (values, {setSubmitting}: FormikBag<PropFormulario, IProducto>) => {
+            guardarProducto(values)
+                .then(()=> mostrarMensaje(`Se guardaron los cambios`))
+                .catch((e)=>console.log(e))
+                .finally(()=> {
+                    setSubmitting(false)
+                })
         },
-    })(InnerForm);
-    const vistaNormal = <>
+    })(InnerForm)),[InnerForm, guardarProducto])
+    useEffect(()=>console.log('myformik cambio'),[MyForm])
+    const vistaNormal = useMemo(()=>(<>
         <FormTitle>Informacion Basica</FormTitle>
         <MyForm productoEditando={producto} nuevoProducto={!productoId} />
-    </>
+    </>),[MyForm, producto, productoId])
     return vistaError ? vistaError : vistaNormal
 }

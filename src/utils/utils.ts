@@ -1,4 +1,5 @@
 import { createCanvas, loadImage } from 'canvas';
+import {message} from "antd";
 
 export function convertAndResizeImage(file: Blob) {
     return new Promise<string>(async (resolve, reject) => {
@@ -27,5 +28,18 @@ export function convertAndResizeImage(file: Blob) {
             altoOriginal
         );
         resolve(canvas.toDataURL("image/jpeg",0.95))
+    })
+}
+
+export function mostrarMensaje(mensaje: string, type: "success"|"error" = "success") {
+    new Promise(()=>{
+        switch (type) {
+            case "success":
+                message.success(mensaje)
+                break
+            case "error":
+                message.error(mensaje)
+                break
+        }
     })
 }
