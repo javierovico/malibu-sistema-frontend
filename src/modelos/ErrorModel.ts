@@ -12,6 +12,14 @@ export interface IError {
     items: ItemError[]
 }
 
+export function objectIsItemError(o:any): o is ItemError {
+    return 'name' in o && 'errors' in o && Array.isArray(o.errors) && o.errors.every((i:any) => typeof i === 'string')
+}
+
+export function objectIsIError(o:any): o is IError {
+    return ('code' in o) && ('message' in o) && ('title' in o) && ('items' in o) && Array.isArray(o.items) && o.items.every((i:any)=>objectIsItemError(i))
+}
+
 export function errorToFormik(e: any): Record<string, string>|null {
     const errorEstandar: IError = errorRandomToIError(e)
     if (errorEstandar.items.length) {
@@ -25,7 +33,10 @@ export function errorToFormik(e: any): Record<string, string>|null {
     }
 }
 
-export function errorRandomToIError(e: any): IError {
+export function errorRandomToIError(e: any, conversiones?: Record<string, string>): IError {
+    if (objectIsIError(e)) {
+        return e;
+    }
     let title: string
     let code: string
     let message: string
@@ -37,7 +48,7 @@ export function errorRandomToIError(e: any): IError {
         const errorsLaravel: Record<string, string[]> = e.response?.data?.data?.errors || {}
         for (const key in errorsLaravel) {
             items.push({
-                name: key,
+                name: (conversiones && key in conversiones)? conversiones[key] : key,
                 errors: errorsLaravel[key]
             })
         }
@@ -45,7 +56,7 @@ export function errorRandomToIError(e: any): IError {
         title = e.name
         code = e.name
         message = e.message
-    }else {
+    } else {
         title = 'Sin Titulo'
         code = 'sinCodeJS'
         message = 'Sin Mensaje detallado'

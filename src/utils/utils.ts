@@ -46,3 +46,7 @@ export function mostrarMensaje(mensaje: string, type: "success"|"error" = "succe
         }
     })
 }
+
+export function formateadorNumero(item: number | string) {
+    return item.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")
+}

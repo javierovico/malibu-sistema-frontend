@@ -1,56 +1,36 @@
-import { LikeOutlined, MessageOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import {Avatar, Button, Col, Divider, List, Modal, Row, Space, Image, Popconfirm} from 'antd';
+import {LikeOutlined, MessageOutlined, EditOutlined, DeleteOutlined, SearchOutlined} from '@ant-design/icons';
+import {Avatar, Button, Col, Divider, List, Modal, Row, Space, Image, Popconfirm, Input, Select, Form} from 'antd';
 import React, {useCallback, useContext, useEffect, useMemo, useState} from "react";
-import {IProducto, URL_GET_PRODUCTOS} from "../../modelos/Producto";
+import {IProducto, URL_GET_PRODUCTOS, useEditorProducto} from "../../modelos/Producto";
 import axios from "axios";
 import {PaginacionVacia, ResponseAPIPaginado} from "../../modelos/ResponseAPI";
-import Search from "antd/es/input/Search";
+import {Formik,Field} from 'formik'
 import {
     createItemNumber,
     createItemNumberOrNull,
-    createItemString,
+    createItemString, ItemQuery,
     ParamsQuerys,
     useParametros
 } from "../../hook/hookQuery";
 import ModificarProducto from "./ModificarProducto";
 import {AuthContext} from "../../context/AuthProvider";
-import {errorRandomToIError} from "../../modelos/ErrorModel";
+import {errorRandomToIError, IError} from "../../modelos/ErrorModel";
 import VistaError from "../../components/UI/VistaError";
+import {AntInput, AntSelect} from "../../components/UI/Antd/AntdInputWithFormik";
 
 
-const IconText = ({ icon, text }: { icon: React.FC; text: string }) => (
+export const IconText = ({ icon, text }: { icon: React.FC; text: string }) => (
     <Space>
         {React.createElement(icon)}
         {text}
     </Space>
 );
 
-export const useEditorProducto = () => useCallback((productoSubiendo: IProducto)=>{
-    return new Promise<IProducto>((resolve,reject)=> {
-        axios.request({
-            data: {...productoSubiendo, imagen: {
-                    url: (productoSubiendo.imagen?.url?.includes("base64"))?productoSubiendo.imagen?.url:null
-            }},
-            url: `${URL_GET_PRODUCTOS}${(productoSubiendo.id)?`/${productoSubiendo.id}`:''}?XDEBUG_SESSION_START=PHPSTORM`,
-            method: productoSubiendo.id ? 'put' : 'post'
-        })
-            .then(({data}) => resolve(data.data.producto))
-            .catch(reject)
-    })
-},[])
+type TipoBusqueda = "id"|"codigo"|"nombre"
 
-export const useEliminarProducto = () => useCallback((productoBorrar: IProducto)=>{
-    return new Promise<void>((resolve,reject)=> {
-        axios.request({
-            url: `${URL_GET_PRODUCTOS}/${productoBorrar.id}?XDEBUG_SESSION_START=PHPSTORM`,
-            method: 'delete'
-        })
-            .then(()=>resolve())
-            .catch(reject)
-    })
-},[])
 
-const useProductos = (busqueda: string, page: number, perPage: number, codigo: string, id: number|null) => {
+
+const useProductos = (busqueda: string, page: number, perPage: number, tipoBusqueda: TipoBusqueda) => {
     const [paginacion, setPaginacion] = useState<ResponseAPIPaginado<IProducto>>(PaginacionVacia);
     const [isProductosLoading, setIsProductoLoading] = useState<boolean>(true)
     const [errorProductos, setErrorProductos] = useState<JSX.Element|undefined>();
@@ -61,11 +41,9 @@ const useProductos = (busqueda: string, page: number, perPage: number, codigo: s
         setErrorProductos(undefined)
         axios.get<ResponseAPIPaginado<IProducto>>(URL_GET_PRODUCTOS,{
             params:{
-                nombre: busqueda,
                 page,
                 perPage,
-                codigo,
-                id,
+                [tipoBusqueda]: busqueda
             }
         })
             .then(({data}) => {
@@ -77,17 +55,17 @@ const useProductos = (busqueda: string, page: number, perPage: number, codigo: s
                 setPaginacion(PaginacionVacia)
             })
             .finally(()=>setIsProductoLoading(false))
-    },[busqueda, codigo, id, page, perPage, setErrorException])
-    const editorProducto = useEditorProducto();
-    const eliminarProducto = useEliminarProducto()
-    const [productoModificando, setProductoModificando] = useState<IProducto>() //todo modificado para pruebas
-    const productoChange = useCallback((p: IProducto)=>{
+    },[busqueda, page, perPage, setErrorException, tipoBusqueda])
+    const editorProducto = useEditorProducto()
+    const [productoModificando, setProductoModificando] = useState<IProducto>()
+    const productoUpdate = useCallback((p: IProducto, borrar: boolean = false)=>{
         return new Promise<void>((res,rej) => {
-            editorProducto(p)
+            const posicionItem: number = paginacion.data.findIndex(pItem => pItem.id === p.id)      // -1 si se va agregar nuevo
+            const productoOriginal = (posicionItem>=0) ? paginacion.data[posicionItem] : undefined  //undefind si se vacrear
+            editorProducto(borrar?undefined:p, productoOriginal)
                 .then((productoSubido)=>{
                     const nuevaPaginacion = {...paginacion}
-                    const posicionItem: number = paginacion.data.findIndex(pItem => pItem.id === productoSubido.id)
-                    nuevaPaginacion.data.splice((posicionItem<0)?0:posicionItem,(posicionItem<0)?0:1,productoSubido)
+                    nuevaPaginacion.data.splice((posicionItem<0)?0:posicionItem,(posicionItem<0)?0:1,...productoSubido?[productoSubido]:[])
                     setPaginacion(nuevaPaginacion)
                     setProductoModificando(productoSubido)
                     res()
@@ -98,7 +76,7 @@ const useProductos = (busqueda: string, page: number, perPage: number, codigo: s
 
     const handleBorrarProducto = useCallback((p: IProducto) => {
         return new Promise<void>(res=>{
-            eliminarProducto(p)
+            productoUpdate(p, true)
                 .then(()=>{
                     const nuevaPaginacion = {...paginacion}
                     const posicionItem: number = paginacion.data.findIndex(pItem => pItem.id === p.id)
@@ -110,13 +88,13 @@ const useProductos = (busqueda: string, page: number, perPage: number, codigo: s
                 })
                 .finally(res)
         })
-    },[eliminarProducto, paginacion, setErrorException])
+    },[productoUpdate, paginacion, setErrorException])
 
     return {
         paginacion,
         isProductosLoading,
         errorProductos,
-        productoChange,
+        productoUpdate,
         productoModificando,
         setProductoModificando,
         handleBorrarProducto,
@@ -127,22 +105,31 @@ interface ParametrosAdminProducto {
     page: number,
     perPage: number,
     busqueda: string,
-    codigo: string,
-    id: number|null
+    tipoBusqueda: TipoBusqueda
 }
 
 
 const itemPerPage = createItemNumber(10)
 const itemPage = createItemNumber()
 const itemBusqueda = createItemString()
+const itemTipoBusqueda: ItemQuery<TipoBusqueda> = {
+    defaultValue: "nombre",
+    valueToQuery: i => i,
+    queryToValue: i => {
+        if (i==="nombre" || i==="codigo" || i==="id") {
+            return i
+        } else {
+            return "nombre"
+        }
+    }
+}
 
 export default function AdminProducto() {
     const itemList = useMemo((): ParamsQuerys<ParametrosAdminProducto> =>({
-        busqueda: itemBusqueda,
         page: itemPage,
         perPage: itemPerPage,
-        codigo: createItemString(),
-        id: createItemNumberOrNull(),
+        busqueda: itemBusqueda,
+        tipoBusqueda: itemTipoBusqueda,
     }),[])
     const {
         paramsURL,
@@ -152,24 +139,23 @@ export default function AdminProducto() {
         busqueda,
         perPage,
         page,
-        codigo,
-        id,
+        tipoBusqueda,
     } = paramsURL
     const {
         paginacion,
         isProductosLoading,
         errorProductos,
-        productoChange,
+        productoUpdate,
         productoModificando,
         setProductoModificando,
         handleBorrarProducto
-    } = useProductos(busqueda, page, perPage, codigo, id)
+    } = useProductos(busqueda, page, perPage, tipoBusqueda)
     useEffect(()=>{
         if (!isProductosLoading && (page > paginacion.last_page)) {
             setParamsToURL({...paramsURL,page:paginacion.last_page})
         }
     },[isProductosLoading, page, paginacion.last_page, paramsURL, setParamsToURL])
-    const [isModalVisible, setIsModalVisible] = useState(false)  //todo: activado para pruebas
+    const [isModalVisible, setIsModalVisible] = useState(false)
     const handleAgregarNuevoProducto = useCallback(()=>{
         setProductoModificando(undefined)
         setIsModalVisible(true)
@@ -179,12 +165,9 @@ export default function AdminProducto() {
         setProductoModificando(p)
         // setTimeout(()=>{setIsModalVisible(!!p)},1000)
     },[setProductoModificando])
-    const handleOk = useCallback((...e:any)=>{
-        console.log(e)
-    },[])
     // useEffect(()=>console.log('productoModificando cambio'),[productoModificando])
-    const VistaModal = <Modal destroyOnClose={true} width={'85%'} footer={null} closable={false} visible={isModalVisible} onOk={handleOk} onCancel={()=>handleModificarProducto()}>
-        <ModificarProducto producto={productoModificando} productoChange={productoChange}/>
+    const VistaModal = <Modal destroyOnClose={true} width={'85%'} footer={null} closable={false} visible={isModalVisible} onCancel={()=>handleModificarProducto()}>
+        <ModificarProducto producto={productoModificando} productoChange={productoUpdate}/>
     </Modal>
     const listaProductos = (
         <List
@@ -254,22 +237,34 @@ export default function AdminProducto() {
             Agregar Nuevo Producto
         </Button>
         <Divider>Filtrado</Divider>
-        <Row justify="space-around">
-            <Col span={10}>
-                {/*<Search placeholder="Nombre de producto a buscar..." onSearch={(e)=>setParamsToURL({...paramsURL, busqueda:e})} enterButton defaultValue={busqueda} />*/}
-                <Search placeholder="Nombre de producto a buscar..." onSearch={(e)=>setParamsToURL({busqueda:e})} enterButton defaultValue={busqueda} />
-            </Col>
-            <Col span={6}>
-                {/*<Search placeholder="Codigo del producto" onSearch={(e)=>setParamsToURL({...paramsURL, codigo:e})} enterButton defaultValue={codigo} />*/}
-                <Search placeholder="Codigo del producto" onSearch={(e)=>setParamsToURL({codigo:e})} enterButton defaultValue={codigo} />
-                {/*<Search placeholder="Codigo del producto" onSearch={(e)=>setParamsToURL({codigo3:e})} enterButton defaultValue={codigo} />*/}
-                {/*<Search placeholder="Codigo del producto" onSearch={(e)=>setParamsToURL({codigo:3})} enterButton defaultValue={codigo} />*/}
-            </Col>
-            <Col span={4}>
-                {/*<Search placeholder="ID del producto" onSearch={(e)=>setParamsToURL({...paramsURL, id:parseInt(e) || null})} enterButton defaultValue={id?''+id:''} />*/}
-                <Search placeholder="ID del producto" onSearch={(e)=>setParamsToURL({id:parseInt(e) || null})} enterButton defaultValue={id?''+id:''} />
-            </Col>
-        </Row>
+        <Formik
+            initialValues={{tipoBusqueda, busqueda}}
+            onSubmit={(val)=>{
+                setParamsToURL(val)
+            }}
+        >
+            {({handleSubmit,submitCount})=><Form>
+                <Input.Group compact>
+                    <Field
+                        component={AntSelect}
+                        name='tipoBusqueda'
+                        selectOptionsKeyValue={[
+                            {label: 'Por ID', value:'id'},
+                            {label: 'Por Codigo', value:'codigo'},
+                            {label: 'Por Nombre', value:'nombre'}
+                        ]}
+                        submitCount={submitCount}
+                    />
+                    <Field
+                        component={AntInput}
+                        name='busqueda'
+                        type='text'
+                        submitCount={submitCount}
+                    />
+                    <Button onClick={()=>handleSubmit()} htmlType='submit' type="primary" icon={<SearchOutlined/>}/>
+                </Input.Group>
+            </Form>}
+        </Formik>
         <Divider plain>Productos</Divider>
         {errorProductos || listaProductos}
         {VistaModal}

@@ -23,6 +23,7 @@ export const CreateAntField = Component => ({
                                          hasFeedback,
                                          label,
                                          selectOptions,
+                                         selectOptionsKeyValue,
                                          submitCount,
                                          type,
                                          renderRight,
@@ -37,6 +38,16 @@ export const CreateAntField = Component => ({
         form.setFieldValue(field.name, value);
     const onChange = value => form.setFieldValue(field.name, value);
     const onBlur = () => form.setFieldTouched(field.name, true);
+
+    const optionSelect = selectOptions
+        ? map(selectOptions, name => <Option key={name}>{name}</Option>)
+        : selectOptionsKeyValue
+            ? map(selectOptionsKeyValue, ({ label, value }) => (
+                <Option key={value} value={value}>
+                    {label}
+                </Option>
+            ))
+            : null;
     return (
         <div className="field-container">
             <FormItem
@@ -56,8 +67,7 @@ export const CreateAntField = Component => ({
                     onChange={type ? onInputChange : onChange}
                     suffix={(<span/>)}
                 >
-                    {selectOptions &&
-                    map(selectOptions, name => <Option key={name}>{name}</Option>)}
+                    {optionSelect}
                 </Component>
             </FormItem>
         </div>

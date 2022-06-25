@@ -1,14 +1,17 @@
-import React, {useCallback, useContext, useMemo} from "react";
-import {IProducto, productoVacio} from "../../modelos/Producto";
-import {Button, Col, Row, Spin} from "antd";
-import {Form, Field, FormikProps, withFormik, FormikBag} from "formik";
-import { FormTitle } from './ModificarProducto.style';
-import {AntInput, AntTextArea} from "../../components/UI/Antd/AntdInputWithFormik";
+import React, {useCallback, useContext, useEffect, useMemo} from "react";
+import {IProducto, PRODUCT_TIPO_SIMPLE, PRODUCTO_TIPO_COMBO, productoVacio} from "../../modelos/Producto";
+import {Button, Col, Divider, Popconfirm, Row, Space, Spin, Table} from "antd";
+import {Field, Form, FormikBag, FormikErrors, FormikProps, withFormik} from "formik";
+import {FormTitle} from './ModificarProducto.style';
+import {AntInput, AntSelect, AntTextArea} from "../../components/UI/Antd/AntdInputWithFormik";
 import {AntFileSelect} from "../../components/UI/Antd/AntdInputWithFormikTypescript";
 import {AuthContext} from "../../context/AuthProvider";
 import {mostrarMensaje} from "../../utils/utils";
 import {errorToFormik} from "../../modelos/ErrorModel";
 import * as Yup from 'yup';
+import TablaProductos from "./TablaProductos";
+import {DeleteOutlined} from "@ant-design/icons";
+import {IconText} from "./AdminProducto";
 
 interface ArgumentosModificarProducto {
     producto?: IProducto,       //si esta definido es el producto a editar (se usa para notificar al padre)
@@ -70,7 +73,33 @@ export default function ModificarProducto ({producto, productoChange}: Argumento
     const {
         setErrorException
     } = useContext(AuthContext)
-    const InnerForm = useCallback(({ isSubmitting, submitCount }: FormikProps<IProducto>) => <Spin spinning={isSubmitting}>
+    // useEffect(()=>console.log(producto),[producto]);
+    const handleQuitarProducto = useCallback((p: IProducto)=>{
+        if (producto?.producto_combos?.length) {
+            const indexSacar = producto.producto_combos.findIndex(prod => prod.id === p.id)
+            if (indexSacar >= 0) {
+                const nuevoProducto = {...producto}
+                nuevoProducto.producto_combos?.splice(indexSacar,1)
+                productoChange(nuevoProducto)
+            }
+        }
+    },[producto, productoChange])
+    const accionesProductoList = useCallback((p: IProducto)=>(
+        <Space size="middle">
+            <Popconfirm
+                key="borrar"
+                okText="Si"
+                cancelText="No"
+                title="¿Está seguro que desea quitar? No se puede deshacer."
+                onConfirm={()=>{handleQuitarProducto(p)}}
+            >
+                <Button type="link" >
+                    <IconText icon={DeleteOutlined} text="Quitar"/>
+                </Button>
+            </Popconfirm>
+        </Space>
+    ),[handleQuitarProducto])
+    const InnerForm = useCallback(({ isSubmitting, submitCount, values }: FormikProps<IProducto>) => <Spin spinning={isSubmitting}>
         <Form className='form-container'>
             <Row gutter={30}>
                 <Col lg={12}>
@@ -97,6 +126,18 @@ export default function ModificarProducto ({producto, productoChange}: Argumento
             <Row gutter={30}>
                 <Col lg={8}>
                     <Field
+                        component={AntSelect}
+                        name='tipo_producto.code'
+                        label='Tipo De Producto'
+                        selectOptionsKeyValue={[
+                            {label: 'Tipo Simple', value:PRODUCT_TIPO_SIMPLE},
+                            {label: 'Tipo Combo', value:PRODUCTO_TIPO_COMBO},
+                        ]}
+                        submitCount={submitCount}
+                    />
+                </Col>
+                <Col lg={5}>
+                    <Field
                         component={AntInput}
                         name='precio'
                         type='number'
@@ -105,7 +146,7 @@ export default function ModificarProducto ({producto, productoChange}: Argumento
                         hasFeedback
                     />
                 </Col>
-                <Col lg={8}>
+                <Col lg={5}>
                     <Field
                         component={AntInput}
                         name='costo'
@@ -116,7 +157,6 @@ export default function ModificarProducto ({producto, productoChange}: Argumento
                     />
                 </Col>
             </Row>
-
             <Row gutter={30}>
                 <Col lg={16}>
                     <Field
@@ -139,6 +179,11 @@ export default function ModificarProducto ({producto, productoChange}: Argumento
                     />
                 </Col>
             </Row>
+            {values.tipo_producto?.code === PRODUCTO_TIPO_COMBO && (<TablaProductos
+                title='Productos en el combo'
+                productos={values.producto_combos || []}
+                acciones={accionesProductoList}
+            />)}
             <Row justify="end">
                 <Col span={4}>
                     <div className='submit-container'>
@@ -149,7 +194,7 @@ export default function ModificarProducto ({producto, productoChange}: Argumento
                 </Col>
             </Row>
         </Form>
-    </Spin>,[])
+    </Spin>,[accionesProductoList])
     const MyForm = useMemo(()=>withFormik<PropFormulario, IProducto>({
         // Ignoramos las propiedades y asignamos el producto que tenemos nomas
         mapPropsToValues: () =>  producto || productoVacio,
@@ -168,18 +213,18 @@ export default function ModificarProducto ({producto, productoChange}: Argumento
             costo: Yup.number()
                 .min(1,'Muy chico')
                 .integer('Solo numeros enteros')
-                .required('Requerido')
+                .required('Requerido'),
+            // 'tipo_producto.code': Yup.string()
+            //     .required("Falta especificar")
         }),
         // Add a custom validation function (this can be async too!)
-        // validate: (values: IProducto) => {
-        //     let errors: FormikErrors<IProducto> = {};
-        //     if (!values.nombre) {
-        //         errors.nombre = 'Required';
-        //     } else if (values.nombre === 'no') {
-        //         errors.nombre = 'Invalid email address';
-        //     }
-        //     return errors;
-        // },
+        validate: (values: IProducto) => {
+            let errors: Record<string, any> = {};
+            if (!values.tipo_producto?.code) {
+                errors['tipo_producto.code'] = 'Falta especificar'
+            }
+            return errors;
+        },
         handleSubmit: (values, {setSubmitting, setErrors}: FormikBag<PropFormulario, IProducto>) => {
             const result = productoChange(values)
             if (typeof result == 'boolean') {
@@ -211,12 +256,9 @@ export default function ModificarProducto ({producto, productoChange}: Argumento
             }
         },
     })(InnerForm),[InnerForm, producto, productoChange, setErrorException])
-    // useEffect(()=>console.log('myformik cambio'),[MyForm])
-    // useEffect(()=>console.log('Producto cambio'),[producto])
-    // useEffect(()=>console.log('productoChange cambio'),[productoChange])
-    // useEffect(()=>console.log('setErrorException cambio'),[setErrorException])
     return <>
         <FormTitle>Informacion Basica</FormTitle>
         <MyForm productoEditando={producto}/>
+        {/*{listaProducto}*/}
     </>
 }
