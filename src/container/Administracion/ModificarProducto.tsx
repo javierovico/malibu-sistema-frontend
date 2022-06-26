@@ -1,6 +1,12 @@
-import React, {useCallback, useContext, useEffect, useMemo} from "react";
-import {IProducto, PRODUCT_TIPO_SIMPLE, PRODUCTO_TIPO_COMBO, productoVacio} from "../../modelos/Producto";
-import {Button, Col, Divider, Popconfirm, Row, Space, Spin, Table} from "antd";
+import React, {useCallback, useContext, useEffect, useMemo, useState} from "react";
+import {
+    IProducto,
+    PRODUCTO_TIPO_SIMPLE,
+    PRODUCTO_TIPO_COMBO,
+    productoVacio,
+    PRODUCTO_TIPOS_ADMITIDOS
+} from "../../modelos/Producto";
+import {Alert, Button, Col, Divider, Modal, Popconfirm, Row, Space, Spin, Table} from "antd";
 import {Field, Form, FormikBag, FormikErrors, FormikProps, withFormik} from "formik";
 import {FormTitle} from './ModificarProducto.style';
 import {AntInput, AntSelect, AntTextArea} from "../../components/UI/Antd/AntdInputWithFormik";
@@ -10,8 +16,9 @@ import {mostrarMensaje} from "../../utils/utils";
 import {errorToFormik} from "../../modelos/ErrorModel";
 import * as Yup from 'yup';
 import TablaProductos from "./TablaProductos";
-import {DeleteOutlined} from "@ant-design/icons";
+import {DeleteOutlined, PlusOutlined} from "@ant-design/icons";
 import {IconText} from "./AdminProducto";
+import SelectDeProductos from "./SelectDeProductos";
 
 interface ArgumentosModificarProducto {
     producto?: IProducto,       //si esta definido es el producto a editar (se usa para notificar al padre)
@@ -74,32 +81,8 @@ export default function ModificarProducto ({producto, productoChange}: Argumento
         setErrorException
     } = useContext(AuthContext)
     // useEffect(()=>console.log(producto),[producto]);
-    const handleQuitarProducto = useCallback((p: IProducto)=>{
-        if (producto?.producto_combos?.length) {
-            const indexSacar = producto.producto_combos.findIndex(prod => prod.id === p.id)
-            if (indexSacar >= 0) {
-                const nuevoProducto = {...producto}
-                nuevoProducto.producto_combos?.splice(indexSacar,1)
-                productoChange(nuevoProducto)
-            }
-        }
-    },[producto, productoChange])
-    const accionesProductoList = useCallback((p: IProducto)=>(
-        <Space size="middle">
-            <Popconfirm
-                key="borrar"
-                okText="Si"
-                cancelText="No"
-                title="¿Está seguro que desea quitar? No se puede deshacer."
-                onConfirm={()=>{handleQuitarProducto(p)}}
-            >
-                <Button type="link" >
-                    <IconText icon={DeleteOutlined} text="Quitar"/>
-                </Button>
-            </Popconfirm>
-        </Space>
-    ),[handleQuitarProducto])
-    const InnerForm = useCallback(({ isSubmitting, submitCount, values }: FormikProps<IProducto>) => <Spin spinning={isSubmitting}>
+    const [isModalVisible,setIsModalVisible] = useState(false)
+    const InnerForm = useCallback(({ setValues, isSubmitting, submitCount, values, errors}: FormikProps<IProducto>) => <Spin spinning={isSubmitting}>
         <Form className='form-container'>
             <Row gutter={30}>
                 <Col lg={12}>
@@ -129,10 +112,10 @@ export default function ModificarProducto ({producto, productoChange}: Argumento
                         component={AntSelect}
                         name='tipo_producto.code'
                         label='Tipo De Producto'
-                        selectOptionsKeyValue={[
-                            {label: 'Tipo Simple', value:PRODUCT_TIPO_SIMPLE},
-                            {label: 'Tipo Combo', value:PRODUCTO_TIPO_COMBO},
-                        ]}
+                        selectOptionsKeyValue={PRODUCTO_TIPOS_ADMITIDOS.map(tp => ({
+                            label: tp.descripcion,
+                            value: tp.code
+                        }))}
                         submitCount={submitCount}
                     />
                 </Col>
@@ -179,11 +162,39 @@ export default function ModificarProducto ({producto, productoChange}: Argumento
                     />
                 </Col>
             </Row>
-            {values.tipo_producto?.code === PRODUCTO_TIPO_COMBO && (<TablaProductos
-                title='Productos en el combo'
-                productos={values.producto_combos || []}
-                acciones={accionesProductoList}
-            />)}
+            {values.tipo_producto?.code === PRODUCTO_TIPO_COMBO && (<>
+                <TablaProductos
+                    title={<>
+                        <Row justify="space-between">
+                            <Col lg={12}>
+                                <h3>Productos en el combo</h3>
+                            </Col>
+                            <Col offset={4} lg={8}>
+                                <Button onClick={()=>setIsModalVisible(true)} style={{float:'right'}} type="primary" icon={<PlusOutlined />}>
+                                    Añadir Producto
+                                </Button>
+                            </Col>
+                        </Row>
+                    </>}
+                    productos={values.producto_combos || []}
+                    acciones={(p)=><Space size="middle">
+                        <Button
+                            type="link"
+                            onClick={()=>{
+                                if (values.producto_combos?.length) {
+                                    const indexSacar = values.producto_combos.findIndex(prod => prod.id === p.id)
+                                    const nuevoProducto = {...values, producto_combos:[...values.producto_combos]}
+                                    nuevoProducto.producto_combos?.splice(indexSacar,1)
+                                    setValues(nuevoProducto)
+                                }
+                            }}
+                        >
+                            <IconText icon={DeleteOutlined} text="Quitar"/>
+                        </Button>
+                    </Space>}
+                />
+                {errors.producto_combos && <Alert message={errors.producto_combos} type="error" showIcon />}
+            </>)}
             <Row justify="end">
                 <Col span={4}>
                     <div className='submit-container'>
@@ -194,7 +205,10 @@ export default function ModificarProducto ({producto, productoChange}: Argumento
                 </Col>
             </Row>
         </Form>
-    </Spin>,[accionesProductoList])
+        <Modal destroyOnClose={true} width={'85%'} footer={null} closable={false} visible={isModalVisible} onCancel={()=>setIsModalVisible(false)}>
+            <SelectDeProductos/>
+        </Modal>
+    </Spin>,[isModalVisible])
     const MyForm = useMemo(()=>withFormik<PropFormulario, IProducto>({
         // Ignoramos las propiedades y asignamos el producto que tenemos nomas
         mapPropsToValues: () =>  producto || productoVacio,

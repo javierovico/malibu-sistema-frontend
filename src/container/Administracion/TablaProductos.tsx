@@ -35,18 +35,38 @@ interface ParametrosRecibidos {
 }
 
 type DataIndex = keyof IProducto
-// type SortKeySorteadoT = 'id' | 'codigo' | 'nombre' | 'tipoProducto' | 'precio' | 'costo'
 
-interface SortItems {
-    id?: SortOrder,
-    codigo?: SortOrder,
-    nombre?: SortOrder,
-    tipoProducto?: SortOrder,
-    precio?: SortOrder,
-    costo?: SortOrder
+type SortKeySorteadoT = 'id' | 'codigo' | 'nombre' | 'tipoProducto' | 'precio' | 'costo'
+
+
+type ItemSorteado = {
+    code: SortKeySorteadoT,
+    orden?: SortOrder
 }
 
-type ItemSortAdmitido = keyof SortItems
+type SortItems = ItemSorteado[]
+
+// type ItemSorteado2 = Record<SortKeySorteadoT,SortOrder>
+//
+// const tipo: ItemSorteado = {
+//     code: 'nombre',
+//     orden: 'descend'
+// }
+//
+// type ItemSorteado3 = {
+//     [k: SortKeySorteadoT] : SortOrder
+// }
+//
+// interface SortItems {
+//     id?: SortOrder,
+//     codigo?: SortOrder,
+//     nombre?: SortOrder,
+//     tipoProducto?: SortOrder,
+//     precio?: SortOrder,
+//     costo?: SortOrder
+// }
+
+// type ItemSortAdmitido = keyof SortItems
 
 function useConversorArg(
     argProductos: IProducto[],
@@ -65,12 +85,12 @@ function useConversorArg(
     const [busquedaIdDefault, setBusquedaIdDefault] = useState<string>("")
     const [busquedaCodeDefault, setBusquedaCodeDefault] = useState<string>("")
     const [busquedaNombreDefault, setBusquedaNombreDefault] = useState<string>("")
-    const [orderByDefault, setOrderByDefault] = useState<SortItems>({nombre:'ascend', costo: 'descend', id:'ascend', tipoProducto: 'descend'})
+    const [orderByDefault, setOrderByDefault] = useState<SortItems>([{code:'nombre',orden:'ascend'},{code:'costo',orden:'descend'},{code:'id',orden:'ascend'},{code:'tipoProducto',orden:'descend'}])
     const tiposProductos = useMemo(()=>argTiposProductos || tiposProductoDefault,[argTiposProductos, tiposProductoDefault])
     const busquedaId = useMemo(()=>argBusquedaId || busquedaIdDefault,[argBusquedaId, busquedaIdDefault])
     const busquedaCode = useMemo(()=>argBusquedaCode || busquedaCodeDefault,[argBusquedaCode, busquedaCodeDefault])
     const busquedaNombre = useMemo(()=>argBusquedaNombre || busquedaNombreDefault,[argBusquedaNombre, busquedaNombreDefault])
-    const sortItems = useMemo(()=>argOrderBy || orderByDefault,[argOrderBy, orderByDefault])
+    const orderItems = useMemo(()=>argOrderBy || orderByDefault,[argOrderBy, orderByDefault])
     const onFilterTipoProductoChange = useCallback((tps: TipoProductoAdmitido[])=>{
         if (tiposProductos.length !== tps.length || tiposProductos.some(t1 => !tps.find(t2=>t2===t1))) {
             (argOnFilterTipoProductoChange || setTiposProductoDefault)(tps)
@@ -79,7 +99,11 @@ function useConversorArg(
     const onBusquedaIdChange = useMemo(()=> argOnBusquedaIdChange || setBusquedaIdDefault,[argOnBusquedaIdChange])
     const onBusquedaCodeChange = useMemo(()=> argOnBusquedaCodeChange || setBusquedaCodeDefault,[argOnBusquedaCodeChange])
     const onBusquedaNombreChange = useMemo(()=> argOnBusquedaNombreChange || setBusquedaNombreDefault,[argOnBusquedaNombreChange])
-    const onOrderByChange = useMemo(()=> argOnOrderByChange || setOrderByDefault,[argOnOrderByChange])
+    const onOrderByChange = useCallback((tps: SortItems)=>{
+        if (orderItems.length !== tps.length || orderItems.some(t1 => !tps.find(t2=>t2.orden===t1.orden && t2.code ===t1.code))) {
+            (argOnOrderByChange || setOrderByDefault)(tps)
+        }
+    },[argOnOrderByChange, orderItems])
     const productos = useMemo(()=>{
         let productosFiltrados = [...argProductos]
         //tipo producto
@@ -98,8 +122,39 @@ function useConversorArg(
         if (!argOnBusquedaNombreChange && busquedaNombre) {
             productosFiltrados = productosFiltrados.filter(p => p.nombre.toLowerCase().includes(busquedaNombre.toLowerCase()) )
         }
+        //Ordenacion
+        if (!argOnOrderByChange && orderItems.length) {
+            productosFiltrados = productosFiltrados.sort((p1,p2)=>{
+                const sortId = orderItems.find(i=>i.code === 'id')?.orden
+                const sortCodigo = orderItems.find(i=>i.code === 'codigo')?.orden
+                const sortNombre = orderItems.find(i=>i.code === 'nombre')?.orden
+                const sortTipoProducto = orderItems.find(i=>i.code === 'tipoProducto')?.orden
+                const sortPrecio = orderItems.find(i=>i.code === 'precio')?.orden
+                const sortCosto = orderItems.find(i=>i.code === 'costo')?.orden
+                //Primero la prioridad mas alta
+                if (sortTipoProducto && p1.tipo_producto?.code !== p2.tipo_producto?.code) {
+                    return (sortTipoProducto === 'ascend' ? 1 : -1) * ((p1.tipo_producto?.code && p2.tipo_producto?.code) ? (p1.tipo_producto?.code.localeCompare(p2.tipo_producto?.code)) : (p1.tipo_producto?.code?1:-1))
+                }
+                if (sortPrecio && p1.precio !== p2.precio) {
+                    return (sortPrecio === 'ascend' ? 1 : -1) * (p1.precio - p2.precio)
+                }
+                if (sortCosto && p1.costo !== p2.costo) {
+                    return (sortCosto === 'ascend' ? 1 : -1) * (p1.costo - p2.costo)
+                }
+                if (sortNombre && p1.nombre !== p2.nombre) {
+                    return (sortNombre === 'ascend' ? 1 : -1) * (p1.nombre.localeCompare(p2.nombre))
+                }
+                if (sortCodigo && p1.codigo !== p2.codigo) {
+                    return (sortCodigo === 'ascend' ? 1 : -1) * (p1.codigo.localeCompare(p2.codigo))
+                }
+                if (sortId && p1.id !== p2.id) {
+                    return (sortId === 'ascend' ? 1 : -1) * ((p1.id && p2.id) ? (p1.id - p2.id) : (p1.id?1:-1))
+                }
+                return 0
+            })
+        }
         return productosFiltrados
-    },[argOnBusquedaCodeChange, argOnBusquedaIdChange, argOnBusquedaNombreChange, argOnFilterTipoProductoChange, argProductos, busquedaCode, busquedaId, busquedaNombre, tiposProductoDefault])
+    },[argOnBusquedaCodeChange, argOnBusquedaIdChange, argOnBusquedaNombreChange, argOnFilterTipoProductoChange, argOnOrderByChange, argProductos, busquedaCode, busquedaId, busquedaNombre, orderItems, tiposProductoDefault])
     // useEffect(()=>console.log('productoChange'),[productos])
     // useEffect(()=>console.log('argOnFilterTipoProductoChange change'),[argOnFilterTipoProductoChange])
     // useEffect(()=>console.log('tiposProductoDefault change'),[tiposProductoDefault])
@@ -114,11 +169,11 @@ function useConversorArg(
         busquedaId,
         busquedaCode,
         busquedaNombre,
-        sortItems
+        orderItems
     }
 }
 
-const RELACIONES_SORT: {[k:string]:ItemSortAdmitido}= {
+const RELACIONES_SORT: {[k:string]:SortKeySorteadoT}= {
     'tipo_producto.code': 'tipoProducto'
 }
 
@@ -139,7 +194,7 @@ export default function TablaProductos(arg: ParametrosRecibidos) {
         busquedaId,
         busquedaCode,
         busquedaNombre,
-        sortItems
+        orderItems
     } = useConversorArg(
         arg.productos,
         arg.onFilterTipoProductoChange,
@@ -231,7 +286,7 @@ export default function TablaProductos(arg: ParametrosRecibidos) {
                 sorter: {
                     multiple: 1
                 },
-                sortOrder: sortItems.id,
+                sortOrder: orderItems.find(r=>r.code === 'id')?.orden,
             },
             {
                 title: 'Codigo',
@@ -242,7 +297,7 @@ export default function TablaProductos(arg: ParametrosRecibidos) {
                 sorter: {
                     multiple: 1
                 },
-                sortOrder: sortItems.codigo,
+                sortOrder: orderItems.find(r=>r.code === 'codigo')?.orden,
             },
             {
                 title: 'Nombre',
@@ -253,7 +308,7 @@ export default function TablaProductos(arg: ParametrosRecibidos) {
                 sorter: {
                     multiple: 1
                 },
-                sortOrder: sortItems.nombre,
+                sortOrder: orderItems.find(r=>r.code === 'nombre')?.orden,
             },
             {
                 title: 'Tipo',
@@ -267,7 +322,7 @@ export default function TablaProductos(arg: ParametrosRecibidos) {
                 sorter: {
                     multiple: 1
                 },
-                sortOrder: sortItems.tipoProducto,
+                sortOrder: orderItems.find(r=>r.code === 'tipoProducto')?.orden,
             },
             {
                 title: 'Precio',
@@ -277,7 +332,7 @@ export default function TablaProductos(arg: ParametrosRecibidos) {
                 sorter: {
                     multiple: 1
                 },
-                sortOrder: sortItems.precio,
+                sortOrder: orderItems.find(r=>r.code === 'precio')?.orden,
             },
             {
                 title: 'Costo',
@@ -287,7 +342,7 @@ export default function TablaProductos(arg: ParametrosRecibidos) {
                 sorter: {
                     multiple: 1
                 },
-                sortOrder: sortItems.costo,
+                sortOrder: orderItems.find(r=>r.code === 'costo')?.orden,
             },
         ]
         if (acciones) {
@@ -298,20 +353,19 @@ export default function TablaProductos(arg: ParametrosRecibidos) {
             })
         }
         return columnas
-    },[acciones, busquedaCode, busquedaId, busquedaNombre, getColumnSearchProps, sortItems.codigo, sortItems.costo, sortItems.id, sortItems.nombre, sortItems.precio, sortItems.tipoProducto, tiposProductos])
+    },[acciones, busquedaCode, busquedaId, busquedaNombre, getColumnSearchProps, orderItems, tiposProductos])
     const onChange = useCallback((pagination: TablePaginationConfig, filters: Record<string, FilterValue | null>, sorter: SorterResult<IProducto> | SorterResult<IProducto>[], extra: TableCurrentDataSource<IProducto>)=>{
         onFilterTipoProductoChange(filters['tipo_producto.code']?.filter(f=>isTipoProductoAdmitido(f)).map(f=> isTipoProductoAdmitido(f)?f:'simple') || [])
         onBusquedaIdChange(filters.id ? filters.id[0] as string: '')
         onBusquedaCodeChange(filters.codigo ? filters.codigo[0] as string: '')
         onBusquedaNombreChange(filters.nombre ? filters.nombre[0] as string: '')
-        const sortItemsNuevo: SortItems = {}
         const sorterArray = !Array.isArray(sorter) ? [sorter] : sorter
-        sorterArray.forEach(s=>{
-            const key: ItemSortAdmitido = RELACIONES_SORT[s.columnKey as string] || s.columnKey
-            sortItemsNuevo[key] = s.order
-        })
-        onOrderByChange(sortItemsNuevo)
+        const orderItemsNuevo: SortItems = sorterArray.filter(s=>s.order).map(s=>({
+            code: RELACIONES_SORT[s.columnKey as string] || s.columnKey,
+            orden: s.order
+        }))
+        onOrderByChange(orderItemsNuevo)
     },[onBusquedaCodeChange, onBusquedaIdChange, onBusquedaNombreChange, onFilterTipoProductoChange, onOrderByChange])
-    useEffect(()=>console.log(sortItems),[sortItems])
+    useEffect(()=>console.log(orderItems),[orderItems])
     return <Table onChange={onChange} title={()=>title} rowKey={'id'} columns={columnas} dataSource={productos} />
 }

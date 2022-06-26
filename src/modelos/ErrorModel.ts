@@ -46,10 +46,11 @@ export function errorRandomToIError(e: any, conversiones?: Record<string, string
         code = e.response?.data?.code || "sinCodeHTTP"
         message = e.response?.data?.message || 'Sin mensaje detallado'
         const errorsLaravel: Record<string, string[]> = e.response?.data?.data?.errors || {}
-        for (const key in errorsLaravel) {
+        for (const key2 in errorsLaravel) {
+            const key: string = key2.split('.')[0]
             items.push({
                 name: (conversiones && key in conversiones)? conversiones[key] : key,
-                errors: errorsLaravel[key]
+                errors: errorsLaravel[key2]
             })
         }
     } else if (e instanceof Error) {

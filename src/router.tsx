@@ -44,6 +44,13 @@ export const routes: TipoRuta[] = [
                 rolRequerido: ROL_ADMIN_PRODUCTOS
             },
             {
+                nombre: 'Lista Producto',
+                link: 'lista',
+                import: 'container/Administracion/ListaProductoDemo',
+                protected: true,
+                rolRequerido: ROL_ADMIN_PRODUCTOS
+            },
+            {
                 nombre: 'Subordinados2',
                 link: SUBORDINADOS_PAGE + '2',
                 import: 'container/Dummy/Dummy',

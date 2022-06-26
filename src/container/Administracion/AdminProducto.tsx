@@ -1,21 +1,15 @@
 import {LikeOutlined, MessageOutlined, EditOutlined, DeleteOutlined, SearchOutlined} from '@ant-design/icons';
-import {Avatar, Button, Col, Divider, List, Modal, Row, Space, Image, Popconfirm, Input, Select, Form} from 'antd';
-import React, {useCallback, useContext, useEffect, useMemo, useState} from "react";
-import {IProducto, URL_GET_PRODUCTOS, useEditorProducto} from "../../modelos/Producto";
-import axios from "axios";
-import {PaginacionVacia, ResponseAPIPaginado} from "../../modelos/ResponseAPI";
+import {Avatar, Button, Divider, List, Modal, Space, Image, Popconfirm, Input, Form} from 'antd';
+import React, {useCallback, useEffect, useMemo, useState} from "react";
+import {IProducto, TipoBusqueda, URL_GET_PRODUCTOS, useProductos} from "../../modelos/Producto";
 import {Formik,Field} from 'formik'
 import {
     createItemNumber,
-    createItemNumberOrNull,
     createItemString, ItemQuery,
     ParamsQuerys,
     useParametros
 } from "../../hook/hookQuery";
 import ModificarProducto from "./ModificarProducto";
-import {AuthContext} from "../../context/AuthProvider";
-import {errorRandomToIError, IError} from "../../modelos/ErrorModel";
-import VistaError from "../../components/UI/VistaError";
 import {AntInput, AntSelect} from "../../components/UI/Antd/AntdInputWithFormik";
 
 
@@ -26,80 +20,6 @@ export const IconText = ({ icon, text }: { icon: React.FC; text: string }) => (
     </Space>
 );
 
-type TipoBusqueda = "id"|"codigo"|"nombre"
-
-
-
-const useProductos = (busqueda: string, page: number, perPage: number, tipoBusqueda: TipoBusqueda) => {
-    const [paginacion, setPaginacion] = useState<ResponseAPIPaginado<IProducto>>(PaginacionVacia);
-    const [isProductosLoading, setIsProductoLoading] = useState<boolean>(true)
-    const [errorProductos, setErrorProductos] = useState<JSX.Element|undefined>();
-    const {setErrorException} = useContext(AuthContext)
-    useEffect(()=>{
-        setIsProductoLoading(true)
-        setPaginacion(PaginacionVacia)
-        setErrorProductos(undefined)
-        axios.get<ResponseAPIPaginado<IProducto>>(URL_GET_PRODUCTOS,{
-            params:{
-                page,
-                perPage,
-                [tipoBusqueda]: busqueda
-            }
-        })
-            .then(({data}) => {
-                setPaginacion(data)
-            })
-            .catch(e=> {
-                setErrorException(e)
-                setErrorProductos(<VistaError error={errorRandomToIError(e)}/>)
-                setPaginacion(PaginacionVacia)
-            })
-            .finally(()=>setIsProductoLoading(false))
-    },[busqueda, page, perPage, setErrorException, tipoBusqueda])
-    const editorProducto = useEditorProducto()
-    const [productoModificando, setProductoModificando] = useState<IProducto>()
-    const productoUpdate = useCallback((p: IProducto, borrar: boolean = false)=>{
-        return new Promise<void>((res,rej) => {
-            const posicionItem: number = paginacion.data.findIndex(pItem => pItem.id === p.id)      // -1 si se va agregar nuevo
-            const productoOriginal = (posicionItem>=0) ? paginacion.data[posicionItem] : undefined  //undefind si se vacrear
-            editorProducto(borrar?undefined:p, productoOriginal)
-                .then((productoSubido)=>{
-                    const nuevaPaginacion = {...paginacion}
-                    nuevaPaginacion.data.splice((posicionItem<0)?0:posicionItem,(posicionItem<0)?0:1,...productoSubido?[productoSubido]:[])
-                    setPaginacion(nuevaPaginacion)
-                    setProductoModificando(productoSubido)
-                    res()
-                })
-                .catch(rej)
-        });
-    },[editorProducto, paginacion])
-
-    const handleBorrarProducto = useCallback((p: IProducto) => {
-        return new Promise<void>(res=>{
-            productoUpdate(p, true)
-                .then(()=>{
-                    const nuevaPaginacion = {...paginacion}
-                    const posicionItem: number = paginacion.data.findIndex(pItem => pItem.id === p.id)
-                    nuevaPaginacion.data.splice(posicionItem,1)
-                    setPaginacion(nuevaPaginacion)
-                })
-                .catch((e)=>{
-                    setErrorException(e)
-                })
-                .finally(res)
-        })
-    },[productoUpdate, paginacion, setErrorException])
-
-    return {
-        paginacion,
-        isProductosLoading,
-        errorProductos,
-        productoUpdate,
-        productoModificando,
-        setProductoModificando,
-        handleBorrarProducto,
-    }
-}
 
 interface ParametrosAdminProducto {
     page: number,
