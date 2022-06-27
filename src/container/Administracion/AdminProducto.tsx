@@ -1,7 +1,7 @@
 import {LikeOutlined, MessageOutlined, EditOutlined, DeleteOutlined, SearchOutlined} from '@ant-design/icons';
 import {Avatar, Button, Divider, List, Modal, Space, Image, Popconfirm, Input, Form} from 'antd';
 import React, {useCallback, useEffect, useMemo, useState} from "react";
-import {IProducto, TipoBusqueda, URL_GET_PRODUCTOS, useProductos} from "../../modelos/Producto";
+import {IProducto, ItemBusqueda, TipoBusqueda, URL_GET_PRODUCTOS, useProductos} from "../../modelos/Producto";
 import {Formik,Field} from 'formik'
 import {
     createItemNumber,
@@ -61,6 +61,7 @@ export default function AdminProducto() {
         page,
         tipoBusqueda,
     } = paramsURL
+    const itemsBusqueda = useMemo<ItemBusqueda[]>(()=>busqueda?[{columna:tipoBusqueda, valor:busqueda}]:[],[busqueda, tipoBusqueda])
     const {
         paginacion,
         isProductosLoading,
@@ -69,7 +70,7 @@ export default function AdminProducto() {
         productoModificando,
         setProductoModificando,
         handleBorrarProducto
-    } = useProductos(busqueda, page, perPage, tipoBusqueda)
+    } = useProductos(page, perPage, undefined, undefined, itemsBusqueda)
     useEffect(()=>{
         if (!isProductosLoading && (page > paginacion.last_page)) {
             setParamsToURL({...paramsURL,page:paginacion.last_page})

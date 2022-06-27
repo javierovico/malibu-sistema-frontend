@@ -4,6 +4,7 @@ import {errorRandomToIError, IError} from "./ErrorModel";
 import {PaginacionVacia, ResponseAPIPaginado} from "./ResponseAPI";
 import {AuthContext} from "../context/AuthProvider";
 import VistaError from "../components/UI/VistaError";
+import {SortOrder} from "antd/es/table/interface";
 
 export const PRODUCTO_TIPO_SIMPLE = 'simple'
 export const PRODUCTO_TIPO_COMBO = 'combo'
@@ -165,11 +166,39 @@ export const useEditorProducto = () => useCallback((productoSubiendo?: IProducto
     })
 },[])
 
+export interface QueryBusqueda {
+    id?: number,
+    codigo?: string,
+    nombre?: string
+}
 
-export type TipoBusqueda = "id"|"codigo"|"nombre"
-export type PosiblesOrdenacionesProducto = "id" | "codigo" | "nombre" | "tipoProducto" | "precio" | "costo" | null
+export type TipoBusqueda = keyof QueryBusqueda
 
-export const useProductos = (busqueda: string, page: number, perPage: number, tipoBusqueda: TipoBusqueda, sortBy?: PosiblesOrdenacionesProducto, tiposProducto?: TipoProductoAdmitido[]) => {
+export interface ItemBusqueda {
+    columna: TipoBusqueda,
+    valor: string|number
+}
+
+// export type PosiblesOrdenacionesProducto = "id" | "codigo" | "nombre" | "tipoProducto" | "precio" | "costo" | null
+export interface QuerySort {
+    id?: SortOrder,
+    codigo?: SortOrder,
+    nombre?: SortOrder,
+    tipoProducto?: SortOrder,
+    precio?: SortOrder,
+    costo?: SortOrder,
+}
+
+export type SortKeySorteado = keyof QuerySort //'id' | 'codigo' | 'nombre' | 'tipoProducto' | 'precio' | 'costo'
+
+export type ItemSorteado = {
+    code: SortKeySorteado,
+    orden?: SortOrder
+}
+
+export type SortItems = ItemSorteado[]
+
+export const useProductos = (page: number, perPage: number, sortBy?: SortItems, tiposProducto?: TipoProductoAdmitido[], itemsBusqueda?: ItemBusqueda[]) => {
     const [paginacion, setPaginacion] = useState<ResponseAPIPaginado<IProducto>>(PaginacionVacia);
     const [isProductosLoading, setIsProductoLoading] = useState<boolean>(true)
     const [errorProductos, setErrorProductos] = useState<JSX.Element|undefined>();
@@ -178,13 +207,19 @@ export const useProductos = (busqueda: string, page: number, perPage: number, ti
         setIsProductoLoading(true)
         setPaginacion(PaginacionVacia)
         setErrorProductos(undefined)
-        axios.get<ResponseAPIPaginado<IProducto>>(URL_GET_PRODUCTOS,{
+        const queryBusqueda: QueryBusqueda = itemsBusqueda?.reduce<QueryBusqueda>((prev,curr)=>{
+            return {...prev, [curr.columna]:curr.valor}
+        },{}) || {}
+        const queryOrden: QuerySort = sortBy?.reduce<QuerySort>((prev,curr: ItemSorteado)=>{
+            return {...prev, [curr.code]:curr.orden}
+        },{}) || {}
+        axios.get<ResponseAPIPaginado<IProducto>>(URL_GET_PRODUCTOS + '?XDEBUG_SESSION_START=PHPSTORM',{
             params:{
                 page,
                 perPage,
-                [tipoBusqueda]: busqueda,
-                sortBy,
-                tiposProducto
+                sortByList: queryOrden,
+                tiposProducto,
+                ...queryBusqueda
             }
         })
             .then(({data}) => {
@@ -196,7 +231,7 @@ export const useProductos = (busqueda: string, page: number, perPage: number, ti
                 setPaginacion(PaginacionVacia)
             })
             .finally(()=>setIsProductoLoading(false))
-    },[busqueda, sortBy, page, perPage, setErrorException, tipoBusqueda, tiposProducto])
+    },[sortBy, page, perPage, setErrorException, tiposProducto, itemsBusqueda])
     const editorProducto = useEditorProducto()
     const [productoModificando, setProductoModificando] = useState<IProducto>()
     const productoUpdate = useCallback((p: IProducto, borrar: boolean = false)=>{

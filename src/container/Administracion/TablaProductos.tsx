@@ -1,8 +1,8 @@
-import {Button, Input, InputRef, Space, Table} from "antd";
+import { Button, Input, InputRef, Space, Table} from "antd";
+import Highlighter from 'react-highlight-words';
 import {
     IProducto,
-    isTipoProductoAdmitido, ITipoProducto,
-    PRODUCTO_TIPOS_ADMITIDOS,
+    isTipoProductoAdmitido, PRODUCTO_TIPOS_ADMITIDOS, SortItems, SortKeySorteado,
     TipoProductoAdmitido
 } from "../../modelos/Producto";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
@@ -10,12 +10,11 @@ import {
     ColumnsType,
     FilterValue,
     SorterResult,
-    TableCurrentDataSource,
     TablePaginationConfig
 } from "antd/lib/table/interface";
 import {formateadorNumero} from "../../utils/utils";
 import {ColumnType} from "antd/es/table";
-import {FilterConfirmProps, SortOrder} from "antd/es/table/interface";
+import {FilterConfirmProps} from "antd/es/table/interface";
 import { SearchOutlined } from '@ant-design/icons';
 
 interface ParametrosRecibidos {
@@ -31,42 +30,14 @@ interface ParametrosRecibidos {
     onBusquedaNombreChange?:(id: string) => void,
     busquedaNombre?: string,
     onOrderByChange?: {(s: SortItems): void},
-    orderBy?: SortItems
+    orderBy?: SortItems,
+    page?: number,
+    totalItems?: number,
+    perPage?: number,
+    onPaginationChange?: {(page:number,perPage:number): void}
 }
 
 type DataIndex = keyof IProducto
-
-type SortKeySorteadoT = 'id' | 'codigo' | 'nombre' | 'tipoProducto' | 'precio' | 'costo'
-
-
-type ItemSorteado = {
-    code: SortKeySorteadoT,
-    orden?: SortOrder
-}
-
-type SortItems = ItemSorteado[]
-
-// type ItemSorteado2 = Record<SortKeySorteadoT,SortOrder>
-//
-// const tipo: ItemSorteado = {
-//     code: 'nombre',
-//     orden: 'descend'
-// }
-//
-// type ItemSorteado3 = {
-//     [k: SortKeySorteadoT] : SortOrder
-// }
-//
-// interface SortItems {
-//     id?: SortOrder,
-//     codigo?: SortOrder,
-//     nombre?: SortOrder,
-//     tipoProducto?: SortOrder,
-//     precio?: SortOrder,
-//     costo?: SortOrder
-// }
-
-// type ItemSortAdmitido = keyof SortItems
 
 function useConversorArg(
     argProductos: IProducto[],
@@ -79,19 +50,26 @@ function useConversorArg(
     argOnBusquedaNombreChange?: ((s:string)=>void),
     argBusquedaNombre?: string,
     argOnOrderByChange?: {(s: SortItems): void},
-    argOrderBy?: SortItems
+    argOrderBy?: SortItems,
+    argOnPaginationChange?: {(page:number,perPage:number): void},
+    argPerPage?: number,
+    argPage?: number,
+    argTotalItems?: number
 ) {
     const [tiposProductoDefault, setTiposProductoDefault] = useState<TipoProductoAdmitido[]>([])
     const [busquedaIdDefault, setBusquedaIdDefault] = useState<number|undefined>(undefined)
     const [busquedaCodeDefault, setBusquedaCodeDefault] = useState<string>("")
     const [busquedaNombreDefault, setBusquedaNombreDefault] = useState<string>("")
-    // const [orderByDefault, setOrderByDefault] = useState<SortItems>([{code:'nombre',orden:'ascend'},{code:'costo',orden:'descend'},{code:'id',orden:'ascend'},{code:'tipoProducto',orden:'descend'}])
     const [orderByDefault, setOrderByDefault] = useState<SortItems>([])
+    const [pageDefault,setPageDefault] = useState<number>(1)
+    const [perPageDefault,setPerPageDefault] = useState<number>(10)
     const tiposProductos = useMemo(()=>argTiposProductos || tiposProductoDefault,[argTiposProductos, tiposProductoDefault])
     const busquedaId = useMemo(()=>argBusquedaId || busquedaIdDefault,[argBusquedaId, busquedaIdDefault])
     const busquedaCode = useMemo(()=>argBusquedaCode || busquedaCodeDefault,[argBusquedaCode, busquedaCodeDefault])
     const busquedaNombre = useMemo(()=>argBusquedaNombre || busquedaNombreDefault,[argBusquedaNombre, busquedaNombreDefault])
     const orderItems = useMemo(()=>argOrderBy || orderByDefault,[argOrderBy, orderByDefault])
+    const perPage = useMemo(()=>argPerPage || perPageDefault,[argPerPage, perPageDefault])
+    const page = useMemo(()=>argPage || pageDefault,[argPage, pageDefault])
     const onFilterTipoProductoChange = useCallback((tps: TipoProductoAdmitido[])=>{
         if (tiposProductos.length !== tps.length || tiposProductos.some(t1 => !tps.find(t2=>t2===t1))) {
             (argOnFilterTipoProductoChange || setTiposProductoDefault)(tps)
@@ -117,6 +95,16 @@ function useConversorArg(
             (argOnOrderByChange || setOrderByDefault)(tps)
         }
     },[argOnOrderByChange, orderItems])
+    const onPaginationChange = useCallback((p:number, pp:number)=> {
+        if (p !== page || pp !== perPage) {
+            if (argOnPaginationChange) {
+                argOnPaginationChange(p,pp)
+            }else {
+                setPageDefault(p)
+                setPerPageDefault(pp)
+            }
+        }
+    },[argOnPaginationChange, page, perPage])
     const productos = useMemo(()=>{
         let productosFiltrados = [...argProductos]
         //tipo producto
@@ -168,6 +156,7 @@ function useConversorArg(
         }
         return productosFiltrados
     },[argOnBusquedaCodeChange, argOnBusquedaIdChange, argOnBusquedaNombreChange, argOnFilterTipoProductoChange, argOnOrderByChange, argProductos, busquedaCode, busquedaId, busquedaNombre, orderItems, tiposProductoDefault])
+    const totalItems = useMemo(()=>argTotalItems || productos.length,[argTotalItems, productos.length])
     // useEffect(()=>console.log('productoChange'),[productos])
     // useEffect(()=>console.log('argOnFilterTipoProductoChange change'),[argOnFilterTipoProductoChange])
     // useEffect(()=>console.log('tiposProductoDefault change'),[tiposProductoDefault])
@@ -178,15 +167,19 @@ function useConversorArg(
         onBusquedaCodeChange,
         onBusquedaNombreChange,
         onOrderByChange,
+        onPaginationChange,
         tiposProductos,
         busquedaId,
         busquedaCode,
         busquedaNombre,
-        orderItems
+        orderItems,
+        perPage,
+        page,
+        totalItems,
     }
 }
 
-const RELACIONES_SORT: {[k:string]:SortKeySorteadoT}= {
+const RELACIONES_SORT: {[k:string]:SortKeySorteado}= {
     'tipo_producto.code': 'tipoProducto'
 }
 
@@ -204,10 +197,14 @@ export default function TablaProductos(arg: ParametrosRecibidos) {
         onBusquedaCodeChange,
         onBusquedaNombreChange,
         onOrderByChange,
+        onPaginationChange,
         busquedaId,
         busquedaCode,
         busquedaNombre,
-        orderItems
+        orderItems,
+        perPage,
+        page,
+        totalItems,
     } = useConversorArg(
         arg.productos,
         arg.onFilterTipoProductoChange,
@@ -219,7 +216,11 @@ export default function TablaProductos(arg: ParametrosRecibidos) {
         arg.onBusquedaNombreChange,
         arg.busquedaNombre,
         arg.onOrderByChange,
-        arg.orderBy
+        arg.orderBy,
+        arg.onPaginationChange,
+        arg.perPage,
+        arg.page,
+        arg.totalItems,
     )
 
     const [searchText, setSearchText] = useState('');
@@ -236,13 +237,8 @@ export default function TablaProductos(arg: ParametrosRecibidos) {
         setSearchedColumn(dataIndex);
     },[]);
 
-    const handleReset = useCallback((clearFilters: () => void) => {
-        clearFilters();
-        setSearchText('');
-    },[])
-
     const getColumnSearchProps = useCallback((dataIndex: DataIndex): ColumnType<IProducto>=>({
-        filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+        filterDropdown: ({ setSelectedKeys, selectedKeys, confirm}) => (
             <div style={{ padding: 8 }}>
                 <Input
                     ref={searchInput}
@@ -266,7 +262,11 @@ export default function TablaProductos(arg: ParametrosRecibidos) {
                         Search
                     </Button>
                     <Button
-                        onClick={() => clearFilters && handleReset(clearFilters)}
+                        onClick={() => {
+                            setSelectedKeys([''])
+                            handleSearch(selectedKeys as string[], confirm, dataIndex)
+                            // clearFilters && handleReset(clearFilters)
+                        }}
                         size="small"
                         style={{ width: 90 }}
                     >
@@ -289,7 +289,18 @@ export default function TablaProductos(arg: ParametrosRecibidos) {
         filterIcon: (filtered: boolean) => (
             <SearchOutlined style={{ color: filtered ? '#1890ff' : undefined }} />
         ),
-    }),[handleReset, handleSearch])
+        render: text =>
+            searchedColumn === dataIndex ? (
+                <Highlighter
+                    highlightStyle={{ backgroundColor: '#ffc069', padding: 0 }}
+                    searchWords={[searchText]}
+                    autoEscape
+                    textToHighlight={text ? text.toString() : ''}
+                />
+            ) : (
+                text
+            ),
+    }),[handleSearch, searchText, searchedColumn])
 
     const columnas = useMemo((): ColumnsType<IProducto>=> {
         const columnas: ColumnsType<IProducto> = [
@@ -370,7 +381,7 @@ export default function TablaProductos(arg: ParametrosRecibidos) {
         }
         return columnas
     },[acciones, busquedaCode, busquedaId, busquedaNombre, getColumnSearchProps, orderItems, tiposProductos])
-    const onChange = useCallback((pagination: TablePaginationConfig, filters: Record<string, FilterValue | null>, sorter: SorterResult<IProducto> | SorterResult<IProducto>[], extra: TableCurrentDataSource<IProducto>)=>{
+    const onChange = useCallback((pagination: TablePaginationConfig, filters: Record<string, FilterValue | null>, sorter: SorterResult<IProducto> | SorterResult<IProducto>[])=>{
         onFilterTipoProductoChange(filters['tipo_producto.code']?.filter(f=>isTipoProductoAdmitido(f)).map(f=> isTipoProductoAdmitido(f)?f:'simple') || [])
         onBusquedaIdChange((filters.id && !isNaN(parseInt(filters.id[0] as string))) ? parseInt(filters.id[0] as string): undefined)
         onBusquedaCodeChange(filters.codigo ? filters.codigo[0] as string: '')
@@ -382,5 +393,22 @@ export default function TablaProductos(arg: ParametrosRecibidos) {
         }))
         onOrderByChange(orderItemsNuevo)
     },[onBusquedaCodeChange, onBusquedaIdChange, onBusquedaNombreChange, onFilterTipoProductoChange, onOrderByChange])
-    return <Table onChange={onChange} title={()=>title} rowKey={'id'} columns={columnas} dataSource={productos} />
+    // useEffect(()=>console.log({long:productos.length}),[productos.length])
+    // useEffect(()=>console.log({totalItems}),[totalItems])
+    // useEffect(()=>console.log({perPage}),[perPage])
+    return <Table
+        pagination={{
+            pageSizeOptions:[4,10,20,50],
+            showQuickJumper:true,
+            showSizeChanger:true,
+            pageSize:totalItems > productos.length ? (productos.length > perPage ? productos.length : perPage) : perPage,
+            current:page,
+            onChange:onPaginationChange,
+            total:totalItems,
+        }}
+        onChange={onChange}
+        title={()=>title}
+        rowKey={'id'}
+        columns={columnas}
+        dataSource={productos} />
 }
