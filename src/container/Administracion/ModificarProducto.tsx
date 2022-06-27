@@ -18,7 +18,7 @@ import * as Yup from 'yup';
 import TablaProductos from "./TablaProductos";
 import {DeleteOutlined, PlusOutlined} from "@ant-design/icons";
 import {IconText} from "./AdminProducto";
-import SelectDeProductos from "./SelectDeProductos";
+import SelectDeProductos, {ProductoSelected} from "./SelectDeProductos";
 
 interface ArgumentosModificarProducto {
     producto?: IProducto,       //si esta definido es el producto a editar (se usa para notificar al padre)
@@ -76,13 +76,17 @@ interface PropFormulario {
     productoEditando?: IProducto,
 }
 
+interface VariablesExtraFormulario {
+    modalSelectProducto: boolean
+}
+
+type FormValue = IProducto & VariablesExtraFormulario
+
 export default function ModificarProducto ({producto, productoChange}: ArgumentosModificarProducto) {
     const {
         setErrorException
     } = useContext(AuthContext)
-    // useEffect(()=>console.log(producto),[producto]);
-    const [isModalVisible,setIsModalVisible] = useState(false)
-    const InnerForm = useCallback(({ setValues, isSubmitting, submitCount, values, errors}: FormikProps<IProducto>) => <Spin spinning={isSubmitting}>
+    const InnerForm = useCallback(({ setValues, isSubmitting, submitCount, values, errors}: FormikProps<FormValue>) => <Spin spinning={isSubmitting}>
         <Form className='form-container'>
             <Row gutter={30}>
                 <Col lg={12}>
@@ -170,7 +174,7 @@ export default function ModificarProducto ({producto, productoChange}: Argumento
                                 <h3>Productos en el combo</h3>
                             </Col>
                             <Col offset={4} lg={8}>
-                                <Button onClick={()=>setIsModalVisible(true)} style={{float:'right'}} type="primary" icon={<PlusOutlined />}>
+                                <Button onClick={()=>setValues({...values,modalSelectProducto:true})} style={{float:'right'}} type="primary" icon={<PlusOutlined />}>
                                     Añadir Producto
                                 </Button>
                             </Col>
@@ -205,26 +209,40 @@ export default function ModificarProducto ({producto, productoChange}: Argumento
                 </Col>
             </Row>
         </Form>
-        <Modal destroyOnClose={true} width={'85%'} footer={null} visible={isModalVisible} onCancel={()=>setIsModalVisible(false)}>
+        <Modal destroyOnClose={true} width={'85%'} footer={null} visible={values.modalSelectProducto} onCancel={()=>setValues({...values,modalSelectProducto:false})}>
             <SelectDeProductos
+                tiposProductosAdmitidos={["simple"]}
                 titulo='Seleccione nuevos productos a añadir'
-                onProductoSelect={(p)=>{
+                productosExistentes={values.producto_combos?.filter(p=>p.id).map(p=>p.id as number) || []}
+                onProductosSelectChange={(prods)=>{
                     const productosCombo = values.producto_combos ? [...values.producto_combos] : []
-                    const indexSacar = productosCombo.findIndex(prod => prod.id === p.id)  // por si sea un producto repetido (-1: nuevo, 0<=:repetido)
-                    if (indexSacar >= 0) {  //ya existia
-                        mostrarMensaje("El producto " + p.nombre + " ya estaba en la lista",'error')
-                    } else {
-                        productosCombo.splice(0,0,p)
-                        setValues({...values, producto_combos:productosCombo})
-                        mostrarMensaje("Se agrego el producto " + p.nombre + " a la lista",'success')
-                    }
+                    prods.forEach((prod: ProductoSelected) => {
+                        const indexSacar = productosCombo.findIndex(pc => pc.id === prod.producto.id)  // por si sea un producto repetido (-1: nuevo, 0<=:sacar)
+                        if (indexSacar >= 0) {  //ya existia
+                            if (prod.selected) {
+                                mostrarMensaje("El producto " + prod.producto.nombre + " ya estaba en la lista",'error')
+                            } else {
+                                productosCombo.splice(indexSacar,1)
+                            }
+                        } else {
+                            if (!prod.selected) {
+                                mostrarMensaje("El producto " + prod.producto.nombre + " No se encontro en la lista para sacar",'error')
+                            } else {
+                                productosCombo.splice(0, 0, prod.producto)
+                            }
+                        }
+                    })
+                    setValues({...values, producto_combos:productosCombo})
                 }}
             />
         </Modal>
-    </Spin>,[isModalVisible])
-    const MyForm = useMemo(()=>withFormik<PropFormulario, IProducto>({
+    </Spin>,[])
+    const MyForm = useMemo(()=>withFormik<PropFormulario, FormValue>({
         // Ignoramos las propiedades y asignamos el producto que tenemos nomas
-        mapPropsToValues: () =>  producto || productoVacio,
+        mapPropsToValues: () =>  ({
+            ...(producto || productoVacio),
+            modalSelectProducto: false
+        }),
         validationSchema: Yup.object().shape({
             nombre: Yup.string()
                 .min(2, 'Muy corto')
@@ -252,7 +270,7 @@ export default function ModificarProducto ({producto, productoChange}: Argumento
             }
             return errors;
         },
-        handleSubmit: (values, {setSubmitting, setErrors}: FormikBag<PropFormulario, IProducto>) => {
+        handleSubmit: (values, {setSubmitting, setErrors}: FormikBag<PropFormulario, FormValue>) => {
             const result = productoChange(values)
             if (typeof result == 'boolean') {
                 if (result) {
@@ -283,10 +301,9 @@ export default function ModificarProducto ({producto, productoChange}: Argumento
             }
         },
     })(InnerForm),[InnerForm, producto, productoChange, setErrorException])
-    useEffect(()=>console.log('InnerForm Cambio'),[InnerForm])
-    useEffect(()=>console.log('producto Cambio'),[producto])
-    useEffect(()=>console.log('productoChange Cambio'),[productoChange])
-    useEffect(()=>console.log('isModalVisible Cambio'),[isModalVisible])
+    // useEffect(()=>console.log('InnerForm Cambio'),[InnerForm])
+    // useEffect(()=>console.log('producto Cambio'),[producto])
+    // useEffect(()=>console.log('productoChange Cambio'),[productoChange])
     return <>
         <FormTitle>Informacion Basica</FormTitle>
         <MyForm productoEditando={producto}/>

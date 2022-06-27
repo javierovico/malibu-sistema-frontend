@@ -10,18 +10,20 @@ import {
     ColumnsType,
     FilterValue,
     SorterResult,
-    TablePaginationConfig
+    TablePaginationConfig, TableRowSelection
 } from "antd/lib/table/interface";
 import {formateadorNumero} from "../../utils/utils";
 import {ColumnType} from "antd/es/table";
 import {FilterConfirmProps} from "antd/es/table/interface";
 import { SearchOutlined } from '@ant-design/icons';
+import {ProductoSelected} from "./SelectDeProductos";
 
 interface ParametrosRecibidos {
     productos: IProducto[],
     acciones?: (p: IProducto) => JSX.Element,
     title?: JSX.Element | string,
     onFilterTipoProductoChange?: (tipos: TipoProductoAdmitido[]) => void,
+    tiposProductosAdmitidos?: TipoProductoAdmitido[],
     tiposProductos?: TipoProductoAdmitido[],
     onBusquedaIdChange?:(id: number|undefined) => void,
     busquedaId?: number,
@@ -34,7 +36,9 @@ interface ParametrosRecibidos {
     page?: number,
     totalItems?: number,
     perPage?: number,
-    onPaginationChange?: {(page:number,perPage:number): void}
+    onPaginationChange?: {(page:number,perPage:number): void},
+    productosIdSelected?: number[],
+    onProductosIdSelectedChange?: {(items: ProductoSelected[]):void}
 }
 
 type DataIndex = keyof IProducto
@@ -188,6 +192,9 @@ export default function TablaProductos(arg: ParametrosRecibidos) {
     const {
         title,
         acciones,
+        onProductosIdSelectedChange,
+        productosIdSelected,
+        tiposProductosAdmitidos
     } = arg
     const {
         onFilterTipoProductoChange,
@@ -341,7 +348,7 @@ export default function TablaProductos(arg: ParametrosRecibidos) {
                 title: 'Tipo',
                 key: 'tipo_producto.code',
                 dataIndex: ['tipo_producto','descripcion'],
-                filters: PRODUCTO_TIPOS_ADMITIDOS.map(tp=> ({
+                filters: PRODUCTO_TIPOS_ADMITIDOS.filter(tpa => !tiposProductosAdmitidos || tiposProductosAdmitidos.includes(tpa.code)).map(tp=> ({
                     text: tp.descripcion,
                     value: tp.code
                 })),
@@ -393,6 +400,23 @@ export default function TablaProductos(arg: ParametrosRecibidos) {
         }))
         onOrderByChange(orderItemsNuevo)
     },[onBusquedaCodeChange, onBusquedaIdChange, onBusquedaNombreChange, onFilterTipoProductoChange, onOrderByChange])
+    const selectedOption = useMemo<TableRowSelection<IProducto>|undefined>(()=>{
+        if (productosIdSelected && onProductosIdSelectedChange) {
+            return {
+                selectedRowKeys:productosIdSelected,
+                onChange: (selectedRowKeys: React.Key[]) => {
+                    onProductosIdSelectedChange(productos
+                        .filter(p1=> (p1.id) && ( productosIdSelected.includes(p1.id) !== selectedRowKeys.includes(p1.id))) //trae solo los que cambiaron de estado
+                        .map(p1=>({
+                            producto: p1,
+                            selected: !!(p1.id && selectedRowKeys.includes(p1.id))     //el producto esta seleccionado o no dependiendo si se encuentra en selected
+                        })))
+                }
+            }
+        } else {
+            return undefined
+        }
+    },[onProductosIdSelectedChange, productos, productosIdSelected])
     // useEffect(()=>console.log({long:productos.length}),[productos.length])
     // useEffect(()=>console.log({totalItems}),[totalItems])
     // useEffect(()=>console.log({perPage}),[perPage])
@@ -410,5 +434,7 @@ export default function TablaProductos(arg: ParametrosRecibidos) {
         title={()=>title}
         rowKey={'id'}
         columns={columnas}
-        dataSource={productos} />
+        dataSource={productos}
+        rowSelection={selectedOption}
+    />
 }

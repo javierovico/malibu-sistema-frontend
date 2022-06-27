@@ -7,22 +7,27 @@ import {
 } from "../../modelos/Producto";
 import React, {useCallback, useMemo, useState} from "react";
 import TablaProductos from "./TablaProductos";
-import {Button, Space} from "antd";
-import {IconText} from "./AdminProducto";
-import {CheckOutlined} from "@ant-design/icons";
+
+export interface ProductoSelected {
+    producto: IProducto,
+    selected: boolean
+}
 
 interface Parametros {
     titulo: string,
-    onProductoSelect: {(p:IProducto):void}
+    onProductosSelectChange: {(items: ProductoSelected[]):void},
+    productosExistentes?: number[],      //lista de productos que ya estan en la lista
+    tiposProductosAdmitidos?: TipoProductoAdmitido[]
 }
 
-export default function SelectDeProductos({titulo,onProductoSelect} : Parametros){
+export default function SelectDeProductos({tiposProductosAdmitidos, titulo,onProductosSelectChange, productosExistentes} : Parametros){
     const [page,setPage] = useState<number>(1)
     const [perPage, setPerpage] = useState<number>(5)
     const [busqueda, setBusqueda] = useState<string>('')
     const [tipoBusqueda, setTipoBusqueda] = useState<TipoBusqueda>('nombre')
     const [orderBy, setOrderBy] = useState<SortItems>([])
-    const [tiposProducto,setTiposProducto] = useState<TipoProductoAdmitido[]>([])
+    const [tiposProducto,setTiposProducto] = useState<TipoProductoAdmitido[]>(tiposProductosAdmitidos||[])
+    const tiposProductosFiltro = useMemo(()=>(tiposProductosAdmitidos && tiposProducto.length === 0) ? tiposProductosAdmitidos : tiposProducto,[tiposProducto, tiposProductosAdmitidos])
     const busquedaNombre = useMemo(()=>tipoBusqueda === 'nombre'?busqueda:'',[busqueda, tipoBusqueda])
     const busquedaCode = useMemo(()=>tipoBusqueda === 'codigo'?busqueda:'',[busqueda, tipoBusqueda])
     const busquedaId = useMemo<number|undefined>(()=>(tipoBusqueda === 'id' && !isNaN(parseInt(busqueda)))?parseInt(busqueda):undefined,[busqueda, tipoBusqueda])
@@ -33,9 +38,10 @@ export default function SelectDeProductos({titulo,onProductoSelect} : Parametros
     const itemsBusqueda = useMemo<ItemBusqueda[]>(()=>busqueda?[{columna:tipoBusqueda, valor:busqueda}]:[],[busqueda, tipoBusqueda])
     const {
         paginacion
-    } = useProductos(page, perPage, orderBy, tiposProducto, itemsBusqueda)
+    } = useProductos(page, perPage, orderBy, tiposProductosFiltro, itemsBusqueda)
     return <>
         <TablaProductos
+            tiposProductosAdmitidos={tiposProductosAdmitidos}
             productos={paginacion.data}
             title={titulo}
             busquedaId={busquedaId}
@@ -45,7 +51,7 @@ export default function SelectDeProductos({titulo,onProductoSelect} : Parametros
             busquedaNombre={busquedaNombre}
             onBusquedaNombreChange={(s)=>changeBusqueda('nombre',s)}
             onFilterTipoProductoChange={setTiposProducto}
-            tiposProductos={tiposProducto}
+            tiposProductos={tiposProductosFiltro}
             orderBy={orderBy}
             onOrderByChange={setOrderBy}
             page={page}
@@ -55,16 +61,18 @@ export default function SelectDeProductos({titulo,onProductoSelect} : Parametros
                 setPerpage(pp)
                 setPage(p)
             }}
-            acciones={(p)=><Space size="middle">
-                <Button
-                    type="link"
-                    onClick={()=>{
-                        onProductoSelect(p)
-                    }}
-                >
-                    <IconText icon={CheckOutlined} text="Seleccionar"/>
-                </Button>
-            </Space>}
+            // acciones={(p)=><Space size="middle">
+            //     <Button
+            //         type="link"
+            //         onClick={()=>{
+            //             onProductoSelect(p, true)
+            //         }}
+            //     >
+            //         <IconText icon={CheckOutlined} text="Seleccionar"/>
+            //     </Button>
+            // </Space>}
+            productosIdSelected={productosExistentes || []}
+            onProductosIdSelectedChange={onProductosSelectChange}
         />
     </>
 }

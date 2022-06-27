@@ -4,8 +4,9 @@ export default function () {
     return <>
         <SelectDeProductos
             titulo='Seleccione un producto'
-            onProductoSelect={(p)=>{
-                console.log({p})
+            productosExistentes={[]}
+            onProductosSelectChange={(p)=>{
+                console.log(p)
             }}
         />
     </>
