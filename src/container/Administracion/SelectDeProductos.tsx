@@ -1,19 +1,24 @@
 import {
+    IProducto,
     ItemBusqueda, SortItems,
     TipoBusqueda,
     TipoProductoAdmitido,
     useProductos
 } from "../../modelos/Producto";
-import {useCallback, useMemo, useState} from "react";
+import React, {useCallback, useMemo, useState} from "react";
 import TablaProductos from "./TablaProductos";
+import {Button, Space} from "antd";
+import {IconText} from "./AdminProducto";
+import {CheckOutlined} from "@ant-design/icons";
 
 interface Parametros {
-
+    titulo: string,
+    onProductoSelect: {(p:IProducto):void}
 }
 
-export default function SelectDeProductos({} : Parametros){
+export default function SelectDeProductos({titulo,onProductoSelect} : Parametros){
     const [page,setPage] = useState<number>(1)
-    const [perPage, setPerpage] = useState<number>(20)
+    const [perPage, setPerpage] = useState<number>(5)
     const [busqueda, setBusqueda] = useState<string>('')
     const [tipoBusqueda, setTipoBusqueda] = useState<TipoBusqueda>('nombre')
     const [orderBy, setOrderBy] = useState<SortItems>([])
@@ -32,7 +37,7 @@ export default function SelectDeProductos({} : Parametros){
     return <>
         <TablaProductos
             productos={paginacion.data}
-            title=''
+            title={titulo}
             busquedaId={busquedaId}
             onBusquedaIdChange={(s)=>changeBusqueda('id',s?(''+s):'')}
             busquedaCode={busquedaCode}
@@ -50,6 +55,16 @@ export default function SelectDeProductos({} : Parametros){
                 setPerpage(pp)
                 setPage(p)
             }}
+            acciones={(p)=><Space size="middle">
+                <Button
+                    type="link"
+                    onClick={()=>{
+                        onProductoSelect(p)
+                    }}
+                >
+                    <IconText icon={CheckOutlined} text="Seleccionar"/>
+                </Button>
+            </Space>}
         />
     </>
 }

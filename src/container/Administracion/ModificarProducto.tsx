@@ -205,8 +205,21 @@ export default function ModificarProducto ({producto, productoChange}: Argumento
                 </Col>
             </Row>
         </Form>
-        <Modal destroyOnClose={true} width={'85%'} footer={null} closable={false} visible={isModalVisible} onCancel={()=>setIsModalVisible(false)}>
-            <SelectDeProductos/>
+        <Modal destroyOnClose={true} width={'85%'} footer={null} visible={isModalVisible} onCancel={()=>setIsModalVisible(false)}>
+            <SelectDeProductos
+                titulo='Seleccione nuevos productos a añadir'
+                onProductoSelect={(p)=>{
+                    const productosCombo = values.producto_combos ? [...values.producto_combos] : []
+                    const indexSacar = productosCombo.findIndex(prod => prod.id === p.id)  // por si sea un producto repetido (-1: nuevo, 0<=:repetido)
+                    if (indexSacar >= 0) {  //ya existia
+                        mostrarMensaje("El producto " + p.nombre + " ya estaba en la lista",'error')
+                    } else {
+                        productosCombo.splice(0,0,p)
+                        setValues({...values, producto_combos:productosCombo})
+                        mostrarMensaje("Se agrego el producto " + p.nombre + " a la lista",'success')
+                    }
+                }}
+            />
         </Modal>
     </Spin>,[isModalVisible])
     const MyForm = useMemo(()=>withFormik<PropFormulario, IProducto>({
@@ -270,6 +283,10 @@ export default function ModificarProducto ({producto, productoChange}: Argumento
             }
         },
     })(InnerForm),[InnerForm, producto, productoChange, setErrorException])
+    useEffect(()=>console.log('InnerForm Cambio'),[InnerForm])
+    useEffect(()=>console.log('producto Cambio'),[producto])
+    useEffect(()=>console.log('productoChange Cambio'),[productoChange])
+    useEffect(()=>console.log('isModalVisible Cambio'),[isModalVisible])
     return <>
         <FormTitle>Informacion Basica</FormTitle>
         <MyForm productoEditando={producto}/>
