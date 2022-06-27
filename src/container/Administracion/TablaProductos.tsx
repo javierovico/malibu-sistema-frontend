@@ -24,8 +24,8 @@ interface ParametrosRecibidos {
     title?: JSX.Element | string,
     onFilterTipoProductoChange?: (tipos: TipoProductoAdmitido[]) => void,
     tiposProductos?: TipoProductoAdmitido[],
-    onBusquedaIdChange?:(id: string) => void,
-    busquedaId?: string,
+    onBusquedaIdChange?:(id: number|undefined) => void,
+    busquedaId?: number,
     onBusquedaCodeChange?:(id: string) => void,
     busquedaCode?: string,
     onBusquedaNombreChange?:(id: string) => void,
@@ -72,8 +72,8 @@ function useConversorArg(
     argProductos: IProducto[],
     argOnFilterTipoProductoChange?: ((tipos: TipoProductoAdmitido[])=>void),
     argTiposProductos?: TipoProductoAdmitido[],
-    argOnBusquedaIdChange?: ((s:string)=>void),
-    argBusquedaId?: string,
+    argOnBusquedaIdChange?: ((s:number|undefined)=>void),
+    argBusquedaId?: number,
     argOnBusquedaCodeChange?: ((s:string)=>void),
     argBusquedaCode?: string,
     argOnBusquedaNombreChange?: ((s:string)=>void),
@@ -82,7 +82,7 @@ function useConversorArg(
     argOrderBy?: SortItems
 ) {
     const [tiposProductoDefault, setTiposProductoDefault] = useState<TipoProductoAdmitido[]>([])
-    const [busquedaIdDefault, setBusquedaIdDefault] = useState<string>("")
+    const [busquedaIdDefault, setBusquedaIdDefault] = useState<number|undefined>(undefined)
     const [busquedaCodeDefault, setBusquedaCodeDefault] = useState<string>("")
     const [busquedaNombreDefault, setBusquedaNombreDefault] = useState<string>("")
     // const [orderByDefault, setOrderByDefault] = useState<SortItems>([{code:'nombre',orden:'ascend'},{code:'costo',orden:'descend'},{code:'id',orden:'ascend'},{code:'tipoProducto',orden:'descend'}])
@@ -97,9 +97,21 @@ function useConversorArg(
             (argOnFilterTipoProductoChange || setTiposProductoDefault)(tps)
         }
     },[argOnFilterTipoProductoChange, setTiposProductoDefault, tiposProductos])
-    const onBusquedaIdChange = useMemo(()=> argOnBusquedaIdChange || setBusquedaIdDefault,[argOnBusquedaIdChange])
-    const onBusquedaCodeChange = useMemo(()=> argOnBusquedaCodeChange || setBusquedaCodeDefault,[argOnBusquedaCodeChange])
-    const onBusquedaNombreChange = useMemo(()=> argOnBusquedaNombreChange || setBusquedaNombreDefault,[argOnBusquedaNombreChange])
+    const onBusquedaIdChange = useCallback((s:number|undefined)=>{
+        if (busquedaId !== s) {
+            (argOnBusquedaIdChange || setBusquedaIdDefault)(s)
+        }
+    },[argOnBusquedaIdChange, busquedaId])
+    const onBusquedaCodeChange = useCallback((s:string)=>{
+        if (busquedaCode !== s) {
+            (argOnBusquedaCodeChange || setBusquedaCodeDefault)(s)
+        }
+    },[argOnBusquedaCodeChange, busquedaCode])
+    const onBusquedaNombreChange = useCallback((s:string)=>{
+        if (busquedaNombre !== s) {
+            (argOnBusquedaNombreChange || setBusquedaNombreDefault)(s)
+        }
+    },[argOnBusquedaNombreChange, busquedaNombre])
     const onOrderByChange = useCallback((tps: SortItems)=>{
         if (orderItems.length !== tps.length || orderItems.some(t1 => !tps.find(t2=>t2.orden===t1.orden && t2.code ===t1.code))) {
             (argOnOrderByChange || setOrderByDefault)(tps)
@@ -113,7 +125,7 @@ function useConversorArg(
         }
         //id
         if (!argOnBusquedaIdChange && busquedaId) {
-            productosFiltrados = productosFiltrados.filter(p => p.id === parseInt(busquedaId) )
+            productosFiltrados = productosFiltrados.filter(p => p.id === busquedaId )
         }
         //codigo
         if (!argOnBusquedaCodeChange && busquedaCode) {
@@ -360,7 +372,7 @@ export default function TablaProductos(arg: ParametrosRecibidos) {
     },[acciones, busquedaCode, busquedaId, busquedaNombre, getColumnSearchProps, orderItems, tiposProductos])
     const onChange = useCallback((pagination: TablePaginationConfig, filters: Record<string, FilterValue | null>, sorter: SorterResult<IProducto> | SorterResult<IProducto>[], extra: TableCurrentDataSource<IProducto>)=>{
         onFilterTipoProductoChange(filters['tipo_producto.code']?.filter(f=>isTipoProductoAdmitido(f)).map(f=> isTipoProductoAdmitido(f)?f:'simple') || [])
-        onBusquedaIdChange(filters.id ? filters.id[0] as string: '')
+        onBusquedaIdChange((filters.id && !isNaN(parseInt(filters.id[0] as string))) ? parseInt(filters.id[0] as string): undefined)
         onBusquedaCodeChange(filters.codigo ? filters.codigo[0] as string: '')
         onBusquedaNombreChange(filters.nombre ? filters.nombre[0] as string: '')
         const sorterArray = !Array.isArray(sorter) ? [sorter] : sorter

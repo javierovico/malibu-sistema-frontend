@@ -15,7 +15,7 @@ export default function SelectDeProductos({} : Parametros){
     const [tiposProducto,setTiposProducto] = useState<TipoProductoAdmitido[]>([])
     const busquedaNombre = useMemo(()=>tipoBusqueda === 'nombre'?busqueda:'',[busqueda, tipoBusqueda])
     const busquedaCode = useMemo(()=>tipoBusqueda === 'codigo'?busqueda:'',[busqueda, tipoBusqueda])
-    const busquedaId = useMemo(()=>tipoBusqueda === 'id'?busqueda:'',[busqueda, tipoBusqueda])
+    const busquedaId = useMemo<number|undefined>(()=>(tipoBusqueda === 'id' && !isNaN(parseInt(busqueda)))?parseInt(busqueda):undefined,[busqueda, tipoBusqueda])
     const changeBusqueda = useCallback((key:TipoBusqueda,value:string)=>{
         setTipoBusqueda(key)
         setBusqueda(value)
@@ -28,7 +28,7 @@ export default function SelectDeProductos({} : Parametros){
             productos={paginacion.data}
             title=''
             busquedaId={busquedaId}
-            onBusquedaIdChange={(s)=>changeBusqueda('id',s)}
+            onBusquedaIdChange={(s)=>changeBusqueda('id',''+s)}
             busquedaCode={busquedaCode}
             onBusquedaCodeChange={(s)=>changeBusqueda('codigo',s)}
             busquedaNombre={busquedaNombre}
