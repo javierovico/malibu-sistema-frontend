@@ -169,7 +169,7 @@ export const useEditorProducto = () => useCallback((productoSubiendo?: IProducto
 export type TipoBusqueda = "id"|"codigo"|"nombre"
 export type PosiblesOrdenacionesProducto = "id" | "codigo" | "nombre" | "tipoProducto" | "precio" | "costo" | null
 
-export const useProductos = (busqueda: string, page: number, perPage: number, tipoBusqueda: TipoBusqueda, sortBy: PosiblesOrdenacionesProducto = null) => {
+export const useProductos = (busqueda: string, page: number, perPage: number, tipoBusqueda: TipoBusqueda, sortBy?: PosiblesOrdenacionesProducto, tiposProducto?: TipoProductoAdmitido[]) => {
     const [paginacion, setPaginacion] = useState<ResponseAPIPaginado<IProducto>>(PaginacionVacia);
     const [isProductosLoading, setIsProductoLoading] = useState<boolean>(true)
     const [errorProductos, setErrorProductos] = useState<JSX.Element|undefined>();
@@ -183,7 +183,8 @@ export const useProductos = (busqueda: string, page: number, perPage: number, ti
                 page,
                 perPage,
                 [tipoBusqueda]: busqueda,
-                sortBy
+                sortBy,
+                tiposProducto
             }
         })
             .then(({data}) => {
@@ -195,7 +196,7 @@ export const useProductos = (busqueda: string, page: number, perPage: number, ti
                 setPaginacion(PaginacionVacia)
             })
             .finally(()=>setIsProductoLoading(false))
-    },[busqueda, sortBy, page, perPage, setErrorException, tipoBusqueda])
+    },[busqueda, sortBy, page, perPage, setErrorException, tipoBusqueda, tiposProducto])
     const editorProducto = useEditorProducto()
     const [productoModificando, setProductoModificando] = useState<IProducto>()
     const productoUpdate = useCallback((p: IProducto, borrar: boolean = false)=>{

@@ -85,7 +85,8 @@ function useConversorArg(
     const [busquedaIdDefault, setBusquedaIdDefault] = useState<string>("")
     const [busquedaCodeDefault, setBusquedaCodeDefault] = useState<string>("")
     const [busquedaNombreDefault, setBusquedaNombreDefault] = useState<string>("")
-    const [orderByDefault, setOrderByDefault] = useState<SortItems>([{code:'nombre',orden:'ascend'},{code:'costo',orden:'descend'},{code:'id',orden:'ascend'},{code:'tipoProducto',orden:'descend'}])
+    // const [orderByDefault, setOrderByDefault] = useState<SortItems>([{code:'nombre',orden:'ascend'},{code:'costo',orden:'descend'},{code:'id',orden:'ascend'},{code:'tipoProducto',orden:'descend'}])
+    const [orderByDefault, setOrderByDefault] = useState<SortItems>([])
     const tiposProductos = useMemo(()=>argTiposProductos || tiposProductoDefault,[argTiposProductos, tiposProductoDefault])
     const busquedaId = useMemo(()=>argBusquedaId || busquedaIdDefault,[argBusquedaId, busquedaIdDefault])
     const busquedaCode = useMemo(()=>argBusquedaCode || busquedaCodeDefault,[argBusquedaCode, busquedaCodeDefault])
@@ -236,7 +237,10 @@ export default function TablaProductos(arg: ParametrosRecibidos) {
                     placeholder={`Search ${dataIndex}`}
                     value={selectedKeys[0]}
                     onChange={e => setSelectedKeys(e.target.value ? [e.target.value] : [])}
-                    onPressEnter={() => handleSearch(selectedKeys as string[], confirm, dataIndex)}
+                    onPressEnter={(e) => {
+                        e.stopPropagation()
+                        handleSearch(selectedKeys as string[], confirm, dataIndex)
+                    }}
                     style={{ marginBottom: 8, display: 'block' }}
                 />
                 <Space>
@@ -366,6 +370,5 @@ export default function TablaProductos(arg: ParametrosRecibidos) {
         }))
         onOrderByChange(orderItemsNuevo)
     },[onBusquedaCodeChange, onBusquedaIdChange, onBusquedaNombreChange, onFilterTipoProductoChange, onOrderByChange])
-    useEffect(()=>console.log(orderItems),[orderItems])
     return <Table onChange={onChange} title={()=>title} rowKey={'id'} columns={columnas} dataSource={productos} />
 }
