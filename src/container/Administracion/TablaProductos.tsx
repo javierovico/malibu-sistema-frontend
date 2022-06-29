@@ -2,7 +2,7 @@ import { Button, Input, InputRef, Space, Table} from "antd";
 import Highlighter from 'react-highlight-words';
 import {
     IProducto,
-    isTipoProductoAdmitido, PRODUCTO_TIPOS_ADMITIDOS, SortItems, SortKeySorteado,
+    isTipoProductoAdmitido, PRODUCTO_TIPOS_ADMITIDOS, SortsProductos,
     TipoProductoAdmitido
 } from "../../modelos/Producto";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
@@ -17,6 +17,9 @@ import {ColumnType} from "antd/es/table";
 import {FilterConfirmProps} from "antd/es/table/interface";
 import { SearchOutlined } from '@ant-design/icons';
 import {ProductoSelected} from "./SelectDeProductos";
+import {ItemSorteado} from "../../modelos/Generico";
+
+type SortItems = ItemSorteado<SortsProductos>[]
 
 interface ParametrosRecibidos {
     productos: IProducto[],
@@ -133,7 +136,7 @@ function useConversorArg(
                 const sortId = orderItems.find(i=>i.code === 'id')?.orden
                 const sortCodigo = orderItems.find(i=>i.code === 'codigo')?.orden
                 const sortNombre = orderItems.find(i=>i.code === 'nombre')?.orden
-                const sortTipoProducto = orderItems.find(i=>i.code === 'tipoProducto')?.orden
+                const sortTipoProducto = orderItems.find(i=>i.code === 'tipo_producto_id')?.orden
                 const sortPrecio = orderItems.find(i=>i.code === 'precio')?.orden
                 const sortCosto = orderItems.find(i=>i.code === 'costo')?.orden
                 //Primero la prioridad mas alta
@@ -183,8 +186,8 @@ function useConversorArg(
     }
 }
 
-const RELACIONES_SORT: {[k:string]:SortKeySorteado}= {
-    'tipo_producto.code': 'tipoProducto'
+const RELACIONES_SORT: {[k:string]:SortsProductos}= {
+    'tipo_producto.code': 'tipo_producto_id'
 }
 
 
@@ -356,7 +359,7 @@ export default function TablaProductos(arg: ParametrosRecibidos) {
                 sorter: {
                     multiple: 1
                 },
-                sortOrder: orderItems.find(r=>r.code === 'tipoProducto')?.orden,
+                sortOrder: orderItems.find(r=>r.code === 'tipo_producto_id')?.orden,
             },
             {
                 title: 'Precio',
@@ -387,7 +390,7 @@ export default function TablaProductos(arg: ParametrosRecibidos) {
             })
         }
         return columnas
-    },[acciones, busquedaCode, busquedaId, busquedaNombre, getColumnSearchProps, orderItems, tiposProductos])
+    },[acciones, busquedaCode, busquedaId, busquedaNombre, getColumnSearchProps, orderItems, tiposProductos, tiposProductosAdmitidos])
     const onChange = useCallback((pagination: TablePaginationConfig, filters: Record<string, FilterValue | null>, sorter: SorterResult<IProducto> | SorterResult<IProducto>[])=>{
         onFilterTipoProductoChange(filters['tipo_producto.code']?.filter(f=>isTipoProductoAdmitido(f)).map(f=> isTipoProductoAdmitido(f)?f:'simple') || [])
         onBusquedaIdChange((filters.id && !isNaN(parseInt(filters.id[0] as string))) ? parseInt(filters.id[0] as string): undefined)

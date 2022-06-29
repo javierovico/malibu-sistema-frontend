@@ -6,6 +6,7 @@ import {IUsuario,UsuarioResponse, TokenUsuarioResponse, URL_USUARIO_PROPIO, URL_
 import ResponseAPI from "../modelos/ResponseAPI";
 import {errorRandomToIError, IError} from "../modelos/ErrorModel";
 import VistaError from "../components/UI/VistaError";
+import Pusher from "pusher-js";
 
 
 interface AuthValues {
@@ -17,7 +18,8 @@ interface AuthValues {
     analizarError: (e: any) => void,
     setError: (e?: IError) => void,
     errorView?: JSX.Element,
-    setErrorException: (e: any) => void
+    setErrorException: (e: any) => void,
+    pusher?: Pusher,
 }
 
 const authValues: AuthValues = {
@@ -64,6 +66,26 @@ const AuthProvider = (props: any) => {
     const [loggedIn, setLoggedIn] = useState(isValidToken());
     const [user, setUser] = useState<IUsuario>();
     const [token, setToken] = useState(getToken);
+
+    const pusher = useMemo(()=>new Pusher(process.env.REACT_APP_PUSHER_APP_KEY || '', {
+        cluster: 'sa1',
+        userAuthentication: {
+            endpoint: process.env.REACT_APP_BASE_URL + "/pusher/user-auth",
+            transport: "ajax",
+            params: {},
+            headers: {
+                authorization: 'Bearer ' + token
+            },
+        },
+        channelAuthorization: {
+            endpoint: process.env.REACT_APP_BASE_URL + "/broadcasting/auth?XDEBUG_SESSION_START=PHPSTORM",
+            transport: "ajax",
+            params: {},
+            headers: {
+                authorization: 'Bearer ' + token
+            },
+        },
+    }),[token])
 
     /** Establece el token en el axio*/
     useEffect(() => {
@@ -128,19 +150,22 @@ const AuthProvider = (props: any) => {
         setError(errorRandomToIError(error))
     },[])
 
+    const value: AuthValues = {
+        loggedIn,
+        logOut,
+        signIn,
+        user,
+        token,
+        analizarError,
+        setError,
+        errorView,
+        setErrorException,
+        pusher
+    }
+
     return (
         <AuthContext.Provider
-            value={{
-                loggedIn,
-                logOut,
-                signIn,
-                user,
-                token,
-                analizarError,
-                setError,
-                errorView,
-                setErrorException,
-            }}
+            value={value}
         >
             <>{props.children}</>
         </AuthContext.Provider>

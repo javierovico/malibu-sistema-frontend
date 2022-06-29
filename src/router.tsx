@@ -3,7 +3,7 @@ import {Navigate, RouteObject, useRoutes} from 'react-router-dom';
 import {AuthContext} from './context/AuthProvider';
 import {
     HOME_PAGE,
-    LOGIN_PAGE, PRODUCTO_ADMINISTRAR_PRODUCTO, ROL_ADMIN_PRODUCTOS, SUBORDINADOS_PAGE,
+    LOGIN_PAGE, PRODUCTO_ADMINISTRAR_PRODUCTO, ROL_ADMIN_PRODUCTOS, ROL_OPERADOR, SUBORDINADOS_PAGE,
 } from './settings/constant';
 import loadable from '@loadable/component'
 import {comprobarRol} from "./modelos/Usuario";
@@ -12,6 +12,7 @@ export interface TipoRuta {
     nombre: string,
     link: string,
     import?: string,
+    import2?: {():Promise<any>},
     hijos?: TipoRuta[],
     protected: boolean,
     ocultarOpcion?: boolean, // le decimos si queremos que esta ruta este oculta del menu
@@ -27,10 +28,12 @@ export const routes: TipoRuta[] = [
         protected: true,
     },
     {
-        nombre: 'Dummy',
-        link: '/test',
-        import: 'container/Dummy/Dummy2',
-        protected: false,
+        nombre: 'Operacion',
+        link: '/trabajo',
+        import2: () => import('./container/Trabajo/Trabajo'),
+        import: 'container/Trabajo/Trabajo',
+        protected: true,
+        rolRequerido: ROL_OPERADOR
     },
     {
         nombre: "Productos",
@@ -83,6 +86,12 @@ export const routes: TipoRuta[] = [
         protected: true,
     },
     {
+        nombre: 'Dummy',
+        link: '/test',
+        import: 'container/Dummy/Dummy2',
+        protected: false,
+    },
+    {
         nombre: 'Pagina No Encontrada',
         link: '*',
         import: 'container/404/404',
@@ -112,6 +121,8 @@ const Rutas = () => {
                 let OtherComponent
                 if (sinPermiso) {  // si se requiere un rol y si el usuario no tiene ese rol
                     OtherComponent = loadable(() => import('./container/404/SinPermiso'))
+                } else if (r.import2) {
+                    OtherComponent = loadable(r.import2)
                 } else {
                     OtherComponent = loadable(() => import('./' + r.import))
                 }

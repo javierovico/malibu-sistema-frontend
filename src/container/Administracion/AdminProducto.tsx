@@ -1,7 +1,13 @@
 import {LikeOutlined, MessageOutlined, EditOutlined, DeleteOutlined, SearchOutlined} from '@ant-design/icons';
 import {Avatar, Button, Divider, List, Modal, Space, Image, Popconfirm, Input, Form} from 'antd';
 import React, {useCallback, useEffect, useMemo, useState} from "react";
-import {IProducto, ItemBusqueda, TipoBusqueda, URL_GET_PRODUCTOS, useProductos} from "../../modelos/Producto";
+import {
+    IProducto,
+    QueryGetProductos,
+    TipoBusquedaProductos,
+    URL_GET_PRODUCTOS,
+    useProductos
+} from "../../modelos/Producto";
 import {Formik,Field} from 'formik'
 import {
     createItemNumber,
@@ -25,14 +31,14 @@ interface ParametrosAdminProducto {
     page: number,
     perPage: number,
     busqueda: string,
-    tipoBusqueda: TipoBusqueda
+    tipoBusqueda: TipoBusquedaProductos
 }
 
 
 const itemPerPage = createItemNumber(10)
 const itemPage = createItemNumber()
 const itemBusqueda = createItemString()
-const itemTipoBusqueda: ItemQuery<TipoBusqueda> = {
+const itemTipoBusqueda: ItemQuery<TipoBusquedaProductos> = {
     defaultValue: "nombre",
     valueToQuery: i => i,
     queryToValue: i => {
@@ -61,7 +67,13 @@ export default function AdminProducto() {
         page,
         tipoBusqueda,
     } = paramsURL
-    const itemsBusqueda = useMemo<ItemBusqueda[]>(()=>busqueda?[{columna:tipoBusqueda, valor:busqueda}]:[],[busqueda, tipoBusqueda])
+    // const itemsBusqueda = useMemo<ItemBusqueda[]>(()=>busqueda?[{columna:tipoBusqueda, valor:busqueda}]:[],[busqueda, tipoBusqueda])
+
+    const itemsBusqueda = useMemo<Partial<QueryGetProductos>>(()=>({
+        id: (tipoBusqueda === 'id' && busqueda && !isNaN(parseInt(busqueda))) ? parseInt(busqueda) : undefined,
+        codigo: (tipoBusqueda === 'codigo' && busqueda) ? busqueda : undefined,
+        nombre: (tipoBusqueda === 'nombre' && busqueda) ? busqueda : undefined,
+    }),[busqueda, tipoBusqueda])
     const {
         paginacion,
         isProductosLoading,
@@ -70,7 +82,7 @@ export default function AdminProducto() {
         productoModificando,
         setProductoModificando,
         handleBorrarProducto
-    } = useProductos(page, perPage, undefined, undefined, itemsBusqueda)
+    } = useProductos(page, perPage, undefined, itemsBusqueda)
     useEffect(()=>{
         if (!isProductosLoading && (page > paginacion.last_page)) {
             setParamsToURL({...paramsURL,page:paginacion.last_page})

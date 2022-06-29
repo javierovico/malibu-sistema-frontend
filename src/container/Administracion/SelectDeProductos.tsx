@@ -1,12 +1,13 @@
 import {
-    IProducto,
-    ItemBusqueda, SortItems,
-    TipoBusqueda,
-    TipoProductoAdmitido,
-    useProductos
+    IProducto, QueryGetProductos, SortsProductos, TipoBusquedaProductos,
+    TipoProductoAdmitido, URL_GET_PRODUCTOS, useProductos,
 } from "../../modelos/Producto";
 import React, {useCallback, useMemo, useState} from "react";
 import TablaProductos from "./TablaProductos";
+import {ItemSorteado, useGenericModel} from "../../modelos/Generico";
+
+
+
 
 export interface ProductoSelected {
     producto: IProducto,
@@ -24,21 +25,29 @@ export default function SelectDeProductos({tiposProductosAdmitidos, titulo,onPro
     const [page,setPage] = useState<number>(1)
     const [perPage, setPerpage] = useState<number>(5)
     const [busqueda, setBusqueda] = useState<string>('')
-    const [tipoBusqueda, setTipoBusqueda] = useState<TipoBusqueda>('nombre')
-    const [orderBy, setOrderBy] = useState<SortItems>([])
+    const [tipoBusqueda, setTipoBusqueda] = useState<TipoBusquedaProductos>('nombre')
+    const [orderBy, setOrderBy] = useState<ItemSorteado<SortsProductos>[]>([])
     const [tiposProducto,setTiposProducto] = useState<TipoProductoAdmitido[]>(tiposProductosAdmitidos||[])
     const tiposProductosFiltro = useMemo(()=>(tiposProductosAdmitidos && tiposProducto.length === 0) ? tiposProductosAdmitidos : tiposProducto,[tiposProducto, tiposProductosAdmitidos])
     const busquedaNombre = useMemo(()=>tipoBusqueda === 'nombre'?busqueda:'',[busqueda, tipoBusqueda])
     const busquedaCode = useMemo(()=>tipoBusqueda === 'codigo'?busqueda:'',[busqueda, tipoBusqueda])
     const busquedaId = useMemo<number|undefined>(()=>(tipoBusqueda === 'id' && !isNaN(parseInt(busqueda)))?parseInt(busqueda):undefined,[busqueda, tipoBusqueda])
-    const changeBusqueda = useCallback((key:TipoBusqueda,value:string)=>{
+    const changeBusqueda = useCallback((key:TipoBusquedaProductos,value:string)=>{
         setTipoBusqueda(key)
         setBusqueda(value)
     },[])
-    const itemsBusqueda = useMemo<ItemBusqueda[]>(()=>busqueda?[{columna:tipoBusqueda, valor:busqueda}]:[],[busqueda, tipoBusqueda])
+    const itemsBusqueda = useMemo((): Partial<QueryGetProductos>=>({
+        id: (tipoBusqueda === 'id' && busqueda && !isNaN(parseInt(busqueda))) ? parseInt(busqueda) : undefined,
+        codigo: (tipoBusqueda === 'codigo' && busqueda) ? busqueda : undefined,
+        nombre: (tipoBusqueda === 'nombre' && busqueda) ? busqueda : undefined,
+        tiposProducto: tiposProductosFiltro.length ? tiposProductosFiltro : undefined
+    }),[busqueda, tipoBusqueda, tiposProductosFiltro])
     const {
         paginacion
-    } = useProductos(page, perPage, orderBy, tiposProductosFiltro, itemsBusqueda)
+    } = useProductos(page, perPage, orderBy, itemsBusqueda)
+    // const {
+    //     paginacion
+    // } = useGenericModel<IProducto,SortsProductos,QueryGetProductos>(URL_GET_PRODUCTOS, page, perPage, undefined, orderBy, itemsBusqueda)
     return <>
         <TablaProductos
             tiposProductosAdmitidos={tiposProductosAdmitidos}
@@ -61,16 +70,6 @@ export default function SelectDeProductos({tiposProductosAdmitidos, titulo,onPro
                 setPerpage(pp)
                 setPage(p)
             }}
-            // acciones={(p)=><Space size="middle">
-            //     <Button
-            //         type="link"
-            //         onClick={()=>{
-            //             onProductoSelect(p, true)
-            //         }}
-            //     >
-            //         <IconText icon={CheckOutlined} text="Seleccionar"/>
-            //     </Button>
-            // </Space>}
             productosIdSelected={productosExistentes || []}
             onProductosIdSelectedChange={onProductosSelectChange}
         />

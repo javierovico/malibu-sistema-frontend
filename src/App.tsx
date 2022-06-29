@@ -12,6 +12,7 @@ import {Row, Col} from "antd";
 import {AuthContext} from "./context/AuthProvider";
 import {ItemType} from "antd/lib/menu/hooks/useItems";
 import {comprobarRol} from "./modelos/Usuario";
+import ListaProductoDemo from "./container/Administracion/ListaProductoDemo";
 
 const {Header, Content, Footer} = Layout;
 
@@ -108,6 +109,7 @@ function App() {
                 </Breadcrumb>
                 <div className="site-layout-content">
                     <Routes/>
+                    {/*<ListaProductoDemo/>*/}
                 </div>
             </Content>
             <Footer style={{textAlign: 'center'}}>

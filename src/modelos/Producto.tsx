@@ -1,13 +1,17 @@
-import React, {useCallback, useContext, useEffect, useState} from "react";
+import {ItemSorteado, useGenericModel} from "./Generico";
 import axios from "axios";
 import {errorRandomToIError, IError} from "./ErrorModel";
-import {PaginacionVacia, ResponseAPIPaginado} from "./ResponseAPI";
-import {AuthContext} from "../context/AuthProvider";
-import VistaError from "../components/UI/VistaError";
-import {SortOrder} from "antd/es/table/interface";
+import {IArchivo} from "./Archivo";
+
+export const URL_GET_PRODUCTOS = 'producto'
 
 export const PRODUCTO_TIPO_SIMPLE = 'simple'
 export const PRODUCTO_TIPO_COMBO = 'combo'
+
+export interface ITipoProducto {
+    code: TipoProductoAdmitido,
+    descripcion: string,
+}
 
 export const PRODUCTO_TIPOS_ADMITIDOS: ITipoProducto[] = [
     {
@@ -22,16 +26,6 @@ export const PRODUCTO_TIPOS_ADMITIDOS: ITipoProducto[] = [
 
 export type TipoProductoAdmitido = typeof PRODUCTO_TIPO_SIMPLE | typeof PRODUCTO_TIPO_COMBO
 
-export function isTipoProductoAdmitido(a: any): a is TipoProductoAdmitido{
-    return PRODUCTO_TIPOS_ADMITIDOS.map(tp=>tp.code.toString()).includes(a)
-}
-
-
-export interface ITipoProducto {
-    code: TipoProductoAdmitido,
-    descripcion: string,
-}
-
 export interface IProducto {
     producto_combos?: IProducto[]
     tipo_producto?: ITipoProducto,
@@ -43,10 +37,6 @@ export interface IProducto {
     precio: number,
     costo: number,
     s3_key: string,
-    url: string
-}
-
-export interface IArchivo {
     url: string
 }
 
@@ -65,8 +55,17 @@ export const productoVacio: IProducto = {
     }
 }
 
-export const URL_GET_PRODUCTOS = 'producto'
 
+export interface QueryGetProductos {
+    id: number,
+    codigo: string,
+    nombre: string,
+    tiposProducto: TipoProductoAdmitido[]
+}
+
+export type SortsProductos =  'id' | 'codigo' | 'nombre' | 'tipo_producto_id' | 'precio' | 'costo'
+
+export type TipoBusquedaProductos = 'id' | 'codigo' | 'nombre'
 
 interface ParametrosAPI {
     nombre?: string,
@@ -79,11 +78,29 @@ interface ParametrosAPI {
     combos?: number[]
 }
 
-/**
- * productoSubiendo: El producto que se va subir (nulo si se va eliminar)
- * productoOriginal: El producto original (nulo si se va crear )
- */
-export const useEditorProducto = () => useCallback((productoSubiendo?: IProducto, productoOriginal?: IProducto)=>{
+export const useProductos =  (page: number, perPage: number, sortBy?: ItemSorteado<SortsProductos>[], itemsBusqueda?: Partial<QueryGetProductos>) => {
+    const {
+        paginacion,
+        isModelLoading: isProductosLoading,
+        errorModel: errorProductos,
+        modelUpdate: productoUpdate,
+        modelModificando: productoModificando,
+        setModelModificando: setProductoModificando,
+        handleBorrarModel: handleBorrarProducto
+    } = useGenericModel(URL_GET_PRODUCTOS, page, perPage, editorProducto, sortBy, itemsBusqueda)
+    return {
+        paginacion,
+        isProductosLoading,
+        errorProductos,
+        productoUpdate,
+        productoModificando,
+        setProductoModificando,
+        handleBorrarProducto
+    }
+}
+
+
+function editorProducto(productoSubiendo?: IProducto, productoOriginal?: IProducto) {
     return new Promise<IProducto|undefined>((resolve,reject)=> {
         let url = URL_GET_PRODUCTOS
         let method: "put" | "delete" | "post"
@@ -164,115 +181,8 @@ export const useEditorProducto = () => useCallback((productoSubiendo?: IProducto
             reject(error)
         }
     })
-},[])
-
-export interface QueryBusqueda {
-    id?: number,
-    codigo?: string,
-    nombre?: string
 }
 
-export type TipoBusqueda = keyof QueryBusqueda
-
-export interface ItemBusqueda {
-    columna: TipoBusqueda,
-    valor: string|number
-}
-
-// export type PosiblesOrdenacionesProducto = "id" | "codigo" | "nombre" | "tipoProducto" | "precio" | "costo" | null
-export interface QuerySort {
-    id?: SortOrder,
-    codigo?: SortOrder,
-    nombre?: SortOrder,
-    tipoProducto?: SortOrder,
-    precio?: SortOrder,
-    costo?: SortOrder,
-}
-
-export type SortKeySorteado = keyof QuerySort //'id' | 'codigo' | 'nombre' | 'tipoProducto' | 'precio' | 'costo'
-
-export type ItemSorteado = {
-    code: SortKeySorteado,
-    orden?: SortOrder
-}
-
-export type SortItems = ItemSorteado[]
-
-export const useProductos = (page: number, perPage: number, sortBy?: SortItems, tiposProducto?: TipoProductoAdmitido[], itemsBusqueda?: ItemBusqueda[]) => {
-    const [paginacion, setPaginacion] = useState<ResponseAPIPaginado<IProducto>>(PaginacionVacia);
-    const [isProductosLoading, setIsProductoLoading] = useState<boolean>(true)
-    const [errorProductos, setErrorProductos] = useState<JSX.Element|undefined>();
-    const {setErrorException} = useContext(AuthContext)
-    useEffect(()=>{
-        setIsProductoLoading(true)
-        setPaginacion(PaginacionVacia)
-        setErrorProductos(undefined)
-        const queryBusqueda: QueryBusqueda = itemsBusqueda?.reduce<QueryBusqueda>((prev,curr)=>{
-            return {...prev, [curr.columna]:curr.valor}
-        },{}) || {}
-        const queryOrden: QuerySort = sortBy?.reduce<QuerySort>((prev,curr: ItemSorteado)=>{
-            return {...prev, [curr.code]:curr.orden}
-        },{}) || {}
-        axios.get<ResponseAPIPaginado<IProducto>>(URL_GET_PRODUCTOS + '?XDEBUG_SESSION_START=PHPSTORM',{
-            params:{
-                page,
-                perPage,
-                sortByList: queryOrden,
-                tiposProducto,
-                ...queryBusqueda
-            }
-        })
-            .then(({data}) => {
-                setPaginacion(data)
-            })
-            .catch(e=> {
-                setErrorException(e)
-                setErrorProductos(<VistaError error={errorRandomToIError(e)}/>)
-                setPaginacion(PaginacionVacia)
-            })
-            .finally(()=>setIsProductoLoading(false))
-    },[sortBy, page, perPage, setErrorException, tiposProducto, itemsBusqueda])
-    const editorProducto = useEditorProducto()
-    const [productoModificando, setProductoModificando] = useState<IProducto>()
-    const productoUpdate = useCallback((p: IProducto, borrar: boolean = false)=>{
-        return new Promise<void>((res,rej) => {
-            const posicionItem: number = paginacion.data.findIndex(pItem => pItem.id === p.id)      // -1 si se va agregar nuevo
-            const productoOriginal = (posicionItem>=0) ? paginacion.data[posicionItem] : undefined  //undefind si se vacrear
-            editorProducto(borrar?undefined:p, productoOriginal)
-                .then((productoSubido)=>{
-                    const nuevaPaginacion = {...paginacion}
-                    nuevaPaginacion.data.splice((posicionItem<0)?0:posicionItem,(posicionItem<0)?0:1,...productoSubido?[productoSubido]:[])
-                    setPaginacion(nuevaPaginacion)
-                    setProductoModificando(productoSubido)
-                    res()
-                })
-                .catch(rej)
-        });
-    },[editorProducto, paginacion])
-
-    const handleBorrarProducto = useCallback((p: IProducto) => {
-        return new Promise<void>(res=>{
-            productoUpdate(p, true)
-                .then(()=>{
-                    const nuevaPaginacion = {...paginacion}
-                    const posicionItem: number = paginacion.data.findIndex(pItem => pItem.id === p.id)
-                    nuevaPaginacion.data.splice(posicionItem,1)
-                    setPaginacion(nuevaPaginacion)
-                })
-                .catch((e)=>{
-                    setErrorException(e)
-                })
-                .finally(res)
-        })
-    },[productoUpdate, paginacion, setErrorException])
-
-    return {
-        paginacion,
-        isProductosLoading,
-        errorProductos,
-        productoUpdate,
-        productoModificando,
-        setProductoModificando,
-        handleBorrarProducto,
-    }
+export function isTipoProductoAdmitido(a: any): a is TipoProductoAdmitido{
+    return PRODUCTO_TIPOS_ADMITIDOS.map(tp=>tp.code.toString()).includes(a)
 }
