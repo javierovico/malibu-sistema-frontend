@@ -1,10 +1,10 @@
 import {
     IProducto, QueryGetProductos, SortsProductos, TipoBusquedaProductos,
-    TipoProductoAdmitido, URL_GET_PRODUCTOS, useProductos,
+    TipoProductoAdmitido, useProductos,
 } from "../../modelos/Producto";
 import React, {useCallback, useMemo, useState} from "react";
 import TablaProductos from "./TablaProductos";
-import {ItemSorteado, useGenericModel} from "../../modelos/Generico";
+import {ItemSorteado} from "../../modelos/Generico";
 
 
 
@@ -45,9 +45,6 @@ export default function SelectDeProductos({tiposProductosAdmitidos, titulo,onPro
     const {
         paginacion
     } = useProductos(page, perPage, orderBy, itemsBusqueda)
-    // const {
-    //     paginacion
-    // } = useGenericModel<IProducto,SortsProductos,QueryGetProductos>(URL_GET_PRODUCTOS, page, perPage, undefined, orderBy, itemsBusqueda)
     return <>
         <TablaProductos
             tiposProductosAdmitidos={tiposProductosAdmitidos}

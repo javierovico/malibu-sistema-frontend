@@ -1,39 +1,26 @@
 import TablaClientes from "./TablaClientes";
-import {ItemBusqueda, ItemSorteado, useGenericModel} from "../../modelos/Generico";
-import {ICliente, URL_CLIENTE} from "../../modelos/Cliente";
+import {ItemSorteado} from "../../modelos/Generico";
+import {QueryBusquedaCliente, SortCliente, useCliente} from "../../modelos/Cliente";
 import {useState} from "react";
-
-type Sorts = "id" | "nombre" | "ciudad"
-
-interface Query {
-    nombre: string,
-    ruc: string,
-    id: string,
-    telefono: string,
-    barrio: string,
-    ciudad: string,
-}
 
 export default function SelectDeCliente () {
     const [page,setPage] = useState<number>(1)
     const [perPage,setPerPage] = useState<number>(15)
-    const [sortBy, setSortBy] = useState<ItemSorteado<Sorts>[]>([{
+    const [sortBy, setSortBy] = useState<ItemSorteado<SortCliente>[]>([{
         code: 'ciudad',
         orden: 'ascend'
     },{
         code: 'id',
         orden: 'descend'
     }]);
-    const [busqueda,setBusqueda] = useState<Partial<Query>>({
+    const [busqueda,setBusqueda] = useState<Partial<QueryBusquedaCliente>>({
         // nombre: 'toy',
     })
     const {
         paginacion
-    } = useGenericModel<ICliente,Sorts,Query>(
-        URL_CLIENTE,
+    } = useCliente(
         page,
         perPage,
-        undefined,
         sortBy,
         busqueda
     )
