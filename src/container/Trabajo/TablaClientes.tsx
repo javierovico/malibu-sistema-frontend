@@ -1,6 +1,6 @@
 import {Button, Input, InputRef, Space, Table} from "antd";
-import {ICliente, ListSortCliente, QueryBusquedaCliente, SortCliente, TipoBusqueda} from "../../modelos/Cliente";
-import {useCallback, useMemo, useRef, useState} from "react";
+import {TipoBusqueda} from "../../modelos/Cliente";
+import {useCallback, useMemo, useRef} from "react";
 import {
     ColumnasTipoModel,
     ColumnTipoModel,
@@ -10,7 +10,7 @@ import {
     Modelable
 } from "../../modelos/Generico";
 import {ColumnFilterItem, FilterValue, SorterResult, TablePaginationConfig} from "antd/lib/table/interface";
-import {FilterConfirmProps, SortOrder} from "antd/es/table/interface";
+import {SortOrder} from "antd/es/table/interface";
 import {SearchOutlined} from "@ant-design/icons";
 import Highlighter from "react-highlight-words";
 
