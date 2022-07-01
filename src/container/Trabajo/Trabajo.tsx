@@ -1,5 +1,5 @@
-import React, {useContext, useEffect, useMemo, useState} from "react";
-import {IMesa, URL_GET_MESAS} from "../../modelos/Carrito";
+import React, {useCallback, useContext, useEffect, useMemo, useState} from "react";
+import {IMesa, QueryBusquedaMesa, useMesas} from "../../modelos/Carrito";
 import {Button, Modal, Space, Table} from "antd";
 import axios from "axios";
 import ResponseAPI from "../../modelos/ResponseAPI";
@@ -10,41 +10,20 @@ import {ColumnsType} from "antd/lib/table/interface";
 import {IconText} from "../Administracion/AdminProducto";
 import {CheckOutlined} from "@ant-design/icons";
 import SelectDeCliente from "./SelectDeCliente";
+import {ICliente} from "../../modelos/Cliente";
 
-function useMesas() {
-    const {setErrorException} = useContext(AuthContext)
-    const [mesas, setMesas] = useState<IMesa[]>([{id:30,nombre:'nombre'}])
-    const [errorMesas, setErrorMesas] = useState<JSX.Element|undefined>();
-    const [isMesasLoading, setIsMesasLoading] = useState<boolean>(true)
-    useEffect(()=>{
-        setIsMesasLoading(true)
-        setErrorMesas(undefined)
-        axios.get<ResponseAPI<{ mesas: IMesa[] }>>(URL_GET_MESAS + '?XDEBUG_SESSION_START=PHPSTORM',{params: {
-                withCarrito: 1,
-                withActivos: 1,
-            }})
-            .then(({data}) => {
-                setMesas(data.data.mesas)
-            })
-            .catch(e=> {
-                setErrorException(e)
-                setErrorMesas(<VistaError error={errorRandomToIError(e)}/>)
-            })
-            .finally(()=>setIsMesasLoading(false))
-    },[setErrorException])
-    return {
-        mesas,
-        errorMesas,
-        isMesasLoading
-    }
-}
 
 export default function Trabajo() {
+    const queryItems = useMemo<Partial<QueryBusquedaMesa>>(()=>({
+        activo: "1",
+        withCarrito: "1"
+    }),[])
     const {
-        mesas,
+        paginacion,
         errorMesas,
         isMesasLoading
-    } = useMesas()
+    } = useMesas(1,1000,undefined, queryItems)
+    const mesas = paginacion.data
     const [mesaAsignacion, setMesaAsignacion] = useState<IMesa>()
     const isModalSelectClienteVisible = useMemo<boolean>(()=>!!mesaAsignacion,[mesaAsignacion])
     const columnas = useMemo(():ColumnsType<IMesa>=>[
@@ -54,7 +33,7 @@ export default function Trabajo() {
             dataIndex: 'id',
         },{
             title:'Codigo',
-            key:'codigo',
+            key:'code',
             dataIndex: 'code'
         },{
             title:'Descripcion',
@@ -80,6 +59,9 @@ export default function Trabajo() {
             </Space>
         }
     ],[])
+    const handleSelectCliente = useCallback((c: ICliente)=>{
+        console.log(c)
+    },[])
     return <>
         {errorMesas || <Table
             loading={isMesasLoading}
@@ -91,6 +73,8 @@ export default function Trabajo() {
 
         <Modal destroyOnClose={true} width={'85%'} footer={null} visible={isModalSelectClienteVisible} onCancel={()=>setMesaAsignacion(undefined)}>
             <SelectDeCliente
+                handleSelectCliente={handleSelectCliente}
+                titulo={"Seleccione el cliente"}
             />
         </Modal>
     </>

@@ -26,6 +26,8 @@ export interface QueryBusquedaCliente {
 
 export type SortCliente = "id" | "ruc" | "telefono" | "nombre" | "ciudad" | "barrio"
 
+export type ListSortCliente = ItemSorteado<SortCliente>[]
+
 interface ParametrosAPI {
     nombre?: string,
     base64Image?: string,

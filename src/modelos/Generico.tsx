@@ -50,11 +50,7 @@ type Editor<T> = {
  * comparador debe retornar true si son iguales
  */
 export function compararArray<T>(arr1:T[], arr2:T[], keys?: ({ key: keyof T, comparador?: {(i1: any, i2:any):boolean} })[]): boolean {
-    return arr1.length === arr2.length
-        && arr1.every(a1 => arr2.find(a2 => keys ?
-            keys.every(k=> k.comparador? k.comparador(a2[k.key],a1[k.key]) : a2[k.key] === a1[k.key])
-            : a2 === a1)
-        )
+    return arr1.length === arr2.length && arr1.every(a1 => existeItemEnArray(a1,arr2, keys))
 }
 
 /**

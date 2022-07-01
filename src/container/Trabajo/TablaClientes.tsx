@@ -1,7 +1,14 @@
 import {Button, Input, InputRef, Space, Table} from "antd";
 import {ListSortCliente, SortCliente} from "../../modelos/Cliente";
 import {useCallback, useMemo, useRef, useState} from "react";
-import {ColumnasTipoModel, ColumnTipoModel, ItemSorteado, Modelable} from "../../modelos/Generico";
+import {
+    ColumnasTipoModel,
+    ColumnTipoModel,
+    compararArray,
+    existeItemEnArray,
+    ItemSorteado,
+    Modelable
+} from "../../modelos/Generico";
 import {ColumnFilterItem, FilterValue, SorterResult, TablePaginationConfig} from "antd/lib/table/interface";
 import {FilterConfirmProps, SortOrder} from "antd/es/table/interface";
 import {SearchOutlined} from "@ant-design/icons";
@@ -14,12 +21,18 @@ export interface ConfiguracionColumna<M> {
     searchable?: boolean,
     searchValue?: string,
     valoresAdmitidosFiltro?: ColumnFilterItem[],
-    valoresFiltro?: string[]
+    valoresFiltro?: string|string[]|undefined
 }
 
 export interface ValorFiltrado {
     code: string,
     value: string[]
+}
+
+
+export interface ValorBuscado {
+    code: string,
+    value?: string
 }
 
 interface Parametros<M> {
@@ -30,7 +43,8 @@ interface Parametros<M> {
     onPaginationChange?: {(page:number,perPage:number): void},
     onOrderByChange?: {(l: ItemSorteado<string>[]): void}      //enviamos los nuevos sortables list
     configuracionColumnas: ConfiguracionColumna<M>[],
-    onFiltroValuesChange?: {(v:ValorFiltrado[]):void}
+    onFiltroValuesChange?: {(v:ValorFiltrado[]):void},
+    onBusquedaValuesChange?: {(v:ValorBuscado[]):void}
 }
 
 
@@ -43,7 +57,8 @@ export default function TablaClientes<M extends Modelable> (arg: Parametros<M>){
         onPaginationChange,
         onOrderByChange,
         configuracionColumnas,
-        onFiltroValuesChange
+        onFiltroValuesChange,
+        onBusquedaValuesChange
     } = arg
 
     const [searchText, setSearchText] = useState('');
@@ -138,13 +153,17 @@ export default function TablaClientes<M extends Modelable> (arg: Parametros<M>){
     },[handleSearch, searchText])
 
     const columnas = useMemo(():ColumnasTipoModel<M> => configuracionColumnas.map(r=>createColumnItemFromKey(r.key, undefined, r.sortOrder, r.sortable, r.searchable, r.valoresAdmitidosFiltro, r.valoresFiltro)),[configuracionColumnas, createColumnItemFromKey])
-    const sortCalculado = useMemo(():ItemSorteado<string>[] =>configuracionColumnas.filter(c=>c.sortOrder).map(c=>({
+    const sortCalculado = useMemo(():ItemSorteado<string>[] =>configuracionColumnas.filter(c=>c.sortable).map(c=>({
         code: c.key as string,
         orden: c.sortOrder,
     })),[configuracionColumnas])
-    const valoresFiltroCalculado = useMemo((): ValorFiltrado[] => configuracionColumnas.filter(r=>r.valoresFiltro).map(c=>({
+    const valoresFiltroCalculado = useMemo((): ValorFiltrado[] => configuracionColumnas.filter(r=>!r.searchable && Array.isArray(r.valoresAdmitidosFiltro)).map(c=>({
         code: c.key as string,
-        value: c.valoresFiltro || []
+        value: c.valoresFiltro ? c.valoresFiltro as string[] : [],
+    })),[configuracionColumnas])
+    const valoresBusquedaCalculado = useMemo((): ValorBuscado[] => configuracionColumnas.filter(r=>r.searchable).map(c=>({
+        code: c.key as string,
+        value: c.valoresFiltro ? c.valoresFiltro as string : undefined
     })),[configuracionColumnas])
     const paginacion = useMemo(()=>((totalItems && perPage && onPaginationChange)?{
         pageSizeOptions:[4,10,20,50],
@@ -156,27 +175,48 @@ export default function TablaClientes<M extends Modelable> (arg: Parametros<M>){
         total:totalItems,
     }:undefined),[items.length, onPaginationChange, page, perPage, totalItems])
     const onChange = useCallback((pagination: TablePaginationConfig, filters: Record<string, FilterValue | null>, sorter: SorterResult<M> | SorterResult<M>[])=>{
-        const sorterArray = !Array.isArray(sorter) ? [sorter] : sorter
-        const nuevoSort: ItemSorteado<string>[] = sorterArray.filter(r=>r.order).map((r=>({
-            code: r.columnKey as string,
-            orden: r.order
-        })))
-        if (onOrderByChange && (sortCalculado.length !== nuevoSort.length || sortCalculado.some(t1 => !nuevoSort.find(t2=>t2.orden===t1.orden && t2.code ===t1.code)))) {
-            onOrderByChange(nuevoSort)
+        if (onOrderByChange) {
+            const sorterArray = !Array.isArray(sorter) ? [sorter] : sorter
+            const nuevoSort: ItemSorteado<string>[] = sortCalculado.map((r=>({
+                code: r.code,
+                orden: sorterArray.find(s=>s.columnKey === r.code)?.order
+            })))
+            const diferenciaSort = nuevoSort.filter(d=>!existeItemEnArray(d,sortCalculado,[{key:'code'},{key:'orden'}]))
+            if (diferenciaSort.length) {
+                console.log(diferenciaSort)
+                onOrderByChange(diferenciaSort)
+            }
         }
-
-        const nuevosValoresFiltrados: ValorFiltrado[] = Object.keys(filters).filter(r=>filters[r]).map(r=>({
-            code: r,
-            value: filters[r] as string[]
-        }))
-        const cambiosValoresFiltro1: ValorFiltrado[] = nuevosValoresFiltrados.filter(n=>{
-            const encontrado = valoresFiltroCalculado.find(v=>v.code === n.code)
-            return !encontrado || (encontrado.value.length !== n.value.length || encontrado.value.some(a1 => !n.value.find(a2=>a2===a1)))
-        })
-        const cambiosValoresFiltro2: ValorFiltrado[] = valoresFiltroCalculado.filter(n=>!nuevosValoresFiltrados.find(a1=>a1.code === n.code)).map((a2)=>({code: a2.code, value: []}))
-        const cambiosValoresFiltro: ValorFiltrado[] = [...cambiosValoresFiltro1, ...cambiosValoresFiltro2]
-        onFiltroValuesChange && cambiosValoresFiltro.length && onFiltroValuesChange(cambiosValoresFiltro)
-    },[onFiltroValuesChange, onOrderByChange, sortCalculado, valoresFiltroCalculado])
+        if (onFiltroValuesChange) {
+            const nuevosValoresFiltrados: ValorFiltrado[] = Object.keys(filters).filter(r=>{
+                const configuracion = configuracionColumnas.find(c => c.key === r)
+                return configuracion && !configuracion?.searchable && Array.isArray(configuracion.valoresAdmitidosFiltro)
+            }).map(r=>({
+                code: r,
+                value: (filters[r] as string[]) ? (filters[r] as string[]) : []
+            }))
+            const diferenciaFiltrada = nuevosValoresFiltrados.filter(d=>!existeItemEnArray(d,valoresFiltroCalculado, [{key:'code'},{key:'value', comparador:(i1,i2)=>compararArray(i1,i2)}]))
+            if (diferenciaFiltrada.length) {
+                onFiltroValuesChange(diferenciaFiltrada)
+            }
+        }
+        if (onBusquedaValuesChange) {
+            const nuevosValoresBuscados: ValorBuscado[] = Object.keys(filters).filter(r=>{
+                const configuracion = configuracionColumnas.find(c => c.key === r)
+                return configuracion && configuracion?.searchable
+            }).map(r=>{
+                const valueRaw = filters[r] as string[]
+                return {
+                    code: r,
+                    value: valueRaw?.length ? valueRaw[0] : undefined
+                }
+            })
+            const diferenciaBuscado = nuevosValoresBuscados.filter(d=>!existeItemEnArray(d,valoresBusquedaCalculado,[{key:'value'},{key:'code'}]))
+            if (diferenciaBuscado.length) {
+                onBusquedaValuesChange(diferenciaBuscado)
+            }
+        }
+    },[configuracionColumnas, onBusquedaValuesChange, onFiltroValuesChange, onOrderByChange, sortCalculado, valoresBusquedaCalculado, valoresFiltroCalculado])
     return <Table
         rowKey={'id'}
         columns={columnas}
