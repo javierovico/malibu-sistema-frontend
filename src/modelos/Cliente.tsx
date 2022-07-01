@@ -1,6 +1,7 @@
 import React from "react";
 import {IArchivo} from "./Archivo";
 import {ItemSorteado, Postable, useGenericModel} from "./Generico";
+import {ItemQuery} from "../hook/hookQuery";
 
 
 export const URL_CLIENTE = 'cliente'
@@ -11,11 +12,14 @@ export interface ICliente {
     telefono: string|null,
     barrio: string|null,
     ciudad: string|null,
-    imagen?: IArchivo|null;
+    imagen?: IArchivo|null,
 }
 
+export type TipoBusqueda = {
+    [n: string]: string|string[]|undefined;
+}
 
-export interface QueryBusquedaCliente {
+export interface QueryBusquedaCliente extends TipoBusqueda{
     nombre: string,
     ruc: string,
     id: string,

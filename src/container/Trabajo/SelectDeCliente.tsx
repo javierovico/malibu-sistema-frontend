@@ -1,4 +1,10 @@
-import TablaClientes, {ConfiguracionColumna, ValorFiltrado} from "./TablaClientes";
+import TablaClientes, {
+    ConfiguracionColumna,
+    generadorColumna,
+    ValorBuscado,
+    ValorCambiado,
+    ValorFiltrado
+} from "./TablaClientes";
 import {ItemSorteado} from "../../modelos/Generico";
 import {ICliente, QueryBusquedaCliente, SortCliente, useCliente} from "../../modelos/Cliente";
 import {useCallback, useMemo, useState} from "react";
@@ -9,6 +15,7 @@ interface Parametros {
     handleSelectCliente: {(cliente: ICliente):void}
 }
 
+
 /**
  * Debe ser capaz de seleccionar un cliente existente o crear uno nuevo y seleccionarlo
  * @constructor
@@ -18,7 +25,7 @@ export default function SelectDeCliente ({titulo, handleSelectCliente}: Parametr
     const [perPage,setPerPage] = useState<number>(15)
     const [sortBy, setSortBy] = useState<ItemSorteado<SortCliente>[]>([]);
     const [busqueda,setBusqueda] = useState<Partial<QueryBusquedaCliente>>({
-        // nombre: 'toy',
+        nombre: 'toy',
     })
     const {
         paginacion
@@ -36,63 +43,39 @@ export default function SelectDeCliente ({titulo, handleSelectCliente}: Parametr
             setPerPage(pp)
         }
     },[page, perPage])
-    const onFiltroValuesChange = useCallback((v:ValorFiltrado[])=>{
-        console.log(v)
+    const onFiltroValuesChange = useCallback((v:ValorCambiado[])=>{
         const nuevaBusqueda = v
             .reduce<Partial<QueryBusquedaCliente>>((prev,curr)=>{
-                const valorTraido = curr.value.length ? curr.value : undefined
+                const valorTraido = curr.value
                 return {
                     ...prev,
                     [curr.code]: valorTraido
                 }
             },busqueda)
-        console.log({nuevaBusqueda,busqueda})
         setBusqueda(nuevaBusqueda)
     },[busqueda])
-    const configuracionColumnas = useMemo((): ConfiguracionColumna<ICliente>[]=> [{
-        key: 'id',
-        sortable:true,
-        sortOrder: sortBy.find(r=>r.code==='id')?.orden,
-        searchable: true,
-    },{
-        key: 'nombre',
-        sortable:true,
-        sortOrder: sortBy.find(r=>r.code==='nombre')?.orden,
-        searchable: true,
-        valoresFiltro: 'Albert'
-    },{
-        key: 'ruc',
-        sortable:true,
-        sortOrder: sortBy.find(r=>r.code==='ruc')?.orden,
-        searchable: true,
-    },{
-        key: 'telefono',
-        searchable: true,
-    },{
-        key: 'ciudad',
-        sortable:true,
-        sortOrder: sortBy.find(r=>r.code==='ciudad')?.orden,
-        valoresAdmitidosFiltro: [{
-            value: 'santa_ana',
-            text: 'Santa Ana'
-        },{
-            value: 'santa_isabel',
-            text: 'Santa Isabel'
-        }],
-        valoresFiltro: ['santa_isabel']
-    },{
-        key: 'barrio',
-        sortable:true,
-        sortOrder: sortBy.find(r=>r.code==='barrio')?.orden,
-        valoresAdmitidosFiltro: [{
-            value: 'barrio_santa_ana',
-            text: 'Barrio Santa Ana'
-        },{
-            value: 'barrio_santa_isabel',
-            text: 'Barrio Santa Isabel'
-        }],
-        // valoresFiltro: ['barrio_santa_ana']
-    }],[sortBy])
+    const onOrderByChange = useCallback((v: ItemSorteado<string>[])=>{
+        setSortBy(v as ItemSorteado<SortCliente>[])
+    },[])
+    const configuracionColumnas = useMemo((): ConfiguracionColumna<ICliente>[]=> [
+        generadorColumna<ICliente,QueryBusquedaCliente>('id',sortBy,true,true,undefined, busqueda),
+        generadorColumna<ICliente,QueryBusquedaCliente>('nombre',sortBy,true,true,undefined, busqueda),
+        generadorColumna<ICliente,QueryBusquedaCliente>('telefono',sortBy,true,true,undefined, busqueda),
+        generadorColumna<ICliente,QueryBusquedaCliente>('ruc',sortBy,true,true,undefined, busqueda),
+        generadorColumna<ICliente,QueryBusquedaCliente>('ciudad',sortBy,true,false,[
+            {
+                value: 'Hyattfort',
+                text: 'Asuncion'
+            },{
+                value: 'Autumnborough',
+                text: 'San Lorenzo'
+            },{
+                value: 'Pacochafort',
+                text: 'Luque'
+            }
+        ], busqueda),
+        generadorColumna<ICliente,QueryBusquedaCliente>('barrio',sortBy,true,true,undefined, busqueda)
+    ],[busqueda, sortBy])
     return <TablaClientes
         configuracionColumnas={configuracionColumnas}
         items={paginacion.data}
@@ -100,7 +83,9 @@ export default function SelectDeCliente ({titulo, handleSelectCliente}: Parametr
         perPage={perPage}
         page={page}
         onPaginationChange={onPaginationChange}
-        onOrderByChange={(r)=>setSortBy(r as ItemSorteado<SortCliente>[])}
+        // onOrderByChange={(r)=>setSortBy(r as ItemSorteado<SortCliente>[])}
+        onOrderByChange={onOrderByChange}
         onFiltroValuesChange={onFiltroValuesChange}
+        onBusquedaValuesChange={onFiltroValuesChange}
     />
 }

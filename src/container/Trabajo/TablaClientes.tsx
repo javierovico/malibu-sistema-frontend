@@ -1,5 +1,5 @@
 import {Button, Input, InputRef, Space, Table} from "antd";
-import {ListSortCliente, SortCliente} from "../../modelos/Cliente";
+import {ICliente, ListSortCliente, QueryBusquedaCliente, SortCliente, TipoBusqueda} from "../../modelos/Cliente";
 import {useCallback, useMemo, useRef, useState} from "react";
 import {
     ColumnasTipoModel,
@@ -29,10 +29,14 @@ export interface ValorFiltrado {
     value: string[]
 }
 
-
 export interface ValorBuscado {
     code: string,
     value?: string
+}
+
+export interface ValorCambiado {
+    code: string,
+    value?: string|string[]
 }
 
 interface Parametros<M> {
@@ -47,6 +51,23 @@ interface Parametros<M> {
     onBusquedaValuesChange?: {(v:ValorBuscado[]):void}
 }
 
+export function generadorColumna<T,QueryBusqueda extends TipoBusqueda>(
+    key: keyof T & keyof QueryBusqueda,
+    sortBy?: ItemSorteado<string>[],
+    sortable?:boolean,
+    searchable?: boolean,
+    valoresAdmitidosFiltro?: ColumnFilterItem[],
+    busqueda?: Partial<QueryBusqueda>
+): ConfiguracionColumna<T>{
+    return {
+        key,
+        sortable,
+        searchable,
+        sortOrder: sortBy?.find(r=>r.code===(key as string))?.orden,
+        valoresAdmitidosFiltro,
+        valoresFiltro: ((busqueda && (busqueda.hasOwnProperty(key)))? busqueda[key]: (searchable?undefined:[])),
+    }
+}
 
 export default function TablaClientes<M extends Modelable> (arg: Parametros<M>){
     const {
@@ -60,26 +81,11 @@ export default function TablaClientes<M extends Modelable> (arg: Parametros<M>){
         onFiltroValuesChange,
         onBusquedaValuesChange
     } = arg
-
-    const [searchText, setSearchText] = useState('');
-    const [searchedColumn, setSearchedColumn] = useState('');
     const searchInput = useRef<InputRef>(null);
-
-    const handleSearch = useCallback((
-        selectedKeys: string[],
-        confirm: (param?: FilterConfirmProps) => void,
-        dataIndex: string,
-    ) => {
-        confirm();
-        setSearchText(selectedKeys[0]);
-        setSearchedColumn(dataIndex as string);
-    },[]);
-
-
     const createColumnItemFromKey = useCallback(<M extends Modelable>(k: keyof M, titulo?: string, sortOrder?: SortOrder, sortable?: boolean, searchable?:boolean, valoresAdmitidosFiltro?: ColumnFilterItem[], valoresFiltro?: string|string[]): ColumnTipoModel<M> =>{
         const key = typeof k === 'number' ? k : k as string
-        const keyString = k as string
         const title = titulo || ((k as string).charAt(0).toUpperCase() + (k as string).slice(1))
+        const searchText = valoresFiltro?((Array.isArray(valoresFiltro) && valoresFiltro.length)?valoresFiltro[0]: (typeof valoresFiltro === 'string'?valoresFiltro:'')):''
         return {
             dataIndex: key,
             key,
@@ -99,14 +105,14 @@ export default function TablaClientes<M extends Modelable> (arg: Parametros<M>){
                         onChange={e => setSelectedKeys(e.target.value ? [e.target.value] : [])}
                         onPressEnter={(e) => {
                             e.stopPropagation()
-                            handleSearch(selectedKeys as string[], confirm, keyString)
+                            confirm()
                         }}
                         style={{ marginBottom: 8, display: 'block' }}
                     />
                     <Space>
                         <Button
                             type="primary"
-                            onClick={() => handleSearch(selectedKeys as string[], confirm, keyString)}
+                            onClick={() => confirm()}
                             icon={<SearchOutlined />}
                             size="small"
                             style={{ width: 90 }}
@@ -116,7 +122,8 @@ export default function TablaClientes<M extends Modelable> (arg: Parametros<M>){
                         <Button
                             onClick={() => {
                                 setSelectedKeys([''])
-                                handleSearch(selectedKeys as string[], confirm, keyString)
+                                confirm()
+                                // handleSearch(selectedKeys as string[], confirm, keyString)
                                 // clearFilters && handleReset(clearFilters)
                             }}
                             size="small"
@@ -129,8 +136,8 @@ export default function TablaClientes<M extends Modelable> (arg: Parametros<M>){
                             size="small"
                             onClick={() => {
                                 confirm({ closeDropdown: false });
-                                setSearchText((selectedKeys as string[])[0]);
-                                setSearchedColumn(keyString);
+                                // setSearchText((selectedKeys as string[])[0]);
+                                // setSearchedColumn(keyString);
                             }}
                         >
                             Filter
@@ -141,16 +148,18 @@ export default function TablaClientes<M extends Modelable> (arg: Parametros<M>){
             filterIcon: searchable ? (filtered: boolean) => (
                 <SearchOutlined style={{ color: filtered ? '#1890ff' : undefined }} />
             ) : undefined,
-            render: searchable ? text => (
-                <Highlighter
-                    highlightStyle={{ backgroundColor: '#ffc069', padding: 0 }}
-                    searchWords={[searchText]}
-                    autoEscape
-                    textToHighlight={text ? text.toString() : ''}
-                />
-            ) : undefined,
+            render: searchable ? (text => {
+                return (
+                    <Highlighter
+                        highlightStyle={{ backgroundColor: '#ffc069', padding: 0 }}
+                        searchWords={[searchText]}
+                        autoEscape
+                        textToHighlight={text ? text.toString() : ''}
+                    />
+                )
+            }) : undefined,
         }
-    },[handleSearch, searchText])
+    },[])
 
     const columnas = useMemo(():ColumnasTipoModel<M> => configuracionColumnas.map(r=>createColumnItemFromKey(r.key, undefined, r.sortOrder, r.sortable, r.searchable, r.valoresAdmitidosFiltro, r.valoresFiltro)),[configuracionColumnas, createColumnItemFromKey])
     const sortCalculado = useMemo(():ItemSorteado<string>[] =>configuracionColumnas.filter(c=>c.sortable).map(c=>({
@@ -183,8 +192,7 @@ export default function TablaClientes<M extends Modelable> (arg: Parametros<M>){
             })))
             const diferenciaSort = nuevoSort.filter(d=>!existeItemEnArray(d,sortCalculado,[{key:'code'},{key:'orden'}]))
             if (diferenciaSort.length) {
-                console.log(diferenciaSort)
-                onOrderByChange(diferenciaSort)
+                onOrderByChange(nuevoSort)
             }
         }
         if (onFiltroValuesChange) {
