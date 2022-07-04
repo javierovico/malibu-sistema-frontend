@@ -146,15 +146,15 @@ export function createColumnItemFromKey<M extends Modelable>(k: keyof M, titulo?
     }
 }
 
-export const useGenericModel = <Model extends Ideable, ModelSort extends string, ModelQuery>(url:string, page: number, perPage: number, postable?: Postable<Model>, sortBy?: ItemSorteado<ModelSort>[], itemsBusqueda?: Partial<ModelQuery>) => {
-    const editor: undefined|Editor<Model> = useMemo(()=>postable ? ((url1, nuevo, original) => editorModel<Model>(url,nuevo,original,postable)) : undefined,[postable, url])
+export const useGenericModel = <Model extends Ideable, ModelSort extends string, ModelQuery>(url:string, nombreGet: string, page: number, perPage: number, postable?: Postable<Model>, sortBy?: ItemSorteado<ModelSort>[], itemsBusqueda?: Partial<ModelQuery>) => {
+    const editor: undefined|Editor<Model> = useMemo(()=>postable ? ((url1, nuevo, original) => editorModel<Model>(url, nombreGet, nuevo, original, postable)) : undefined,[nombreGet, postable, url])
     const [paginacion, setPaginacion] = useState<ResponseAPIPaginado<Model>>(PaginacionVacia);
     const [isModelLoading, setIsModelLoading] = useState<boolean>(true)
     const [errorModel, setErrorModel] = useState<JSX.Element|undefined>();
     const {setErrorException} = useContext(AuthContext)
     useEffect(()=>{
         setIsModelLoading(true)
-        setPaginacion(PaginacionVacia)
+        // setPaginacion(PaginacionVacia)
         setErrorModel(undefined)
         // const queryBusqueda: Partial<ModelQuery> = itemsBusqueda?.reduce<Partial<ModelQuery>>((prev,curr: ItemBusqueda<ModelQuery>)=>{
         //     return {...prev, [curr.columna]:curr.valor}
@@ -189,8 +189,8 @@ export const useGenericModel = <Model extends Ideable, ModelSort extends string,
                 const modelOriginal = (posicionItem>=0) ? paginacion.data[posicionItem] : undefined  //undefind si se vacrear
                 editor(url, borrar?undefined:p, modelOriginal)
                     .then((modelSubido)=>{
-                        const nuevaPaginacion = {...paginacion}
-                        nuevaPaginacion.data.splice((posicionItem<0)?0:posicionItem,(posicionItem<0)?0:1,...modelSubido?[modelSubido]:[])
+                        const nuevaPaginacion = {...paginacion, data: [...paginacion.data]}
+                        nuevaPaginacion.data.splice((posicionItem<0)?0:posicionItem,(posicionItem<0)?0:1,...(modelSubido?[modelSubido]:[]))
                         setPaginacion(nuevaPaginacion)
                         setModelModificando(modelSubido)
                         res()
@@ -203,20 +203,21 @@ export const useGenericModel = <Model extends Ideable, ModelSort extends string,
     },[editor, paginacion, url])
 
     const handleBorrarModel = useCallback((p: Model) => {
-        return new Promise<void>(res=>{
-            modelUpdate(p, true)
-                .then(()=>{
-                    const nuevaPaginacion = {...paginacion}
-                    const posicionItem: number = paginacion.data.findIndex(pItem => pItem.id === p.id)
-                    nuevaPaginacion.data.splice(posicionItem,1)
-                    setPaginacion(nuevaPaginacion)
-                })
-                .catch((e)=>{
-                    setErrorException(e)
-                })
-                .finally(res)
-        })
-    },[modelUpdate, paginacion, setErrorException])
+        return modelUpdate(p,true)
+        // return new Promise<void>(res=>{
+        //     modelUpdate(p, true)
+        //         .then(()=>{
+        //             const nuevaPaginacion = {...paginacion}
+        //             const posicionItem: number = paginacion.data.findIndex(pItem => pItem.id === p.id)
+        //             nuevaPaginacion.data.splice(posicionItem,1)
+        //             setPaginacion(nuevaPaginacion)
+        //         })
+        //         .catch((e)=>{
+        //             setErrorException(e)
+        //         })
+        //         .finally(res)
+        // })
+    },[modelUpdate])
 
     return {
         paginacion,
@@ -229,7 +230,7 @@ export const useGenericModel = <Model extends Ideable, ModelSort extends string,
     }
 }
 
-export function editorModel<T extends Ideable>(url: string, productoSubiendo: T|undefined, productoOriginal: T|undefined, postableFunction: Postable<T>) {
+export function editorModel<T extends Ideable>(url: string, nombreGet:string, productoSubiendo: T|undefined, productoOriginal: T|undefined, postableFunction: Postable<T>) {
     return new Promise<T|undefined>((resolve,reject)=> {
         let method: "put" | "delete" | "post"
         let data: Record<string,any> = {}
@@ -257,7 +258,7 @@ export function editorModel<T extends Ideable>(url: string, productoSubiendo: T|
                 url,
                 method
             })
-                .then(({data}) => resolve(data.data.producto))
+                .then(({data}) => resolve(data.data[nombreGet]))
                 .catch((e)=>{
                     reject(errorRandomToIError(e,{
                         tipoProducto: 'tipo_producto.code',

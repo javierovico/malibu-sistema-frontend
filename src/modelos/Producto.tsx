@@ -1,6 +1,4 @@
-import {editorModel, ItemSorteado, Postable, useGenericModel} from "./Generico";
-import axios from "axios";
-import {errorRandomToIError, IError} from "./ErrorModel";
+import {ItemSorteado, Postable, useGenericModel} from "./Generico";
 import {IArchivo} from "./Archivo";
 
 export const URL_GET_PRODUCTOS = 'producto'
@@ -87,7 +85,7 @@ export const useProductos =  (page: number, perPage: number, sortBy?: ItemSortea
         modelModificando: productoModificando,
         setModelModificando: setProductoModificando,
         handleBorrarModel: handleBorrarProducto
-    } = useGenericModel(URL_GET_PRODUCTOS, page, perPage, postableProducto, sortBy, itemsBusqueda)
+    } = useGenericModel(URL_GET_PRODUCTOS, 'producto', page, perPage, postableProducto, sortBy, itemsBusqueda)
     return {
         paginacion,
         isProductosLoading,

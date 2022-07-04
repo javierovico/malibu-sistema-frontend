@@ -1,16 +1,12 @@
-import React, {useCallback, useContext, useEffect, useMemo, useState} from "react";
+import React, {useCallback, useMemo, useState} from "react";
 import {IMesa, QueryBusquedaMesa, useMesas} from "../../modelos/Carrito";
-import {Button, Modal, Space, Table} from "antd";
-import axios from "axios";
-import ResponseAPI from "../../modelos/ResponseAPI";
-import VistaError from "../../components/UI/VistaError";
-import {errorRandomToIError} from "../../modelos/ErrorModel";
-import {AuthContext} from "../../context/AuthProvider";
+import {Button, Dropdown, Menu, Modal, Space, Table, Tooltip} from "antd";
 import {ColumnsType} from "antd/lib/table/interface";
 import {IconText} from "../Administracion/AdminProducto";
-import {CheckOutlined} from "@ant-design/icons";
+import {CheckOutlined, DownOutlined} from "@ant-design/icons";
 import SelectDeCliente from "./SelectDeCliente";
 import {ICliente} from "../../modelos/Cliente";
+import {ItemType} from "antd/lib/menu/hooks/useItems";
 
 
 export default function Trabajo() {
@@ -26,6 +22,12 @@ export default function Trabajo() {
     const mesas = paginacion.data
     const [mesaAsignacion, setMesaAsignacion] = useState<IMesa>()
     const isModalSelectClienteVisible = useMemo<boolean>(()=>!!mesaAsignacion,[mesaAsignacion])
+    const menuAsignacion = useMemo(():ItemType[]=>[
+        {
+            title: 'Hola',
+            key: '1'
+        }
+    ],[])
     const columnas = useMemo(():ColumnsType<IMesa>=>[
         {
             title:'ID',
@@ -48,20 +50,37 @@ export default function Trabajo() {
             title:'Acciones',
             key:'acciones',
             render: (_,m)=> <Space size="middle">
+                <Dropdown overlay={<Menu items={menuAsignacion} />} trigger={['click']}>
+                    <a onClick={e => e.preventDefault()}>
+                        <Space>
+                            Asignar
+                            <DownOutlined />
+                        </Space>
+                    </a>
+                </Dropdown>
                 <Button
                     type="link"
                     onClick={()=>{
                         setMesaAsignacion(m)
                     }}
                 >
-                    <IconText icon={CheckOutlined} text="Tomar"/>
+                    <IconText icon={CheckOutlined} text="Asignar"/>
                 </Button>
             </Space>
         }
-    ],[])
-    const handleSelectCliente = useCallback((c: ICliente)=>{
-        console.log(c)
+    ],[menuAsignacion])
+    const [clienteSeleccionado, setClienteSeleccionado] = useState<ICliente>()
+    const handleCancelModalCliente = useCallback(()=>{
+        setClienteSeleccionado(undefined)
+        setMesaAsignacion(undefined)
     },[])
+    const handleAceptarModalCliente = useCallback(()=>{
+
+    },[])
+    const footerModalSelectCliente = useMemo(()=>[
+        <Button key='back' onClick={handleCancelModalCliente}>Cancelar</Button>,
+        <Tooltip key='confirm' title={!clienteSeleccionado?'Debe seleccionar un cliente primero':''}><Button type='primary' onClick={handleAceptarModalCliente} disabled={!clienteSeleccionado}>Aceptar</Button></Tooltip>,
+    ],[clienteSeleccionado, handleAceptarModalCliente, handleCancelModalCliente])
     return <>
         {errorMesas || <Table
             loading={isMesasLoading}
@@ -70,11 +89,16 @@ export default function Trabajo() {
             dataSource={mesas}
             columns={columnas}
         />}
-
-        <Modal destroyOnClose={true} width={'85%'} footer={null} visible={isModalSelectClienteVisible} onCancel={()=>setMesaAsignacion(undefined)}>
+        <Modal
+            destroyOnClose={true}
+            width={'85%'}
+            footer={footerModalSelectCliente}
+            visible={isModalSelectClienteVisible}
+            onCancel={handleCancelModalCliente}
+        >
             <SelectDeCliente
-                handleSelectCliente={handleSelectCliente}
-                titulo={"Seleccione el cliente"}
+                handleSelectCliente={setClienteSeleccionado}
+                clienteSelected={clienteSeleccionado}
             />
         </Modal>
     </>

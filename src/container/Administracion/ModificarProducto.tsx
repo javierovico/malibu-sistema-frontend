@@ -1,13 +1,12 @@
-import React, {useCallback, useContext, useEffect, useMemo, useState} from "react";
+import React, {useCallback, useContext, useMemo} from "react";
 import {
     IProducto,
-    PRODUCTO_TIPO_SIMPLE,
     PRODUCTO_TIPO_COMBO,
     productoVacio,
     PRODUCTO_TIPOS_ADMITIDOS
 } from "../../modelos/Producto";
-import {Alert, Button, Col, Divider, Modal, Popconfirm, Row, Space, Spin, Table} from "antd";
-import {Field, Form, FormikBag, FormikErrors, FormikProps, withFormik} from "formik";
+import {Alert, Button, Col, Modal, Row, Space, Spin} from "antd";
+import {Field, Form, FormikBag, FormikProps, withFormik} from "formik";
 import {FormTitle} from './ModificarProducto.style';
 import {AntInput, AntSelect, AntTextArea} from "../../components/UI/Antd/AntdInputWithFormik";
 import {AntFileSelect} from "../../components/UI/Antd/AntdInputWithFormikTypescript";

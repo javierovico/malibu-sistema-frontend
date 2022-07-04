@@ -5,7 +5,7 @@ import {
     isTipoProductoAdmitido, PRODUCTO_TIPOS_ADMITIDOS, SortsProductos,
     TipoProductoAdmitido
 } from "../../modelos/Producto";
-import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {useCallback, useMemo, useRef, useState} from "react";
 import {
     ColumnsType,
     FilterValue,

@@ -2,7 +2,7 @@ import SelectDeProductos from "./SelectDeProductos";
 import {useContext, useEffect} from "react";
 import {AuthContext} from "../../context/AuthProvider";
 
-export default function () {
+export default function ListaProductoDemo() {
     const {
         pusher,
         user

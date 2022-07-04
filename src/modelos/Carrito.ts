@@ -48,7 +48,7 @@ export const useMesas =  (page: number, perPage: number, sortBy?: ItemSorteado<S
         modelModificando: productoModificando,
         setModelModificando: setProductoModificando,
         handleBorrarModel: handleBorrarProducto
-    } = useGenericModel<IMesa, SortMesa, QueryBusquedaMesa>(URL_MESA, page, perPage, postableMesa, sortBy, itemsBusqueda)
+    } = useGenericModel<IMesa, SortMesa, QueryBusquedaMesa>(URL_MESA,'mesa', page, perPage, postableMesa, sortBy, itemsBusqueda)
     return {
         paginacion,
         isMesasLoading,

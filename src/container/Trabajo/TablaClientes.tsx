@@ -2,14 +2,19 @@ import {Button, Input, InputRef, Space, Table} from "antd";
 import {TipoBusqueda} from "../../modelos/Cliente";
 import {useCallback, useMemo, useRef} from "react";
 import {
-    ColumnasTipoModel,
     ColumnTipoModel,
     compararArray,
     existeItemEnArray,
     ItemSorteado,
     Modelable
 } from "../../modelos/Generico";
-import {ColumnFilterItem, FilterValue, SorterResult, TablePaginationConfig} from "antd/lib/table/interface";
+import {
+    ColumnFilterItem, ColumnsType,
+    FilterValue, RowSelectionType,
+    SorterResult,
+    TablePaginationConfig,
+    TableRowSelection
+} from "antd/lib/table/interface";
 import {SortOrder} from "antd/es/table/interface";
 import {SearchOutlined} from "@ant-design/icons";
 import Highlighter from "react-highlight-words";
@@ -39,7 +44,13 @@ export interface ValorCambiado {
     value?: string|string[]
 }
 
+export interface ItemsSelected<M> {
+    item: M,
+    selected: boolean
+}
+
 interface Parametros<M> {
+    title?: JSX.Element | string,
     items: M[],
     page?: number,
     totalItems?: number,
@@ -49,6 +60,11 @@ interface Parametros<M> {
     configuracionColumnas: ConfiguracionColumna<M>[],
     onFiltroValuesChange?: {(v:ValorFiltrado[]):void},
     onBusquedaValuesChange?: {(v:ValorBuscado[]):void}
+    itemsIdSelected?: number[],
+    onItemsIdSelectedChange?: {(items: ItemsSelected<M>[]):void},
+    typeSelcted?: RowSelectionType,
+    acciones?: (p: M) => JSX.Element,
+    loading?: boolean
 }
 
 export function generadorColumna<T,QueryBusqueda extends TipoBusqueda>(
@@ -79,7 +95,13 @@ export default function TablaClientes<M extends Modelable> (arg: Parametros<M>){
         onOrderByChange,
         configuracionColumnas,
         onFiltroValuesChange,
-        onBusquedaValuesChange
+        onBusquedaValuesChange,
+        itemsIdSelected,
+        onItemsIdSelectedChange,
+        typeSelcted,
+        title,
+        acciones,
+        loading
     } = arg
     const searchInput = useRef<InputRef>(null);
     const createColumnItemFromKey = useCallback(<M extends Modelable>(k: keyof M, titulo?: string, sortOrder?: SortOrder, sortable?: boolean, searchable?:boolean, valoresAdmitidosFiltro?: ColumnFilterItem[], valoresFiltro?: string|string[]): ColumnTipoModel<M> =>{
@@ -160,8 +182,17 @@ export default function TablaClientes<M extends Modelable> (arg: Parametros<M>){
             }) : undefined,
         }
     },[])
-
-    const columnas = useMemo(():ColumnasTipoModel<M> => configuracionColumnas.map(r=>createColumnItemFromKey(r.key, undefined, r.sortOrder, r.sortable, r.searchable, r.valoresAdmitidosFiltro, r.valoresFiltro)),[configuracionColumnas, createColumnItemFromKey])
+    const columnas = useMemo((): ColumnsType<M> => {
+        const cols: ColumnsType<M> = configuracionColumnas.map(r=>createColumnItemFromKey(r.key, undefined, r.sortOrder, r.sortable, r.searchable, r.valoresAdmitidosFiltro, r.valoresFiltro))
+        if (acciones) {
+            cols.push({
+                title: 'Acciones',
+                key: 'action',
+                render: acciones,
+            })
+        }
+        return cols
+    },[acciones, configuracionColumnas, createColumnItemFromKey])
     const sortCalculado = useMemo(():ItemSorteado<string>[] =>configuracionColumnas.filter(c=>c.sortable).map(c=>({
         code: c.key as string,
         orden: c.sortOrder,
@@ -225,11 +256,32 @@ export default function TablaClientes<M extends Modelable> (arg: Parametros<M>){
             }
         }
     },[configuracionColumnas, onBusquedaValuesChange, onFiltroValuesChange, onOrderByChange, sortCalculado, valoresBusquedaCalculado, valoresFiltroCalculado])
+    const selectedOption = useMemo<TableRowSelection<M>|undefined>(()=>{
+        if (itemsIdSelected && onItemsIdSelectedChange) {
+            return {
+                type:typeSelcted,
+                selectedRowKeys:itemsIdSelected,
+                onChange: (selectedRowKeys: React.Key[]) => {
+                    onItemsIdSelectedChange(items
+                        .filter(p1=> (p1.id) && ( itemsIdSelected.includes(p1.id) !== selectedRowKeys.includes(p1.id))) //trae solo los que cambiaron de estado
+                        .map(p1=>({
+                            item: p1,
+                            selected: !!(p1.id && selectedRowKeys.includes(p1.id))     //el producto esta seleccionado o no dependiendo si se encuentra en selected
+                        })))
+                }
+            }
+        } else {
+            return undefined
+        }
+    },[items, itemsIdSelected, onItemsIdSelectedChange, typeSelcted])
     return <Table
+        loading={loading}
+        title={()=>title}
         rowKey={'id'}
         columns={columnas}
         dataSource={items}
         pagination={paginacion}
         onChange={onChange}
+        rowSelection={selectedOption}
     />
 }

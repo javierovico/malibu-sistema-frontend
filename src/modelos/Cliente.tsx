@@ -1,18 +1,25 @@
-import React from "react";
 import {IArchivo} from "./Archivo";
 import {ItemSorteado, Postable, useGenericModel} from "./Generico";
-import {ItemQuery} from "../hook/hookQuery";
 
 
 export const URL_CLIENTE = 'cliente'
 export interface ICliente {
-    id?: number,
+    id?: number|null,
     nombre: string,
     ruc: string|null,
     telefono: string|null,
     barrio: string|null,
     ciudad: string|null,
     imagen?: IArchivo|null,
+}
+
+export const clienteVacio: ICliente = {
+    id: null,
+    ruc: '',
+    telefono: '',
+    barrio: '',
+    ciudad: '',
+    nombre: '',
 }
 
 export type TipoBusqueda = {
@@ -30,7 +37,6 @@ export interface QueryBusquedaCliente extends TipoBusqueda{
 
 export type SortCliente = "id" | "ruc" | "telefono" | "nombre" | "ciudad" | "barrio"
 
-export type ListSortCliente = ItemSorteado<SortCliente>[]
 
 interface ParametrosAPI {
     nombre?: string,
@@ -81,21 +87,21 @@ const postableCliente: Postable<ICliente> = (clienteNuevo, clienteOriginal): Par
 export const useCliente =  (page: number, perPage: number, sortBy?: ItemSorteado<SortCliente>[], itemsBusqueda?: Partial<QueryBusquedaCliente>) => {
     const {
         paginacion,
-        isModelLoading: isProductosLoading,
-        errorModel: errorProductos,
-        modelUpdate: productoUpdate,
-        modelModificando: productoModificando,
-        setModelModificando: setProductoModificando,
-        handleBorrarModel: handleBorrarProducto
-    } = useGenericModel<ICliente, SortCliente, QueryBusquedaCliente>(URL_CLIENTE, page, perPage, postableCliente, sortBy, itemsBusqueda)
+        isModelLoading: isClientesLoading,
+        errorModel: errorCliente,
+        modelUpdate: clienteUpdate,
+        modelModificando: clienteModificando,
+        setModelModificando: setClienteModificando,
+        handleBorrarModel: handleBorrarCliente
+    } = useGenericModel<ICliente, SortCliente, QueryBusquedaCliente>(URL_CLIENTE,'cliente', page, perPage, postableCliente, sortBy, itemsBusqueda)
     return {
         paginacion,
-        isProductosLoading,
-        errorProductos,
-        productoUpdate,
-        productoModificando,
-        setProductoModificando,
-        handleBorrarProducto
+        isClientesLoading,
+        errorCliente,
+        clienteUpdate,
+        clienteModificando,
+        setClienteModificando,
+        handleBorrarCliente
     }
 }
 

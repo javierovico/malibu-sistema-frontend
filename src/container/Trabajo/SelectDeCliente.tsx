@@ -1,18 +1,19 @@
 import TablaClientes, {
     ConfiguracionColumna,
-    generadorColumna,
-    ValorBuscado,
+    generadorColumna, ItemsSelected,
     ValorCambiado,
-    ValorFiltrado
 } from "./TablaClientes";
 import {ItemSorteado} from "../../modelos/Generico";
-import {ICliente, QueryBusquedaCliente, SortCliente, useCliente} from "../../modelos/Cliente";
-import {useCallback, useMemo, useState} from "react";
-import { keys } from 'ts-transformer-keys';
+import {clienteVacio, ICliente, QueryBusquedaCliente, SortCliente, useCliente} from "../../modelos/Cliente";
+import React, {useCallback, useMemo, useState} from "react";
+import {Button, Col, Modal, Popconfirm, Row, Space, Tooltip} from "antd";
+import {DeleteOutlined, EditOutlined, PlusOutlined} from "@ant-design/icons";
+import ModificarCliente from "../Administracion/ModificarCliente";
+import {IconText} from "../Administracion/AdminProducto";
 
 interface Parametros {
-    titulo: string,
-    handleSelectCliente: {(cliente: ICliente):void}
+    handleSelectCliente: {(cliente: ICliente):void},
+    clienteSelected?: ICliente,
 }
 
 
@@ -20,15 +21,18 @@ interface Parametros {
  * Debe ser capaz de seleccionar un cliente existente o crear uno nuevo y seleccionarlo
  * @constructor
  */
-export default function SelectDeCliente ({titulo, handleSelectCliente}: Parametros) {
+export default function SelectDeCliente ({handleSelectCliente,clienteSelected}: Parametros) {
     const [page,setPage] = useState<number>(1)
-    const [perPage,setPerPage] = useState<number>(15)
+    const [perPage,setPerPage] = useState<number>(10)
     const [sortBy, setSortBy] = useState<ItemSorteado<SortCliente>[]>([]);
-    const [busqueda,setBusqueda] = useState<Partial<QueryBusquedaCliente>>({
-        nombre: 'toy',
-    })
+    const [busqueda,setBusqueda] = useState<Partial<QueryBusquedaCliente>>({})
     const {
-        paginacion
+        paginacion,
+        clienteUpdate,
+        clienteModificando,
+        setClienteModificando,
+        handleBorrarCliente,
+        isClientesLoading
     } = useCliente(
         page,
         perPage,
@@ -76,16 +80,91 @@ export default function SelectDeCliente ({titulo, handleSelectCliente}: Parametr
         ], busqueda),
         generadorColumna<ICliente,QueryBusquedaCliente>('barrio',sortBy,true,true,undefined, busqueda)
     ],[busqueda, sortBy])
-    return <TablaClientes
-        configuracionColumnas={configuracionColumnas}
-        items={paginacion.data}
-        totalItems={paginacion.total}
-        perPage={perPage}
-        page={page}
-        onPaginationChange={onPaginationChange}
-        // onOrderByChange={(r)=>setSortBy(r as ItemSorteado<SortCliente>[])}
-        onOrderByChange={onOrderByChange}
-        onFiltroValuesChange={onFiltroValuesChange}
-        onBusquedaValuesChange={onFiltroValuesChange}
-    />
+    const onItemsIdSelectedChange = useCallback((items: ItemsSelected<ICliente>[])=>{
+        const selected = items.find(i=>i.selected)?.item
+        selected && handleSelectCliente(selected)
+    },[handleSelectCliente])
+    // const [isModalAgregarClienteVisible, setIsModalAgregarClienteVisible] =useState(false)
+    const handleAgregarCliente = useCallback(()=>{
+        setClienteModificando(clienteVacio)
+    },[setClienteModificando])
+    const titulo = <>
+        <Row justify="space-between">
+            <Col lg={12}>
+                <h3>Seleccione Cliente</h3>
+            </Col>
+            <Col offset={4} lg={8}>
+                <Button onClick={()=>handleAgregarCliente()} style={{float:'right'}} type="primary" icon={<PlusOutlined />}>
+                    Crear Nuevo Cliente
+                </Button>
+            </Col>
+        </Row>
+    </>
+    const clienteChange = useCallback((c:ICliente)=>{
+        return new Promise<void>((res,rej)=>{
+            clienteUpdate(c)
+                .then(()=>{
+                    setClienteModificando(undefined)
+                    res()
+                })
+                .catch(rej)
+        })
+    },[clienteUpdate, setClienteModificando])
+    const acciones = useCallback((c: ICliente)=><Space size="middle">
+        <Tooltip title="Borrar">
+            <Popconfirm
+                key="borrar"
+                okText="Si"
+                cancelText="No"
+                title="Seguro que desea borrar?"
+                onConfirm={()=>handleBorrarCliente(c)}
+            >
+                <Button type="link" >
+                    <IconText icon={DeleteOutlined} text=""/>
+                </Button>
+            </Popconfirm>
+        </Tooltip>
+        <Tooltip title="Modiicar">
+            <Button
+                type="link"
+                onClick={()=>{
+                    setClienteModificando(c)
+                }}
+            >
+                <IconText icon={EditOutlined} text=""/>
+            </Button>
+        </Tooltip>
+    </Space>,[handleBorrarCliente, setClienteModificando])
+    return <>
+        <TablaClientes
+            loading={isClientesLoading}
+            title={titulo}
+            itemsIdSelected={clienteSelected?.id?[clienteSelected.id]:[]}
+            onItemsIdSelectedChange={onItemsIdSelectedChange}
+            configuracionColumnas={configuracionColumnas}
+            items={paginacion.data}
+            totalItems={paginacion.total}
+            perPage={perPage}
+            page={page}
+            onPaginationChange={onPaginationChange}
+            // onOrderByChange={(r)=>setSortBy(r as ItemSorteado<SortCliente>[])}
+            onOrderByChange={onOrderByChange}
+            onFiltroValuesChange={onFiltroValuesChange}
+            onBusquedaValuesChange={onFiltroValuesChange}
+            typeSelcted={'radio'}
+            acciones={acciones}
+        />
+        <Modal
+            destroyOnClose={true}
+            width={'85%'}
+            footer={null}
+            visible={!!clienteModificando}
+            onCancel={()=>setClienteModificando(undefined)}
+        >
+            <ModificarCliente
+                clienteChange={clienteChange}
+                cliente={clienteModificando}
+            />
+        </Modal>
+    </>
 }
