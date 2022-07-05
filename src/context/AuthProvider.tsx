@@ -6,8 +6,9 @@ import {IUsuario,UsuarioResponse, TokenUsuarioResponse, URL_USUARIO_PROPIO, URL_
 import ResponseAPI from "../modelos/ResponseAPI";
 import {errorRandomToIError, IError} from "../modelos/ErrorModel";
 import VistaError from "../components/UI/VistaError";
-import Pusher from "pusher-js";
+import Pusher, {Channel} from "pusher-js";
 
+const CHANNEL_PRIVATE_MESA = 'private-mesa'
 
 interface AuthValues {
     loggedIn: boolean,
@@ -20,6 +21,7 @@ interface AuthValues {
     errorView?: JSX.Element,
     setErrorException: (e: any) => void,
     pusher?: Pusher,
+    channelCarrito?: Channel,
 }
 
 const authValues: AuthValues = {
@@ -86,6 +88,8 @@ const AuthProvider = (props: any) => {
             },
         },
     }),[token])
+
+    const channelCarrito = useMemo<Channel|undefined>(()=>pusher?.subscribe(CHANNEL_PRIVATE_MESA),[pusher])
 
     /** Establece el token en el axio*/
     useEffect(() => {
@@ -160,7 +164,8 @@ const AuthProvider = (props: any) => {
         setError,
         errorView,
         setErrorException,
-        pusher
+        pusher,
+        channelCarrito
     }
 
     return (

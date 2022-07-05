@@ -221,6 +221,7 @@ export const useGenericModel = <Model extends Ideable, ModelSort extends string,
 
     return {
         paginacion,
+        setPaginacion,
         isModelLoading,
         errorModel,
         modelUpdate,
