@@ -14,6 +14,7 @@ import {IconText} from "../Administracion/AdminProducto";
 interface Parametros {
     handleSelectCliente: {(cliente: ICliente):void},
     clienteSelected?: ICliente,
+    titulo?:string
 }
 
 
@@ -21,7 +22,7 @@ interface Parametros {
  * Debe ser capaz de seleccionar un cliente existente o crear uno nuevo y seleccionarlo
  * @constructor
  */
-export default function SelectDeCliente ({handleSelectCliente,clienteSelected}: Parametros) {
+export default function SelectDeCliente ({handleSelectCliente,clienteSelected,titulo}: Parametros) {
     const [page,setPage] = useState<number>(1)
     const [perPage,setPerPage] = useState<number>(10)
     const [sortBy, setSortBy] = useState<ItemSorteado<SortCliente>[]>([]);
@@ -88,10 +89,10 @@ export default function SelectDeCliente ({handleSelectCliente,clienteSelected}: 
     const handleAgregarCliente = useCallback(()=>{
         setClienteModificando(clienteVacio)
     },[setClienteModificando])
-    const titulo = <>
+    const tituloCreado = <>
         <Row justify="space-between">
             <Col lg={12}>
-                <h3>Seleccione Cliente</h3>
+                <h3>{titulo || 'Seleccione Cliente'}</h3>
             </Col>
             <Col offset={4} lg={8}>
                 <Button onClick={()=>handleAgregarCliente()} style={{float:'right'}} type="primary" icon={<PlusOutlined />}>
@@ -138,7 +139,7 @@ export default function SelectDeCliente ({handleSelectCliente,clienteSelected}: 
     return <>
         <TablaClientes
             loading={isClientesLoading}
-            title={titulo}
+            title={tituloCreado}
             itemsIdSelected={clienteSelected?.id?[clienteSelected.id]:[]}
             onItemsIdSelectedChange={onItemsIdSelectedChange}
             configuracionColumnas={configuracionColumnas}
