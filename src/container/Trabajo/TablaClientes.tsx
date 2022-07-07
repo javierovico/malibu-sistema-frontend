@@ -21,19 +21,23 @@ import Highlighter from "react-highlight-words";
 import * as React from "react";
 import {RenderedCell} from "rc-table/lib/interface";
 
-export interface ConfiguracionColumna<M> {
-    key: keyof M,
+export interface FilterFunction<M> { (item: M, filter:undefined|string|string[]): boolean }
+
+export interface SorterFunction<M> { (i1: M, i2: M): number }
+
+export interface ConfiguracionColumnaSimple<M> {
+    key: keyof M | string,
     sortable?: boolean,
-    sortOrder?: SortOrder,
     searchable?: boolean,
-    searchValue?: string,
     valoresAdmitidosFiltro?: ColumnFilterItem[],
-    valoresFiltro?: string|string[]|undefined,
-    titulo?: string
+    titulo?: string,
+    render?: {(value: any, item:M):React.ReactNode | RenderedCell<M>},
+    filter?: FilterFunction<M>,
+    sorter?: SorterFunction<M>,
 }
 
-export interface ConfiguracionColumnaCalculada<M> {
-    key: string,
+export interface ConfiguracionColumna<M> {
+    key: string | keyof M,
     sortable?: boolean,
     sortOrder?: SortOrder,
     searchable?: boolean,
@@ -41,12 +45,10 @@ export interface ConfiguracionColumnaCalculada<M> {
     valoresAdmitidosFiltro?: ColumnFilterItem[],
     valoresFiltro?: string|string[]|undefined,
     titulo?: string,
-    render: {(value: any, item:M):React.ReactNode | RenderedCell<M>}
+    render?: {(value: any, item:M):React.ReactNode | RenderedCell<M>},
+    filter?: FilterFunction<M>
 }
 
-export function objectIsConfiguracionColumnaCalculada<T>(a:any): a is ConfiguracionColumnaCalculada<T> {
-    return a.hasOwnProperty('key') && a.hasOwnProperty('render')
-}
 
 export interface ValorFiltrado {
     code: string,
@@ -76,7 +78,7 @@ interface Parametros<M> {
     perPage?: number,
     onPaginationChange?: {(page:number,perPage:number): void},
     onOrderByChange?: {(l: ItemSorteado<string>[]): void}      //enviamos los nuevos sortables list
-    configuracionColumnas: (ConfiguracionColumna<M>|ConfiguracionColumnaCalculada<M>)[],
+    configuracionColumnas: (ConfiguracionColumna<M>)[],
     onFiltroValuesChange?: {(v:ValorFiltrado[]):void},
     onBusquedaValuesChange?: {(v:ValorBuscado[]):void}
     itemsIdSelected?: number[],
@@ -104,15 +106,19 @@ export function generadorColumna<T,QueryBusqueda extends TipoBusqueda>(
     }
 }
 
-export function generadorColumnaCalculada<T,QueryBusqueda extends TipoBusqueda>(
-    key: string,
-    render:{(value:any, item:T):React.ReactNode | RenderedCell<T>},
-    sortBy?: ItemSorteado<string>[],
-    sortable?:boolean,
-    searchable?: boolean,
-    valoresAdmitidosFiltro?: ColumnFilterItem[],
+export function generadorColumnaSimple<T,QueryBusqueda extends TipoBusqueda>(
+    cs: ConfiguracionColumnaSimple<T>|string,
     busqueda?: Partial<QueryBusqueda>,
-): ConfiguracionColumnaCalculada<T>{
+    sortBy?: ItemSorteado<string>[],
+): ConfiguracionColumna<T>{
+    const conf = (typeof cs == 'string')?{key:cs}:cs
+    const {
+        key,
+        sortable,
+        searchable,
+        valoresAdmitidosFiltro,
+        render
+    } = conf
     return {
         key,
         sortable,
@@ -143,7 +149,7 @@ export default function TablaClientes<M extends Modelable> (arg: Parametros<M>){
         loading
     } = arg
     const searchInput = useRef<InputRef>(null);
-    const createColumnItemFromKey = useCallback(<M extends Modelable>(r: ConfiguracionColumna<M> | ConfiguracionColumnaCalculada<M>): ColumnTipoModel<M> =>{
+    const createColumnItemFromKey = useCallback(<M extends Modelable>(r: ConfiguracionColumna<M>): ColumnTipoModel<M> =>{
         const {
             key: k,
             titulo,
@@ -168,10 +174,8 @@ export default function TablaClientes<M extends Modelable> (arg: Parametros<M>){
                     />
                 )
             }
-        } else if (objectIsConfiguracionColumnaCalculada<M>(r)) {
-            render = r.render
         } else {
-            render = undefined
+            render = r.render
         }
         const filteredValue = valoresFiltro?(Array.isArray(valoresFiltro)?valoresFiltro:[valoresFiltro]):null
         // console.log({filteredValue,valoresAdmitidosFiltro})

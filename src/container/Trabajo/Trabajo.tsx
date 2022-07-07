@@ -4,14 +4,13 @@ import {Button, Dropdown, Menu, Modal, Space, Table, Tooltip} from "antd";
 import {ColumnsType} from "antd/lib/table/interface";
 import {DownOutlined} from "@ant-design/icons";
 import SelectDeCliente from "./SelectDeCliente";
-import {ICliente, QueryBusquedaCliente} from "../../modelos/Cliente";
+import {ICliente} from "../../modelos/Cliente";
 import {ItemType} from "antd/lib/menu/hooks/useItems";
 import './Trabajo.css'
 import TablaClientes, {
     ConfiguracionColumna,
-    ConfiguracionColumnaCalculada,
-    generadorColumna,
-    generadorColumnaCalculada
+    ConfiguracionColumnaSimple,
+    generadorColumnaSimple
 } from "./TablaClientes";
 import {useTablaOfflineAuxiliar} from "../../modelos/Generico";
 
@@ -112,38 +111,55 @@ export default function Trabajo() {
         <Button key='back' onClick={handleCancelModalCliente}>Cancelar</Button>,
         <Tooltip key='confirm' title={!clienteSeleccionado?'Debe seleccionar un cliente primero':''}><Button type='primary' onClick={handleAceptarModalCliente} disabled={!clienteSeleccionado}>Aceptar</Button></Tooltip>,
     ],[clienteSeleccionado, handleAceptarModalCliente, handleCancelModalCliente])
+    const configuracionColumnasSimple: ConfiguracionColumnaSimple<IMesa>[]= useMemo<ConfiguracionColumnaSimple<IMesa>[]>(()=>[
+        {
+            key:'id',
+            sortable: true,
+            searchable: true,
+        },
+        {
+            key:'estado',
+            render: (_,m) =>  m.carrito_activo ? EstadoMesa.ESTADO_ASIGNADO : EstadoMesa.ESTADO_LIBRE,
+            sortable: true,
+            sorter: (m1: IMesa, m2: IMesa) => {
+                return (m1?.carrito_activo?1:0) - (m2?.carrito_activo?1:0)
+            }
+        }
+    ],[])
     const {
         items,
-        sortBy,
         setSortBy,
-        busqueda,
-        onFiltroValuesChange
-    } = useTablaOfflineAuxiliar(paginacion.data)
-    const configuracionColumnas = useMemo((): (ConfiguracionColumna<IMesa> | ConfiguracionColumnaCalculada<IMesa>)[]=> [
-        generadorColumna<IMesa,QueryBusquedaCliente>('id',sortBy,true,false,[
-            {
-                value:'1',
-                text:'uno',
-            },{
-                value:'2',
-                text:'dos',
-            }
-        ], busqueda),
-        generadorColumna<IMesa,QueryBusquedaCliente>('code',sortBy,true,true,undefined, busqueda),
-        generadorColumna<IMesa,QueryBusquedaCliente>('descripcion',sortBy,true,true,undefined, busqueda),
-        generadorColumnaCalculada<IMesa,QueryBusquedaCliente>('estado',(_,m): EstadoMesa=> {
-            return m.carrito_activo ? EstadoMesa.ESTADO_ASIGNADO : EstadoMesa.ESTADO_LIBRE
-        },sortBy,true,false,[
-            {
-                value: EstadoMesa.ESTADO_LIBRE,
-                text:  EstadoMesa.ESTADO_LIBRE
-            },
-            {
-                value: EstadoMesa.ESTADO_ASIGNADO,
-                text:  EstadoMesa.ESTADO_ASIGNADO
-            }
-        ], busqueda),
-    ],[busqueda, sortBy])
+        onFiltroValuesChange,
+        configuracionColumnas
+    } = useTablaOfflineAuxiliar(paginacion.data, configuracionColumnasSimple)
+    // const configuracionColumnas = useMemo((): ConfiguracionColumna<IMesa>[]=> configuracionColumnasSimple.map(cs=>generadorColumnaSimple(cs,busqueda, sortBy)),[busqueda, configuracionColumnasSimple, sortBy])
+    // const configuracionColumnas = useMemo((): (ConfiguracionColumna<IMesa> | ConfiguracionColumnaCalculada<IMesa>)[]=> [
+    //     generadorColumna<IMesa,QueryBusquedaCliente>('id',sortBy,true,false,[
+    //         {
+    //             value:'1',
+    //             text:'uno',
+    //         },{
+    //             value:'2',
+    //             text:'dos',
+    //         }
+    //     ], busqueda),
+    //     generadorColumna<IMesa,QueryBusquedaCliente>('code',sortBy,true,true,undefined, busqueda),
+    //     generadorColumna<IMesa,QueryBusquedaCliente>('descripcion',sortBy,true,true,undefined, busqueda),
+    //     generadorColumnaCalculada<IMesa,QueryBusquedaCliente>('estado',(_,m): EstadoMesa=> {
+    //         return m.carrito_activo ? EstadoMesa.ESTADO_ASIGNADO : EstadoMesa.ESTADO_LIBRE
+    //     },sortBy,true,false,[
+    //         {
+    //             value: EstadoMesa.ESTADO_LIBRE,
+    //             text:  EstadoMesa.ESTADO_LIBRE
+    //         },
+    //         {
+    //             value: EstadoMesa.ESTADO_ASIGNADO,
+    //             text:  EstadoMesa.ESTADO_ASIGNADO
+    //         }
+    //     ], busqueda,(m,f)=>{
+    //         return true
+    //     }),
+    // ],[busqueda, sortBy])
     return <>
         {errorMesas || <Table
             rowClassName={(m, index) => !m.carrito_activo ? '' :  'table-row-dark'}

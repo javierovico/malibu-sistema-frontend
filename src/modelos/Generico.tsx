@@ -9,7 +9,13 @@ import {ColumnType} from "antd/lib/table/interface";
 import {Button, Input, Space} from "antd";
 import {SearchOutlined} from "@ant-design/icons";
 import Highlighter from "react-highlight-words";
-import {ValorCambiado} from "../container/Trabajo/TablaClientes";
+import {
+    ConfiguracionColumna,
+    ConfiguracionColumnaSimple,
+    generadorColumnaSimple,
+    ValorCambiado
+} from "../container/Trabajo/TablaClientes";
+import {IMesa} from "./Carrito";
 
 export type ColumnTipoModel<M> = ColumnType<M> & {
     dataIndex: keyof M
@@ -279,8 +285,7 @@ export function editorModel<T extends Ideable>(url: string, nombreGet:string, pr
     })
 }
 
-
-export function useTablaOfflineAuxiliar<T extends Ideable>(itemsOriginales: T[]) {
+export function useTablaOfflineAuxiliar<T extends Ideable>(itemsOriginales: T[], configuracionColumnasSimple?:ConfiguracionColumnaSimple<T>[]) {
     const [sortBy, setSortBy] = useState<ItemSorteado<string>[]>([]);
     const [busqueda,setBusqueda] = useState<Record<string,undefined|string|string[]>>({})
     // useEffect(()=>console.log(busqueda),[busqueda])
@@ -303,7 +308,10 @@ export function useTablaOfflineAuxiliar<T extends Ideable>(itemsOriginales: T[])
             itemsFiltrados = itemsFiltrados.filter(r=>{
                 let ret: boolean = true
                 Object.keys(busqueda).forEach(key=>{
-                    if (ret && r.hasOwnProperty(key)) {
+                    const configuracion = configuracionColumnasSimple?.find(r=>r.key === key )
+                    if (configuracion) {
+                        console.log(configuracion)
+                    } else if (ret && r.hasOwnProperty(key)) {
                         const valorBuscado = busqueda[key]
                         if (typeof valorBuscado == 'string' && valorBuscado){
                             ret = r[key].toString().toLowerCase().includes(valorBuscado.toLowerCase())
@@ -321,14 +329,20 @@ export function useTablaOfflineAuxiliar<T extends Ideable>(itemsOriginales: T[])
             itemsFiltrados = itemsFiltrados.sort((p1,p2)=>{
                 let ret = 0
                 sortBy.forEach(s=>{
-                    if (s.orden && ret=== 0 && p1.hasOwnProperty(s.code) && p1[s.code] !== p2[s.code]) {
-                        let indicador: number
-                        if (typeof p1[s.code] == 'number') {
-                            indicador = p1[s.code] - p2[s.code]
-                        } else {
-                            indicador = p1[s.code].toString().localeCompare(p2[s.code].toString())
+                    const multiplicador = (s.orden === 'ascend' ? 1 : -1)
+                    if (ret === 0) {
+                        const configuracion = configuracionColumnasSimple?.find(r=>(typeof r != 'string') && r.key === s.code )
+                        if (configuracion?.sorter) {
+                            ret = multiplicador * configuracion.sorter(p1,p2)
+                        } else if (s.orden && p1.hasOwnProperty(s.code) && p1[s.code] !== p2[s.code]) {
+                            let indicador: number
+                            if (typeof p1[s.code] == 'number') {
+                                indicador = p1[s.code] - p2[s.code]
+                            } else {
+                                indicador = p1[s.code].toString().localeCompare(p2[s.code].toString())
+                            }
+                            ret = multiplicador * indicador
                         }
-                        ret = (s.orden === 'ascend' ? 1 : -1) * indicador
                     }
                 })
                 return ret
@@ -336,11 +350,13 @@ export function useTablaOfflineAuxiliar<T extends Ideable>(itemsOriginales: T[])
         }
         return itemsFiltrados
     },[busqueda, itemsOriginales, sortBy])
+    const configuracionColumnas = useMemo((): ConfiguracionColumna<T>[]=> configuracionColumnasSimple?.map(cs=>generadorColumnaSimple(cs,busqueda, sortBy))  || [],[busqueda, configuracionColumnasSimple, sortBy])
     return {
         items,
         sortBy,
         setSortBy,
         busqueda,
-        onFiltroValuesChange
+        onFiltroValuesChange,
+        configuracionColumnas
     }
 }
