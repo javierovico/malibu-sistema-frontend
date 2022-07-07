@@ -9,6 +9,7 @@ import {ColumnType} from "antd/lib/table/interface";
 import {Button, Input, Space} from "antd";
 import {SearchOutlined} from "@ant-design/icons";
 import Highlighter from "react-highlight-words";
+import {ValorCambiado} from "../container/Trabajo/TablaClientes";
 
 export type ColumnTipoModel<M> = ColumnType<M> & {
     dataIndex: keyof M
@@ -28,7 +29,7 @@ export interface ItemBusqueda<T> {
     valor: string|number|string[]|number[]
 }
 
-export type Modelable = Record<string,any>
+export type Modelable = Record<string,any> & Object
 
 export interface Ideable extends Modelable{
     id?: number|null
@@ -276,4 +277,70 @@ export function editorModel<T extends Ideable>(url: string, nombreGet:string, pr
             reject(error)
         }
     })
+}
+
+
+export function useTablaOfflineAuxiliar<T extends Ideable>(itemsOriginales: T[]) {
+    const [sortBy, setSortBy] = useState<ItemSorteado<string>[]>([]);
+    const [busqueda,setBusqueda] = useState<Record<string,undefined|string|string[]>>({})
+    // useEffect(()=>console.log(busqueda),[busqueda])
+    const onFiltroValuesChange = useCallback((v:ValorCambiado[])=>{
+        console.log(v)
+        const nuevaBusqueda = v
+            .reduce<Partial<{}>>((prev,curr)=>{
+                const valorTraido = curr.value
+                return {
+                    ...prev,
+                    [curr.code]: valorTraido
+                }
+            },busqueda)
+        console.log(nuevaBusqueda)
+        setBusqueda(nuevaBusqueda)
+    },[busqueda])
+    const items: T[] = useMemo<T[]>(()=>{
+        let itemsFiltrados = [...itemsOriginales]
+        if (Object.keys(busqueda).length) {
+            itemsFiltrados = itemsFiltrados.filter(r=>{
+                let ret: boolean = true
+                Object.keys(busqueda).forEach(key=>{
+                    if (ret && r.hasOwnProperty(key)) {
+                        const valorBuscado = busqueda[key]
+                        if (typeof valorBuscado == 'string' && valorBuscado){
+                            ret = r[key].toString().toLowerCase().includes(valorBuscado.toLowerCase())
+                        } else if(Array.isArray(valorBuscado) && valorBuscado.length) {
+                            ret = valorBuscado.includes(r[key].toString())
+                        } else {
+                            //string[] => filtro
+                        }
+                    }
+                })
+                return ret
+            })
+        }
+        if (sortBy.filter(sb=>sb.orden).length) {
+            itemsFiltrados = itemsFiltrados.sort((p1,p2)=>{
+                let ret = 0
+                sortBy.forEach(s=>{
+                    if (s.orden && ret=== 0 && p1.hasOwnProperty(s.code) && p1[s.code] !== p2[s.code]) {
+                        let indicador: number
+                        if (typeof p1[s.code] == 'number') {
+                            indicador = p1[s.code] - p2[s.code]
+                        } else {
+                            indicador = p1[s.code].toString().localeCompare(p2[s.code].toString())
+                        }
+                        ret = (s.orden === 'ascend' ? 1 : -1) * indicador
+                    }
+                })
+                return ret
+            })
+        }
+        return itemsFiltrados
+    },[busqueda, itemsOriginales, sortBy])
+    return {
+        items,
+        sortBy,
+        setSortBy,
+        busqueda,
+        onFiltroValuesChange
+    }
 }

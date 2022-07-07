@@ -4,14 +4,26 @@ import {Button, Dropdown, Menu, Modal, Space, Table, Tooltip} from "antd";
 import {ColumnsType} from "antd/lib/table/interface";
 import {DownOutlined} from "@ant-design/icons";
 import SelectDeCliente from "./SelectDeCliente";
-import {ICliente} from "../../modelos/Cliente";
+import {ICliente, QueryBusquedaCliente} from "../../modelos/Cliente";
 import {ItemType} from "antd/lib/menu/hooks/useItems";
 import './Trabajo.css'
+import TablaClientes, {
+    ConfiguracionColumna,
+    ConfiguracionColumnaCalculada,
+    generadorColumna,
+    generadorColumnaCalculada
+} from "./TablaClientes";
+import {useTablaOfflineAuxiliar} from "../../modelos/Generico";
 
 enum TipoAsignacion {
     TIPO_CLIENTE,
     TIPO_ANONIMO,
     NINGUN_TIPO,
+}
+
+enum EstadoMesa {
+    ESTADO_LIBRE= 'Libre',
+    ESTADO_ASIGNADO = 'Asignado'
 }
 
 export default function Trabajo() {
@@ -100,6 +112,38 @@ export default function Trabajo() {
         <Button key='back' onClick={handleCancelModalCliente}>Cancelar</Button>,
         <Tooltip key='confirm' title={!clienteSeleccionado?'Debe seleccionar un cliente primero':''}><Button type='primary' onClick={handleAceptarModalCliente} disabled={!clienteSeleccionado}>Aceptar</Button></Tooltip>,
     ],[clienteSeleccionado, handleAceptarModalCliente, handleCancelModalCliente])
+    const {
+        items,
+        sortBy,
+        setSortBy,
+        busqueda,
+        onFiltroValuesChange
+    } = useTablaOfflineAuxiliar(paginacion.data)
+    const configuracionColumnas = useMemo((): (ConfiguracionColumna<IMesa> | ConfiguracionColumnaCalculada<IMesa>)[]=> [
+        generadorColumna<IMesa,QueryBusquedaCliente>('id',sortBy,true,false,[
+            {
+                value:'1',
+                text:'uno',
+            },{
+                value:'2',
+                text:'dos',
+            }
+        ], busqueda),
+        generadorColumna<IMesa,QueryBusquedaCliente>('code',sortBy,true,true,undefined, busqueda),
+        generadorColumna<IMesa,QueryBusquedaCliente>('descripcion',sortBy,true,true,undefined, busqueda),
+        generadorColumnaCalculada<IMesa,QueryBusquedaCliente>('estado',(_,m): EstadoMesa=> {
+            return m.carrito_activo ? EstadoMesa.ESTADO_ASIGNADO : EstadoMesa.ESTADO_LIBRE
+        },sortBy,true,false,[
+            {
+                value: EstadoMesa.ESTADO_LIBRE,
+                text:  EstadoMesa.ESTADO_LIBRE
+            },
+            {
+                value: EstadoMesa.ESTADO_ASIGNADO,
+                text:  EstadoMesa.ESTADO_ASIGNADO
+            }
+        ], busqueda),
+    ],[busqueda, sortBy])
     return <>
         {errorMesas || <Table
             rowClassName={(m, index) => !m.carrito_activo ? '' :  'table-row-dark'}
@@ -108,6 +152,16 @@ export default function Trabajo() {
             rowKey={'id'}
             dataSource={mesas}
             columns={columnas}
+        />}
+        {errorMesas || <TablaClientes
+            loading={isMesasLoading}
+            title='Estado de mesas'
+            configuracionColumnas={configuracionColumnas}
+            items={items}
+            totalItems={paginacion.total}
+            onOrderByChange={setSortBy}
+            onBusquedaValuesChange={onFiltroValuesChange}
+            onFiltroValuesChange={onFiltroValuesChange}
         />}
         <Modal
             destroyOnClose={true}

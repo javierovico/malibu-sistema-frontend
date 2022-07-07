@@ -1,5 +1,5 @@
 import {Button, Input, InputRef, Space, Table} from "antd";
-import {TipoBusqueda} from "../../modelos/Cliente";
+import {clienteVacio, TipoBusqueda} from "../../modelos/Cliente";
 import {useCallback, useMemo, useRef} from "react";
 import {
     ColumnTipoModel,
@@ -18,6 +18,8 @@ import {
 import {SortOrder} from "antd/es/table/interface";
 import {SearchOutlined} from "@ant-design/icons";
 import Highlighter from "react-highlight-words";
+import * as React from "react";
+import {RenderedCell} from "rc-table/lib/interface";
 
 export interface ConfiguracionColumna<M> {
     key: keyof M,
@@ -26,7 +28,24 @@ export interface ConfiguracionColumna<M> {
     searchable?: boolean,
     searchValue?: string,
     valoresAdmitidosFiltro?: ColumnFilterItem[],
-    valoresFiltro?: string|string[]|undefined
+    valoresFiltro?: string|string[]|undefined,
+    titulo?: string
+}
+
+export interface ConfiguracionColumnaCalculada<M> {
+    key: string,
+    sortable?: boolean,
+    sortOrder?: SortOrder,
+    searchable?: boolean,
+    searchValue?: string,
+    valoresAdmitidosFiltro?: ColumnFilterItem[],
+    valoresFiltro?: string|string[]|undefined,
+    titulo?: string,
+    render: {(value: any, item:M):React.ReactNode | RenderedCell<M>}
+}
+
+export function objectIsConfiguracionColumnaCalculada<T>(a:any): a is ConfiguracionColumnaCalculada<T> {
+    return a.hasOwnProperty('key') && a.hasOwnProperty('render')
 }
 
 export interface ValorFiltrado {
@@ -57,7 +76,7 @@ interface Parametros<M> {
     perPage?: number,
     onPaginationChange?: {(page:number,perPage:number): void},
     onOrderByChange?: {(l: ItemSorteado<string>[]): void}      //enviamos los nuevos sortables list
-    configuracionColumnas: ConfiguracionColumna<M>[],
+    configuracionColumnas: (ConfiguracionColumna<M>|ConfiguracionColumnaCalculada<M>)[],
     onFiltroValuesChange?: {(v:ValorFiltrado[]):void},
     onBusquedaValuesChange?: {(v:ValorBuscado[]):void}
     itemsIdSelected?: number[],
@@ -85,6 +104,26 @@ export function generadorColumna<T,QueryBusqueda extends TipoBusqueda>(
     }
 }
 
+export function generadorColumnaCalculada<T,QueryBusqueda extends TipoBusqueda>(
+    key: string,
+    render:{(value:any, item:T):React.ReactNode | RenderedCell<T>},
+    sortBy?: ItemSorteado<string>[],
+    sortable?:boolean,
+    searchable?: boolean,
+    valoresAdmitidosFiltro?: ColumnFilterItem[],
+    busqueda?: Partial<QueryBusqueda>,
+): ConfiguracionColumnaCalculada<T>{
+    return {
+        key,
+        sortable,
+        searchable,
+        sortOrder: sortBy?.find(r=>r.code===(key as string))?.orden,
+        valoresAdmitidosFiltro,
+        valoresFiltro: ((busqueda && (busqueda.hasOwnProperty(key)))? busqueda[key]: (searchable?undefined:[])),
+        render
+    }
+}
+
 export default function TablaClientes<M extends Modelable> (arg: Parametros<M>){
     const {
         items,
@@ -104,17 +143,45 @@ export default function TablaClientes<M extends Modelable> (arg: Parametros<M>){
         loading
     } = arg
     const searchInput = useRef<InputRef>(null);
-    const createColumnItemFromKey = useCallback(<M extends Modelable>(k: keyof M, titulo?: string, sortOrder?: SortOrder, sortable?: boolean, searchable?:boolean, valoresAdmitidosFiltro?: ColumnFilterItem[], valoresFiltro?: string|string[]): ColumnTipoModel<M> =>{
+    const createColumnItemFromKey = useCallback(<M extends Modelable>(r: ConfiguracionColumna<M> | ConfiguracionColumnaCalculada<M>): ColumnTipoModel<M> =>{
+        const {
+            key: k,
+            titulo,
+            sortOrder,
+            sortable,
+            searchable,
+            valoresAdmitidosFiltro,
+            valoresFiltro,
+        } = r
         const key = typeof k === 'number' ? k : k as string
         const title = titulo || ((k as string).charAt(0).toUpperCase() + (k as string).slice(1))
         const searchText = valoresFiltro?((Array.isArray(valoresFiltro) && valoresFiltro.length)?valoresFiltro[0]: (typeof valoresFiltro === 'string'?valoresFiltro:'')):''
+        let render: {(value:any, item:M):React.ReactNode | RenderedCell<M>}|undefined
+        if (searchable) {
+            render = text => {
+                return (
+                    <Highlighter
+                        highlightStyle={{ backgroundColor: '#ffc069', padding: 0 }}
+                        searchWords={[searchText]}
+                        autoEscape
+                        textToHighlight={text ? text.toString() : ''}
+                    />
+                )
+            }
+        } else if (objectIsConfiguracionColumnaCalculada<M>(r)) {
+            render = r.render
+        } else {
+            render = undefined
+        }
+        const filteredValue = valoresFiltro?(Array.isArray(valoresFiltro)?valoresFiltro:[valoresFiltro]):null
+        // console.log({filteredValue,valoresAdmitidosFiltro})
         return {
             dataIndex: key,
             key,
             title,
-            sortOrder: sortOrder,
+            sortOrder,
             filters: valoresAdmitidosFiltro,
-            filteredValue: valoresFiltro?(Array.isArray(valoresFiltro)?valoresFiltro:[valoresFiltro]):null,
+            filteredValue,
             sorter: sortable?{
                 multiple: 1
             }: undefined,
@@ -143,7 +210,7 @@ export default function TablaClientes<M extends Modelable> (arg: Parametros<M>){
                         </Button>
                         <Button
                             onClick={() => {
-                                setSelectedKeys([''])
+                                setSelectedKeys([])
                                 confirm()
                                 // handleSearch(selectedKeys as string[], confirm, keyString)
                                 // clearFilters && handleReset(clearFilters)
@@ -170,20 +237,11 @@ export default function TablaClientes<M extends Modelable> (arg: Parametros<M>){
             filterIcon: searchable ? (filtered: boolean) => (
                 <SearchOutlined style={{ color: filtered ? '#1890ff' : undefined }} />
             ) : undefined,
-            render: searchable ? (text => {
-                return (
-                    <Highlighter
-                        highlightStyle={{ backgroundColor: '#ffc069', padding: 0 }}
-                        searchWords={[searchText]}
-                        autoEscape
-                        textToHighlight={text ? text.toString() : ''}
-                    />
-                )
-            }) : undefined,
+            render
         }
     },[])
     const columnas = useMemo((): ColumnsType<M> => {
-        const cols: ColumnsType<M> = configuracionColumnas.map(r=>createColumnItemFromKey(r.key, undefined, r.sortOrder, r.sortable, r.searchable, r.valoresAdmitidosFiltro, r.valoresFiltro))
+        const cols: ColumnsType<M> = configuracionColumnas.map(r=>createColumnItemFromKey(r))
         if (acciones) {
             cols.push({
                 title: 'Acciones',
