@@ -4,6 +4,7 @@ import {ICliente} from "./Cliente";
 import axios from "axios";
 import {AuthContext} from "../context/AuthProvider";
 import {mostrarMensaje} from "../utils/utils";
+import {IUsuario} from "./Usuario";
 
 
 type EstadoCarrito = "creado" | "finalizado"
@@ -20,6 +21,7 @@ export interface ICarrito {
     mesa_id: number|null,
     pagado: boolean,
     status: EstadoCarrito,
+    mozo?: IUsuario
 
 }
 
@@ -56,6 +58,7 @@ export interface QueryBusquedaMesa {
     activo: LaravelBoolean,
     withCarrito: LaravelBoolean,
     withMozo: LaravelBoolean,
+    withCliente: LaravelBoolean
 }
 
 export const URL_MESA = 'mesa'

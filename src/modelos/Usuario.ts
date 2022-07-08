@@ -10,7 +10,7 @@ interface IUsuario {
     user: string,
     nombre: string,
     id: number,
-    roles: IRol[],
+    roles?: IRol[],
 }
 
 interface TokenUsuarioResponse {
@@ -31,5 +31,5 @@ export {URL_USUARIO_PROPIO, URL_LOGIN};
 export type {TokenUsuarioResponse, UsuarioResponse, IUsuario};
 
 export function comprobarRol(user: IUsuario, rolCode: string) {
-    return !!user.roles.find((rol) => rol.codigo === rolCode)
+    return !!user.roles?.find((rol) => rol.codigo === rolCode)
 }

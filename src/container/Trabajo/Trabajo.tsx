@@ -20,6 +20,7 @@ export default function Trabajo() {
         activo: "1",
         withCarrito: "1",
         withMozo: '1',
+        withCliente: '1',
     }),[])
     const {
         paginacion,
@@ -69,22 +70,30 @@ export default function Trabajo() {
         <Tooltip key='confirm' title={!clienteSeleccionado?'Debe seleccionar un cliente primero':''}><Button type='primary' onClick={handleAceptarModalCliente} disabled={!clienteSeleccionado}>Aceptar</Button></Tooltip>,
     ],[clienteSeleccionado, handleAceptarModalCliente, handleCancelModalCliente])
     const configuracionColumnasSimple: ConfiguracionColumnaSimple<IMesa>[]= useMemo<ConfiguracionColumnaSimple<IMesa>[]>(()=>[
-        {
-            key:'id',
-            sortable: true,
-            searchable: true,
-        },
+        // {
+        //     key:'id',
+        //     sortable: true,
+        //     searchable: true,
+        // },
         {
             key:'code',
-            titulo:'Codigo',
+            titulo:'Mesa',
             sortable: true,
             searchable: true,
         },
         {
-            key:'descripcion',
-            sortable: true,
-            searchable: true,
+            key:'mozo',
+            render: (_, m) => m.carrito_activo?.mozo?.user
         },
+        {
+            key:'cliente',
+            render: (_, m) => m.carrito_activo?.cliente?.nombre
+        },
+        // {
+        //     key:'descripcion',
+        //     sortable: true,
+        //     searchable: true,
+        // },
         {
             key:'estado',
             render: (_,m) =>  m.carrito_activo ? EstadoMesa.ESTADO_ASIGNADO : EstadoMesa.ESTADO_LIBRE,
