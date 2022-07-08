@@ -23,12 +23,24 @@ export interface ICarrito {
 
 }
 
+export enum EstadoMesa {
+    ESTADO_LIBRE= 'Libre',
+    ESTADO_ASIGNADO = 'Asignado'
+}
 export interface IMesa {
     id:number,
     code:string,
     descripcion: string,
     activo: "1" | "0",
     carrito_activo?: ICarrito
+}
+
+export function getStatusFromMesa(m: IMesa): EstadoMesa {
+    if (m.carrito_activo) {
+        return EstadoMesa.ESTADO_ASIGNADO
+    } else {
+        return EstadoMesa.ESTADO_LIBRE
+    }
 }
 
 interface ParametrosAPI {

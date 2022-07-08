@@ -19,7 +19,7 @@ import {SortOrder} from "antd/es/table/interface";
 import {SearchOutlined} from "@ant-design/icons";
 import Highlighter from "react-highlight-words";
 import * as React from "react";
-import {RenderedCell} from "rc-table/lib/interface";
+import {RenderedCell, RowClassName} from "rc-table/lib/interface";
 
 export interface FilterFunction<M> { (item: M, filter:undefined|string|string[]): boolean }
 
@@ -85,7 +85,8 @@ interface Parametros<M> {
     onItemsIdSelectedChange?: {(items: ItemsSelected<M>[]):void},
     typeSelcted?: RowSelectionType,
     acciones?: (p: M) => JSX.Element,
-    loading?: boolean
+    loading?: boolean,
+    rowClassName?:string | RowClassName<M>
 }
 
 export function generadorColumna<T,QueryBusqueda extends TipoBusqueda>(
@@ -107,19 +108,20 @@ export function generadorColumna<T,QueryBusqueda extends TipoBusqueda>(
 }
 
 export function generadorColumnaSimple<T,QueryBusqueda extends TipoBusqueda>(
-    cs: ConfiguracionColumnaSimple<T>|string,
+    cs: ConfiguracionColumnaSimple<T>,
     busqueda?: Partial<QueryBusqueda>,
     sortBy?: ItemSorteado<string>[],
 ): ConfiguracionColumna<T>{
-    const conf = (typeof cs == 'string')?{key:cs}:cs
     const {
         key,
         sortable,
         searchable,
         valoresAdmitidosFiltro,
-        render
-    } = conf
+        render,
+        titulo,
+    } = cs
     return {
+        titulo,
         key,
         sortable,
         searchable,
@@ -146,7 +148,8 @@ export default function TablaClientes<M extends Modelable> (arg: Parametros<M>){
         typeSelcted,
         title,
         acciones,
-        loading
+        loading,
+        rowClassName
     } = arg
     const searchInput = useRef<InputRef>(null);
     const createColumnItemFromKey = useCallback(<M extends Modelable>(r: ConfiguracionColumna<M>): ColumnTipoModel<M> =>{
@@ -337,6 +340,7 @@ export default function TablaClientes<M extends Modelable> (arg: Parametros<M>){
         }
     },[items, itemsIdSelected, onItemsIdSelectedChange, typeSelcted])
     return <Table
+        rowClassName={rowClassName}
         loading={loading}
         title={()=>title}
         rowKey={'id'}

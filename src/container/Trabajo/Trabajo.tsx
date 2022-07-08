@@ -1,28 +1,18 @@
-import React, {useCallback, useContext, useMemo, useState} from "react";
-import {IMesa, QueryBusquedaMesa, useCarritos, useMesas} from "../../modelos/Carrito";
-import {Button, Dropdown, Menu, Modal, Space, Table, Tooltip} from "antd";
-import {ColumnsType} from "antd/lib/table/interface";
+import React, {useCallback, useMemo, useState} from "react";
+import {EstadoMesa, getStatusFromMesa, IMesa, QueryBusquedaMesa, useCarritos, useMesas} from "../../modelos/Carrito";
+import {Button, Dropdown, Menu, Modal, Space, Tooltip} from "antd";
 import {DownOutlined} from "@ant-design/icons";
 import SelectDeCliente from "./SelectDeCliente";
 import {ICliente} from "../../modelos/Cliente";
 import {ItemType} from "antd/lib/menu/hooks/useItems";
 import './Trabajo.css'
-import TablaClientes, {
-    ConfiguracionColumna,
-    ConfiguracionColumnaSimple,
-    generadorColumnaSimple
-} from "./TablaClientes";
+import TablaClientes, {ConfiguracionColumnaSimple} from "./TablaClientes";
 import {useTablaOfflineAuxiliar} from "../../modelos/Generico";
 
 enum TipoAsignacion {
     TIPO_CLIENTE,
     TIPO_ANONIMO,
     NINGUN_TIPO,
-}
-
-enum EstadoMesa {
-    ESTADO_LIBRE= 'Libre',
-    ESTADO_ASIGNADO = 'Asignado'
 }
 
 export default function Trabajo() {
@@ -40,7 +30,6 @@ export default function Trabajo() {
         reservarMesa,
         asignacionLoading
     } = useCarritos()
-    const mesas = paginacion.data
     const [mesaAsignacion, setMesaAsignacion] = useState<IMesa>()
     const [tipoAsignacion,setTipoAsignacion] = useState<TipoAsignacion>(TipoAsignacion.TIPO_ANONIMO)
     const isModalSelectClienteVisible = useMemo<boolean>(()=>!!mesaAsignacion && tipoAsignacion === TipoAsignacion.TIPO_CLIENTE,[mesaAsignacion, tipoAsignacion])
@@ -66,38 +55,6 @@ export default function Trabajo() {
             onClick: ()=>handleAsignarSinCliente(m)
         },
     ],[handleAsignarACliente, handleAsignarSinCliente])
-    const columnas = useMemo(():ColumnsType<IMesa>=>[
-        {
-            title:'ID',
-            key:'id',
-            dataIndex: 'id',
-        },{
-            title:'Codigo',
-            key:'code',
-            dataIndex: 'code'
-        },{
-            title:'Descripcion',
-            key:'descripcion',
-            dataIndex: 'descripcion'
-        },{
-            title:'Estado',
-            key:'estado',
-            render: (_,m) => m.carrito_activo ? 'Asignado' : 'Libre'
-        },{
-            title:'Acciones',
-            key:'acciones',
-            render: (_,m)=> <Space size="middle">
-                {!m.carrito_activo && <Dropdown overlay={<Menu items={crearMenuAsignacion(m)}/>} trigger={['click']}>
-                    <a href='/#' onClick={e => e.preventDefault()}>
-                        <Space>
-                            Asignar
-                            <DownOutlined/>
-                        </Space>
-                    </a>
-                </Dropdown>}
-            </Space>
-        }
-    ],[crearMenuAsignacion])
     const [clienteSeleccionado, setClienteSeleccionado] = useState<ICliente>()
     const handleCancelModalCliente = useCallback(()=>{
         setClienteSeleccionado(undefined)
@@ -118,59 +75,61 @@ export default function Trabajo() {
             searchable: true,
         },
         {
+            key:'code',
+            titulo:'Codigo',
+            sortable: true,
+            searchable: true,
+        },
+        {
+            key:'descripcion',
+            sortable: true,
+            searchable: true,
+        },
+        {
             key:'estado',
             render: (_,m) =>  m.carrito_activo ? EstadoMesa.ESTADO_ASIGNADO : EstadoMesa.ESTADO_LIBRE,
             sortable: true,
             sorter: (m1: IMesa, m2: IMesa) => {
                 return (m1?.carrito_activo?1:0) - (m2?.carrito_activo?1:0)
+            },
+            valoresAdmitidosFiltro: [
+                {
+                    value: EstadoMesa.ESTADO_LIBRE,
+                    text:  EstadoMesa.ESTADO_LIBRE
+                },
+                {
+                    value: EstadoMesa.ESTADO_ASIGNADO,
+                    text:  EstadoMesa.ESTADO_ASIGNADO
+                }
+            ],
+            filter:(item, filter) => {
+                const arr: string[] = Array.isArray(filter)?filter:(filter?[filter]:[])   //convierte a array
+                return arr.includes(getStatusFromMesa(item))
             }
+        },{
+            key:'acciones',
+            render: (_,m)=> <Space size="middle">
+                {(getStatusFromMesa(m) === EstadoMesa.ESTADO_LIBRE) && <Dropdown overlay={<Menu items={crearMenuAsignacion(m)}/>} trigger={['click']}>
+                    <a href='/#' onClick={e => e.preventDefault()}>
+                        <Space>
+                            Asignar
+                            <DownOutlined/>
+                        </Space>
+                    </a>
+                </Dropdown>}
+            </Space>
         }
-    ],[])
+    ],[crearMenuAsignacion])
     const {
         items,
         setSortBy,
         onFiltroValuesChange,
         configuracionColumnas
     } = useTablaOfflineAuxiliar(paginacion.data, configuracionColumnasSimple)
-    // const configuracionColumnas = useMemo((): ConfiguracionColumna<IMesa>[]=> configuracionColumnasSimple.map(cs=>generadorColumnaSimple(cs,busqueda, sortBy)),[busqueda, configuracionColumnasSimple, sortBy])
-    // const configuracionColumnas = useMemo((): (ConfiguracionColumna<IMesa> | ConfiguracionColumnaCalculada<IMesa>)[]=> [
-    //     generadorColumna<IMesa,QueryBusquedaCliente>('id',sortBy,true,false,[
-    //         {
-    //             value:'1',
-    //             text:'uno',
-    //         },{
-    //             value:'2',
-    //             text:'dos',
-    //         }
-    //     ], busqueda),
-    //     generadorColumna<IMesa,QueryBusquedaCliente>('code',sortBy,true,true,undefined, busqueda),
-    //     generadorColumna<IMesa,QueryBusquedaCliente>('descripcion',sortBy,true,true,undefined, busqueda),
-    //     generadorColumnaCalculada<IMesa,QueryBusquedaCliente>('estado',(_,m): EstadoMesa=> {
-    //         return m.carrito_activo ? EstadoMesa.ESTADO_ASIGNADO : EstadoMesa.ESTADO_LIBRE
-    //     },sortBy,true,false,[
-    //         {
-    //             value: EstadoMesa.ESTADO_LIBRE,
-    //             text:  EstadoMesa.ESTADO_LIBRE
-    //         },
-    //         {
-    //             value: EstadoMesa.ESTADO_ASIGNADO,
-    //             text:  EstadoMesa.ESTADO_ASIGNADO
-    //         }
-    //     ], busqueda,(m,f)=>{
-    //         return true
-    //     }),
-    // ],[busqueda, sortBy])
     return <>
-        {errorMesas || <Table
-            rowClassName={(m, index) => !m.carrito_activo ? '' :  'table-row-dark'}
-            loading={isMesasLoading || asignacionLoading}
-            title={() => 'Estado de Mesas'}
-            rowKey={'id'}
-            dataSource={mesas}
-            columns={columnas}
-        />}
         {errorMesas || <TablaClientes
-            loading={isMesasLoading}
+            rowClassName={(m) => getStatusFromMesa(m) === EstadoMesa.ESTADO_LIBRE ? '' :  'table-row-dark'}
+            loading={isMesasLoading || asignacionLoading}
             title='Estado de mesas'
             configuracionColumnas={configuracionColumnas}
             items={items}

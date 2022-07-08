@@ -15,7 +15,6 @@ import {
     generadorColumnaSimple,
     ValorCambiado
 } from "../container/Trabajo/TablaClientes";
-import {IMesa} from "./Carrito";
 
 export type ColumnTipoModel<M> = ColumnType<M> & {
     dataIndex: keyof M
@@ -290,7 +289,6 @@ export function useTablaOfflineAuxiliar<T extends Ideable>(itemsOriginales: T[],
     const [busqueda,setBusqueda] = useState<Record<string,undefined|string|string[]>>({})
     // useEffect(()=>console.log(busqueda),[busqueda])
     const onFiltroValuesChange = useCallback((v:ValorCambiado[])=>{
-        console.log(v)
         const nuevaBusqueda = v
             .reduce<Partial<{}>>((prev,curr)=>{
                 const valorTraido = curr.value
@@ -299,7 +297,6 @@ export function useTablaOfflineAuxiliar<T extends Ideable>(itemsOriginales: T[],
                     [curr.code]: valorTraido
                 }
             },busqueda)
-        console.log(nuevaBusqueda)
         setBusqueda(nuevaBusqueda)
     },[busqueda])
     const items: T[] = useMemo<T[]>(()=>{
@@ -308,17 +305,19 @@ export function useTablaOfflineAuxiliar<T extends Ideable>(itemsOriginales: T[],
             itemsFiltrados = itemsFiltrados.filter(r=>{
                 let ret: boolean = true
                 Object.keys(busqueda).forEach(key=>{
-                    const configuracion = configuracionColumnasSimple?.find(r=>r.key === key )
-                    if (configuracion) {
-                        console.log(configuracion)
-                    } else if (ret && r.hasOwnProperty(key)) {
-                        const valorBuscado = busqueda[key]
-                        if (typeof valorBuscado == 'string' && valorBuscado){
-                            ret = r[key].toString().toLowerCase().includes(valorBuscado.toLowerCase())
-                        } else if(Array.isArray(valorBuscado) && valorBuscado.length) {
-                            ret = valorBuscado.includes(r[key].toString())
-                        } else {
-                            //string[] => filtro
+                    const valorBuscado = busqueda[key]
+                    if (ret && (Array.isArray(valorBuscado)?valorBuscado.length:valorBuscado)) {    //solo admite arrays no vacios o cadenas
+                        const configuracion = configuracionColumnasSimple?.find(r=>r.key === key )
+                        if (configuracion?.filter) {
+                            ret = configuracion.filter(r,valorBuscado)
+                        } else if (r.hasOwnProperty(key)) {
+                            if (typeof valorBuscado == 'string' && valorBuscado){
+                                ret = r[key].toString().toLowerCase().includes(valorBuscado.toLowerCase())
+                            } else if(Array.isArray(valorBuscado) && valorBuscado.length) {
+                                ret = valorBuscado.includes(r[key].toString())
+                            } else {
+                                //string[] => filtro
+                            }
                         }
                     }
                 })
@@ -329,8 +328,8 @@ export function useTablaOfflineAuxiliar<T extends Ideable>(itemsOriginales: T[],
             itemsFiltrados = itemsFiltrados.sort((p1,p2)=>{
                 let ret = 0
                 sortBy.forEach(s=>{
-                    const multiplicador = (s.orden === 'ascend' ? 1 : -1)
                     if (ret === 0) {
+                        const multiplicador = (s.orden === 'ascend' ? 1 : -1)
                         const configuracion = configuracionColumnasSimple?.find(r=>(typeof r != 'string') && r.key === s.code )
                         if (configuracion?.sorter) {
                             ret = multiplicador * configuracion.sorter(p1,p2)
@@ -349,7 +348,7 @@ export function useTablaOfflineAuxiliar<T extends Ideable>(itemsOriginales: T[],
             })
         }
         return itemsFiltrados
-    },[busqueda, itemsOriginales, sortBy])
+    },[busqueda, configuracionColumnasSimple, itemsOriginales, sortBy])
     const configuracionColumnas = useMemo((): ConfiguracionColumna<T>[]=> configuracionColumnasSimple?.map(cs=>generadorColumnaSimple(cs,busqueda, sortBy))  || [],[busqueda, configuracionColumnasSimple, sortBy])
     return {
         items,
