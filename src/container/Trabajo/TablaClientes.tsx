@@ -1,5 +1,5 @@
 import {Button, Input, InputRef, Space, Table} from "antd";
-import {clienteVacio, TipoBusqueda} from "../../modelos/Cliente";
+import {TipoBusqueda} from "../../modelos/Cliente";
 import {useCallback, useMemo, useRef} from "react";
 import {
     ColumnTipoModel,

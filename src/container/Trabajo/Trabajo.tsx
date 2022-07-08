@@ -1,6 +1,14 @@
 import React, {useCallback, useMemo, useState} from "react";
-import {EstadoMesa, getStatusFromMesa, IMesa, QueryBusquedaMesa, useCarritos, useMesas} from "../../modelos/Carrito";
-import {Button, Dropdown, Menu, Modal, Space, Tooltip} from "antd";
+import {
+    EstadoMesa,
+    getStatusFromMesa,
+    ICarrito,
+    IMesa,
+    QueryBusquedaMesa,
+    useCarritos,
+    useMesas
+} from "../../modelos/Carrito";
+import {Button, Dropdown, Menu, MenuProps, Modal, Space, Tooltip} from "antd";
 import {DownOutlined} from "@ant-design/icons";
 import SelectDeCliente from "./SelectDeCliente";
 import {ICliente} from "../../modelos/Cliente";
@@ -13,6 +21,13 @@ enum TipoAsignacion {
     TIPO_CLIENTE,
     TIPO_ANONIMO,
     NINGUN_TIPO,
+}
+
+enum Acciones {
+    ASIGNAR_MESA_A_CLIENTE = 'asignarMesaACliente',
+    ASIGNAR_MESA_A_ANONIMO = 'asignarMesaAAnonimo',
+    ASIGNAR_PRODUCTO_A_CARRITO = 'asignarProductoACarrito',
+    VER_LISTA_PRODUCTOS = 'listaProductos',
 }
 
 export default function Trabajo() {
@@ -32,6 +47,7 @@ export default function Trabajo() {
         asignacionLoading
     } = useCarritos()
     const [mesaAsignacion, setMesaAsignacion] = useState<IMesa>()
+    const [carritoViendo, setCarritoViendo] = useState<ICarrito>()
     const [tipoAsignacion,setTipoAsignacion] = useState<TipoAsignacion>(TipoAsignacion.TIPO_ANONIMO)
     const isModalSelectClienteVisible = useMemo<boolean>(()=>!!mesaAsignacion && tipoAsignacion === TipoAsignacion.TIPO_CLIENTE,[mesaAsignacion, tipoAsignacion])
     const handleAsignarACliente = useCallback((m: IMesa)=>{
@@ -39,23 +55,61 @@ export default function Trabajo() {
         setTipoAsignacion(TipoAsignacion.TIPO_CLIENTE)
         setMesaAsignacion(m)
     },[])
+    const handleVerListaProductos = useCallback((c: ICarrito)=>{
+        setCarritoViendo(c)
+    },[])
     const handleAsignarSinCliente = useCallback((m:IMesa)=>{
         setTipoAsignacion(TipoAsignacion.TIPO_ANONIMO)
         setMesaAsignacion(m)
         reservarMesa(m)
     },[reservarMesa])
-    const crearMenuAsignacion = useCallback((m:IMesa):ItemType[]=>[
-        {
-            label: 'A cliente',
-            key: 'cliente',
-            onClick: ()=> handleAsignarACliente(m)
-        },
-        {
-            label: 'No registrar cliente',
-            key: 'anonimo',
-            onClick: ()=>handleAsignarSinCliente(m)
-        },
-    ],[handleAsignarACliente, handleAsignarSinCliente])
+    const crearMenuAccion = useCallback((m:IMesa):ItemType[]=>{
+        const estado = getStatusFromMesa(m)
+        const menus: ItemType[] = []
+        if (estado === EstadoMesa.ESTADO_LIBRE) {
+            menus.push({
+                key: 'menu1',
+                type: 'group',
+                label: 'Asignar a:',
+                children:[
+                    {
+                        label: 'Cliente registrado',
+                        key: Acciones.ASIGNAR_MESA_A_CLIENTE,
+                        onClick: ()=> handleAsignarACliente(m)
+                    },
+                    {
+                        label: 'Cliente anonimo',
+                        key: Acciones.ASIGNAR_MESA_A_ANONIMO,
+                        onClick: ()=>handleAsignarSinCliente(m)
+                    },
+                ]
+            })
+        }
+        if (estado === EstadoMesa.ESTADO_ASIGNADO) {
+            menus.push({
+                key: 'menu2',
+                type: 'group',
+                label: 'Pedidos:',
+                children:[
+                    {
+                        label: 'Asignar Producto',
+                        key: Acciones.ASIGNAR_PRODUCTO_A_CARRITO,
+                        onClick: ()=> m.carrito_activo && handleVerListaProductos(m.carrito_activo)
+                    },
+                    {
+                        label: 'Ver Lista de Pedidos',
+                        key: Acciones.VER_LISTA_PRODUCTOS,
+                        onClick: ()=> m.carrito_activo && handleVerListaProductos(m.carrito_activo)
+                    }
+                ]
+            })
+        }
+        return menus
+    },[handleAsignarACliente, handleAsignarSinCliente, handleVerListaProductos])
+    const [menuAccionVisible,setMenuAccionVisible] = useState<number|undefined>(undefined)  // indica de cual mesa (id) estara abierto
+    const onAccionesClick: MenuProps['onClick'] = useCallback(()=>{
+        setMenuAccionVisible(undefined)
+    },[])
     const [clienteSeleccionado, setClienteSeleccionado] = useState<ICliente>()
     const handleCancelModalCliente = useCallback(()=>{
         setClienteSeleccionado(undefined)
@@ -70,11 +124,6 @@ export default function Trabajo() {
         <Tooltip key='confirm' title={!clienteSeleccionado?'Debe seleccionar un cliente primero':''}><Button type='primary' onClick={handleAceptarModalCliente} disabled={!clienteSeleccionado}>Aceptar</Button></Tooltip>,
     ],[clienteSeleccionado, handleAceptarModalCliente, handleCancelModalCliente])
     const configuracionColumnasSimple: ConfiguracionColumnaSimple<IMesa>[]= useMemo<ConfiguracionColumnaSimple<IMesa>[]>(()=>[
-        // {
-        //     key:'id',
-        //     sortable: true,
-        //     searchable: true,
-        // },
         {
             key:'code',
             titulo:'Mesa',
@@ -89,11 +138,6 @@ export default function Trabajo() {
             key:'cliente',
             render: (_, m) => m.carrito_activo?.cliente?.nombre
         },
-        // {
-        //     key:'descripcion',
-        //     sortable: true,
-        //     searchable: true,
-        // },
         {
             key:'estado',
             render: (_,m) =>  m.carrito_activo ? EstadoMesa.ESTADO_ASIGNADO : EstadoMesa.ESTADO_LIBRE,
@@ -117,18 +161,20 @@ export default function Trabajo() {
             }
         },{
             key:'acciones',
-            render: (_,m)=> <Space size="middle">
-                {(getStatusFromMesa(m) === EstadoMesa.ESTADO_LIBRE) && <Dropdown overlay={<Menu items={crearMenuAsignacion(m)}/>} trigger={['click']}>
-                    <a href='/#' onClick={e => e.preventDefault()}>
-                        <Space>
-                            Asignar
-                            <DownOutlined/>
-                        </Space>
-                    </a>
-                </Dropdown>}
-            </Space>
+            render: (_,m)=>{
+                return  <Space size="middle">
+                    <Dropdown visible={menuAccionVisible === m.id} onVisibleChange={(r)=>setMenuAccionVisible(r?m.id:undefined)} overlay={<Menu onClick={onAccionesClick} items={crearMenuAccion(m)}/>} trigger={['click']}>
+                        <a href='/#' onClick={e => e.preventDefault()}>
+                            <Space>
+                                Accion
+                                <DownOutlined/>
+                            </Space>
+                        </a>
+                    </Dropdown>
+                </Space>
+            }
         }
-    ],[crearMenuAsignacion])
+    ],[crearMenuAccion, menuAccionVisible, onAccionesClick])
     const {
         items,
         setSortBy,
@@ -153,6 +199,19 @@ export default function Trabajo() {
             footer={footerModalSelectCliente}
             visible={isModalSelectClienteVisible}
             onCancel={handleCancelModalCliente}
+        >
+            <SelectDeCliente
+                handleSelectCliente={setClienteSeleccionado}
+                clienteSelected={clienteSeleccionado}
+                titulo={'Seleccione cliente para mesa ' + mesaAsignacion?.code}
+            />
+        </Modal>
+        <Modal  //Modal para mostrar los productos actuales
+            destroyOnClose={true}
+            width={'85%'}
+            footer={null}
+            visible={!!carritoViendo}
+            onCancel={()=>setCarritoViendo(undefined)}
         >
             <SelectDeCliente
                 handleSelectCliente={setClienteSeleccionado}
