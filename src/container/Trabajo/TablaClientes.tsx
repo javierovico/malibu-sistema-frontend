@@ -4,7 +4,7 @@ import {useCallback, useMemo, useRef} from "react";
 import {
     ColumnTipoModel,
     compararArray,
-    existeItemEnArray,
+    existeItemEnArray, Ideable,
     ItemSorteado,
     Modelable
 } from "../../modelos/Generico";
@@ -30,6 +30,7 @@ export interface ConfiguracionColumnaSimple<M> {
     sortable?: boolean,
     searchable?: boolean,
     valoresAdmitidosFiltro?: ColumnFilterItem[],
+    filtroDesdeValores?: boolean,               //si es true, los valores para valoresAdmitidosFiltro se traen de los items
     titulo?: string,
     render?: {(value: any, item:M):React.ReactNode | RenderedCell<M>},
     filter?: FilterFunction<M>,
@@ -107,19 +108,30 @@ export function generadorColumna<T,QueryBusqueda extends TipoBusqueda>(
     }
 }
 
-export function generadorColumnaSimple<T,QueryBusqueda extends TipoBusqueda>(
+export function generadorColumnaSimple<T extends Modelable,QueryBusqueda extends TipoBusqueda>(
     cs: ConfiguracionColumnaSimple<T>,
     busqueda?: Partial<QueryBusqueda>,
     sortBy?: ItemSorteado<string>[],
+    itemsOriginlaes?: T[],
 ): ConfiguracionColumna<T>{
     const {
         key,
         sortable,
         searchable,
-        valoresAdmitidosFiltro,
+        valoresAdmitidosFiltro: valoresAdmitidosFiltroOriginal,
         render,
         titulo,
+        filtroDesdeValores,
     } = cs
+    let valoresAdmitidosFiltro: ColumnFilterItem[]|undefined = valoresAdmitidosFiltroOriginal
+    if (filtroDesdeValores) {
+        valoresAdmitidosFiltro = itemsOriginlaes?.map(r=> render?render(r[key],r):r[key])?.filter((v,i,s)=>s.indexOf(v)===i)?.map(r=> {
+            return {
+                value: ''+r,
+                text: ''+r,
+            }
+        }) || []
+    }
     return {
         titulo,
         key,
@@ -161,27 +173,30 @@ export default function TablaClientes<M extends Modelable> (arg: Parametros<M>){
             searchable,
             valoresAdmitidosFiltro,
             valoresFiltro,
+            render
         } = r
         const key = typeof k === 'number' ? k : k as string
         const title = titulo || ((k as string).charAt(0).toUpperCase() + (k as string).slice(1))
         const searchText = valoresFiltro?((Array.isArray(valoresFiltro) && valoresFiltro.length)?valoresFiltro[0]: (typeof valoresFiltro === 'string'?valoresFiltro:'')):''
-        let render: {(value:any, item:M):React.ReactNode | RenderedCell<M>}|undefined
-        if (searchable) {
-            render = text => {
-                return (
-                    <Highlighter
-                        highlightStyle={{ backgroundColor: '#ffc069', padding: 0 }}
-                        searchWords={[searchText]}
-                        autoEscape
-                        textToHighlight={text ? text.toString() : ''}
-                    />
-                )
+        const renderSearchable = (text: any) => <Highlighter    // Se trata del render que se va usar para resaltar las palabras buscadas
+            highlightStyle={{ backgroundColor: '#ffc069', padding: 0 }}
+            searchWords={[searchText]}
+            autoEscape
+            textToHighlight={text ? text.toString() : ''}
+        />
+        let renderFinal: {(value:any, item:M):React.ReactNode | RenderedCell<M>}|undefined = undefined
+        if (render) {
+            if (searchable) {
+                renderFinal = (text: any, item: M) => {
+                    return renderSearchable(render(text,item))
+                }
+            } else {
+                renderFinal = render
             }
-        } else {
-            render = r.render
+        } else if (searchable) {
+            renderFinal = renderSearchable
         }
         const filteredValue = valoresFiltro?(Array.isArray(valoresFiltro)?valoresFiltro:[valoresFiltro]):null
-        // console.log({filteredValue,valoresAdmitidosFiltro})
         return {
             dataIndex: key,
             key,
@@ -244,7 +259,7 @@ export default function TablaClientes<M extends Modelable> (arg: Parametros<M>){
             filterIcon: searchable ? (filtered: boolean) => (
                 <SearchOutlined style={{ color: filtered ? '#1890ff' : undefined }} />
             ) : undefined,
-            render
+            render: renderFinal
         }
     },[])
     const columnas = useMemo((): ColumnsType<M> => {

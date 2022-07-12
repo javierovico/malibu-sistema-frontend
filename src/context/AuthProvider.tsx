@@ -8,7 +8,7 @@ import {errorRandomToIError, IError} from "../modelos/ErrorModel";
 import VistaError from "../components/UI/VistaError";
 import Pusher, {Channel} from "pusher-js";
 
-const CHANNEL_PRIVATE_MESA = 'private-mesa'
+const CHANNEL_PRIVATE_CARRITO = 'private-carrito'
 
 interface AuthValues {
     loggedIn: boolean,
@@ -89,7 +89,7 @@ const AuthProvider = (props: any) => {
         },
     }),[token])
 
-    const channelCarrito = useMemo<Channel|undefined>(()=>pusher?.subscribe(CHANNEL_PRIVATE_MESA),[pusher])
+    const channelCarrito = useMemo<Channel|undefined>(()=>pusher?.subscribe(CHANNEL_PRIVATE_CARRITO),[pusher])
 
     /** Establece el token en el axio*/
     useEffect(() => {

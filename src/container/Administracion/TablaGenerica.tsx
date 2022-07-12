@@ -191,7 +191,7 @@ const RELACIONES_SORT: {[k:string]:SortsProductos}= {
 }
 
 
-export default function TablaProductos(arg: ParametrosRecibidos) {
+export default function TablaGenerica(arg: ParametrosRecibidos) {
     const {
         title,
         acciones,

@@ -15,6 +15,9 @@ import {
     generadorColumnaSimple,
     ValorCambiado
 } from "../container/Trabajo/TablaClientes";
+import {isNaN} from "formik";
+
+export type WithQuery = Record<string, LaravelBoolean|undefined>
 
 export type ColumnTipoModel<M> = ColumnType<M> & {
     dataIndex: keyof M
@@ -284,10 +287,44 @@ export function editorModel<T extends Ideable>(url: string, nombreGet:string, pr
     })
 }
 
+const filtroSimple = (vB: undefined|string|string[],dondeBuscar:any): boolean => {
+    if (typeof vB == 'string' && vB){
+        return dondeBuscar.toString().toLowerCase().includes(vB.toLowerCase())
+    } else if(Array.isArray(vB) && vB.length) {
+        return vB.includes(dondeBuscar.toString())
+    } else {
+        return false
+    }
+}
+
+function toNumber(s: any) : number|false {
+    if (typeof s === 'number') {
+        return isNaN(s)?false:s
+    } else if (typeof s === 'string') {
+        const sNumero = parseInt(s)
+        if (isNaN(sNumero)) {
+            return false
+        } else {
+            return sNumero
+        }
+    } else {
+        return false
+    }
+}
+
+const ordenamientoSimple = (item1: any, item2:any): number => {
+    const n1 = toNumber(item1)
+    const n2 = toNumber(item2)
+    if (n1 !== false && n2 !== false) {
+        return n1 - n2
+    } else {
+        return item1.toString().localeCompare(item2.toString())
+    }
+}
+
 export function useTablaOfflineAuxiliar<T extends Ideable>(itemsOriginales: T[], configuracionColumnasSimple?:ConfiguracionColumnaSimple<T>[]) {
     const [sortBy, setSortBy] = useState<ItemSorteado<string>[]>([]);
     const [busqueda,setBusqueda] = useState<Record<string,undefined|string|string[]>>({})
-    // useEffect(()=>console.log(busqueda),[busqueda])
     const onFiltroValuesChange = useCallback((v:ValorCambiado[])=>{
         const nuevaBusqueda = v
             .reduce<Partial<{}>>((prev,curr)=>{
@@ -310,14 +347,10 @@ export function useTablaOfflineAuxiliar<T extends Ideable>(itemsOriginales: T[],
                         const configuracion = configuracionColumnasSimple?.find(r=>r.key === key )
                         if (configuracion?.filter) {
                             ret = configuracion.filter(r,valorBuscado)
+                        } else if (configuracion?.render) {
+                            ret = filtroSimple(valorBuscado, configuracion.render(r[key],r))
                         } else if (r.hasOwnProperty(key)) {
-                            if (typeof valorBuscado == 'string' && valorBuscado){
-                                ret = r[key].toString().toLowerCase().includes(valorBuscado.toLowerCase())
-                            } else if(Array.isArray(valorBuscado) && valorBuscado.length) {
-                                ret = valorBuscado.includes(r[key].toString())
-                            } else {
-                                //string[] => filtro
-                            }
+                            ret = filtroSimple(valorBuscado,r[key])
                         }
                     }
                 })
@@ -330,17 +363,13 @@ export function useTablaOfflineAuxiliar<T extends Ideable>(itemsOriginales: T[],
                 sortBy.forEach(s=>{
                     if (ret === 0) {
                         const multiplicador = (s.orden === 'ascend' ? 1 : -1)
-                        const configuracion = configuracionColumnasSimple?.find(r=>(typeof r != 'string') && r.key === s.code )
+                        const configuracion = configuracionColumnasSimple?.find(r=>r.key === s.code )
                         if (configuracion?.sorter) {
                             ret = multiplicador * configuracion.sorter(p1,p2)
+                        } else if(configuracion?.render){
+                            ret = multiplicador * ordenamientoSimple(configuracion.render(p1[s.code],p1),configuracion.render(p2[s.code],p2))
                         } else if (s.orden && p1.hasOwnProperty(s.code) && p1[s.code] !== p2[s.code]) {
-                            let indicador: number
-                            if (typeof p1[s.code] == 'number') {
-                                indicador = p1[s.code] - p2[s.code]
-                            } else {
-                                indicador = p1[s.code].toString().localeCompare(p2[s.code].toString())
-                            }
-                            ret = multiplicador * indicador
+                            ret = multiplicador * ordenamientoSimple(p1[s.code],p2[s.code])
                         }
                     }
                 })
@@ -349,7 +378,7 @@ export function useTablaOfflineAuxiliar<T extends Ideable>(itemsOriginales: T[],
         }
         return itemsFiltrados
     },[busqueda, configuracionColumnasSimple, itemsOriginales, sortBy])
-    const configuracionColumnas = useMemo((): ConfiguracionColumna<T>[]=> configuracionColumnasSimple?.map(cs=>generadorColumnaSimple(cs,busqueda, sortBy))  || [],[busqueda, configuracionColumnasSimple, sortBy])
+    const configuracionColumnas = useMemo((): ConfiguracionColumna<T>[]=> configuracionColumnasSimple?.map(cs=>generadorColumnaSimple(cs,busqueda, sortBy,itemsOriginales))  || [],[busqueda, configuracionColumnasSimple, itemsOriginales, sortBy])
     return {
         items,
         sortBy,

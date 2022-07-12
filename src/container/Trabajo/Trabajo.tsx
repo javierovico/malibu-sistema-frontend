@@ -1,21 +1,20 @@
 import React, {useCallback, useMemo, useState} from "react";
 import {
-    EstadoMesa,
-    getStatusFromMesa,
+    ESTADO_CARRITO_OCUPADO,
+    EstadoCarrito,
     ICarrito,
     IMesa,
-    QueryBusquedaMesa,
-    useCarritos,
-    useMesas
+    useCarrito
 } from "../../modelos/Carrito";
-import {Button, Dropdown, Menu, MenuProps, Modal, Space, Tooltip} from "antd";
-import {DownOutlined} from "@ant-design/icons";
+import {Button, Col, Dropdown, Menu, MenuProps, Modal, Row, Space, Tooltip} from "antd";
+import {DownOutlined, PlusOutlined} from "@ant-design/icons";
 import SelectDeCliente from "./SelectDeCliente";
 import {ICliente} from "../../modelos/Cliente";
 import {ItemType} from "antd/lib/menu/hooks/useItems";
 import './Trabajo.css'
 import TablaClientes, {ConfiguracionColumnaSimple} from "./TablaClientes";
 import {useTablaOfflineAuxiliar} from "../../modelos/Generico";
+import VisorDeCarrito from "./VisorDeCarrito";
 
 enum TipoAsignacion {
     TIPO_CLIENTE,
@@ -31,23 +30,97 @@ enum Acciones {
 }
 
 export default function Trabajo() {
-    const queryItems = useMemo((): Partial<QueryBusquedaMesa>=>({
-        activo: "1",
-        withCarrito: "1",
-        withMozo: '1',
-        withCliente: '1',
-    }),[])
     const {
-        paginacion,
+        mesas,
         errorMesas,
-        isMesasLoading
-    } = useMesas(1,1000,undefined, queryItems)
-    const {
+        isMesasLoading,
         reservarMesa,
-        asignacionLoading
-    } = useCarritos()
+        asignacionLoading,
+        isPedidosLoading,
+        // errorPedidos,
+        pedidoUpdate,
+        // pedidoModificando,
+        // setPedidoModificando,
+        // handleBorrarPedido,
+        pedidos: pedidosOriginales,
+    } = useCarrito()
+    const [menuAccionPedidoVisible,setMenuAccionPedidoVisible] = useState<number|undefined>(undefined)  // indica de cual pedido (id) estara abierto
+    const [carritoIdViendo, setCarritoIdViendo] = useState<{ id?: number, abrirSelectProducto?: boolean }>({})
+    const carritoViendo = useMemo(()=>({carrito: pedidosOriginales.find(p=>p.id === carritoIdViendo?.id), abrirSelectProducto: carritoIdViendo.abrirSelectProducto}),[carritoIdViendo, pedidosOriginales])
+    const crearMenuAccionPedido = useCallback((c:ICarrito):ItemType[]=>{
+        const menus: ItemType[] = []
+        if (c.status === EstadoCarrito.CREADO) {
+            menus.push({
+                key: 'menuPedidos',
+                type: 'group',
+                label: 'Pedidos:',
+                children:[
+                    {
+                        label: 'Asignar Producto',
+                        key: Acciones.ASIGNAR_PRODUCTO_A_CARRITO,
+                        onClick: ()=> setCarritoIdViendo({id: c.id, abrirSelectProducto: true})
+                    },
+                    {
+                        label: 'Ver Lista de Pedidos',
+                        key: Acciones.VER_LISTA_PRODUCTOS,
+                        onClick: ()=> setCarritoIdViendo({id:c.id})
+                    }
+                ]
+            })
+        }
+        return menus
+    },[])
+    const configuracionColumnasSimplePedidos = useMemo<ConfiguracionColumnaSimple<ICarrito>[]>(()=>[
+        {
+            key: 'id',
+            sortable: true,
+        },
+        {
+            key: 'clientes',
+            render: (_, c) => c.cliente?.nombre || 'ANONIMO',
+            sortable: true,
+            searchable: true,
+        },
+        {
+            key: 'encargado',
+            render: (_, c) => c.mozo?.user,
+            sortable: true,
+            filtroDesdeValores:true
+        },
+        {
+            key: 'mesa',
+            render: (_, c) => c.mesa?.code,
+            searchable: true,
+            sortable: true,
+        },
+        {
+            key: 'status',
+            titulo: 'Estado',
+            filtroDesdeValores: true,
+            sortable: true,
+        },
+        {
+            key:'acciones',
+            render: (_, c) => <Space size="middle">
+                <Dropdown visible={menuAccionPedidoVisible === c.id} onVisibleChange={(r)=>setMenuAccionPedidoVisible(r?c.id:undefined)} overlay={<Menu onClick={()=>setMenuAccionPedidoVisible(undefined)} items={crearMenuAccionPedido(c)}/>} trigger={['click']}>
+                    <a href='/#' onClick={e => e.preventDefault()}>
+                        <Space>
+                            Accion
+                            <DownOutlined/>
+                        </Space>
+                    </a>
+                </Dropdown>
+            </Space>
+        }
+    ],[crearMenuAccionPedido, menuAccionPedidoVisible])
+    const {
+        items: pedidos,
+        setSortBy: setSortByPedidos,
+        onFiltroValuesChange: onFiltroValuesChangePedidos,
+        configuracionColumnas: configuracionColumnasPedidos
+    } = useTablaOfflineAuxiliar(pedidosOriginales, configuracionColumnasSimplePedidos)
+    /** Fin de pedidos*/
     const [mesaAsignacion, setMesaAsignacion] = useState<IMesa>()
-    const [carritoViendo, setCarritoViendo] = useState<ICarrito>()
     const [tipoAsignacion,setTipoAsignacion] = useState<TipoAsignacion>(TipoAsignacion.TIPO_ANONIMO)
     const isModalSelectClienteVisible = useMemo<boolean>(()=>!!mesaAsignacion && tipoAsignacion === TipoAsignacion.TIPO_CLIENTE,[mesaAsignacion, tipoAsignacion])
     const handleAsignarACliente = useCallback((m: IMesa)=>{
@@ -55,18 +128,16 @@ export default function Trabajo() {
         setTipoAsignacion(TipoAsignacion.TIPO_CLIENTE)
         setMesaAsignacion(m)
     },[])
-    const handleVerListaProductos = useCallback((c: ICarrito)=>{
-        setCarritoViendo(c)
-    },[])
     const handleAsignarSinCliente = useCallback((m:IMesa)=>{
         setTipoAsignacion(TipoAsignacion.TIPO_ANONIMO)
         setMesaAsignacion(m)
         reservarMesa(m)
     },[reservarMesa])
-    const crearMenuAccion = useCallback((m:IMesa):ItemType[]=>{
-        const estado = getStatusFromMesa(m)
+    const crearMenuAccionMesa = useCallback((m:IMesa):ItemType[]=>{
+        // const estado = getStatusFromMesa(m)
+        const estado: EstadoCarrito|undefined = pedidosOriginales.find(p=>p.mesa_id === m.id)?.status
         const menus: ItemType[] = []
-        if (estado === EstadoMesa.ESTADO_LIBRE) {
+        if (!estado || !ESTADO_CARRITO_OCUPADO.includes(estado)) {
             menus.push({
                 key: 'menu1',
                 type: 'group',
@@ -85,7 +156,7 @@ export default function Trabajo() {
                 ]
             })
         }
-        if (estado === EstadoMesa.ESTADO_ASIGNADO) {
+        if (estado && ESTADO_CARRITO_OCUPADO.includes(estado)) {
             menus.push({
                 key: 'menu2',
                 type: 'group',
@@ -94,18 +165,18 @@ export default function Trabajo() {
                     {
                         label: 'Asignar Producto',
                         key: Acciones.ASIGNAR_PRODUCTO_A_CARRITO,
-                        onClick: ()=> m.carrito_activo && handleVerListaProductos(m.carrito_activo)
+                        onClick: ()=> setCarritoIdViendo({id: pedidosOriginales.find(p => p.mesa_id === m.id)?.id, abrirSelectProducto: true})
                     },
                     {
                         label: 'Ver Lista de Pedidos',
                         key: Acciones.VER_LISTA_PRODUCTOS,
-                        onClick: ()=> m.carrito_activo && handleVerListaProductos(m.carrito_activo)
+                        onClick: ()=> setCarritoIdViendo({id: pedidosOriginales.find(p => p.mesa_id === m.id)?.id})
                     }
                 ]
             })
         }
         return menus
-    },[handleAsignarACliente, handleAsignarSinCliente, handleVerListaProductos])
+    },[handleAsignarACliente, handleAsignarSinCliente, pedidosOriginales])
     const [menuAccionVisible,setMenuAccionVisible] = useState<number|undefined>(undefined)  // indica de cual mesa (id) estara abierto
     const onAccionesClick: MenuProps['onClick'] = useCallback(()=>{
         setMenuAccionVisible(undefined)
@@ -132,38 +203,22 @@ export default function Trabajo() {
         },
         {
             key:'mozo',
-            render: (_, m) => m.carrito_activo?.mozo?.user
+            render: (_, m) => pedidosOriginales.find(p=>p.mesa_id === m.id)?.mozo?.user
         },
         {
             key:'cliente',
-            render: (_, m) => m.carrito_activo?.cliente?.nombre
+            render: (_, m) => pedidosOriginales.find(p=>p.mesa_id === m.id)?.cliente?.nombre
         },
         {
             key:'estado',
-            render: (_,m) =>  m.carrito_activo ? EstadoMesa.ESTADO_ASIGNADO : EstadoMesa.ESTADO_LIBRE,
+            render: (_,m) =>  pedidosOriginales.find(p=>p.mesa_id === m.id)?.status,
             sortable: true,
-            sorter: (m1: IMesa, m2: IMesa) => {
-                return (m1?.carrito_activo?1:0) - (m2?.carrito_activo?1:0)
-            },
-            valoresAdmitidosFiltro: [
-                {
-                    value: EstadoMesa.ESTADO_LIBRE,
-                    text:  EstadoMesa.ESTADO_LIBRE
-                },
-                {
-                    value: EstadoMesa.ESTADO_ASIGNADO,
-                    text:  EstadoMesa.ESTADO_ASIGNADO
-                }
-            ],
-            filter:(item, filter) => {
-                const arr: string[] = Array.isArray(filter)?filter:(filter?[filter]:[])   //convierte a array
-                return arr.includes(getStatusFromMesa(item))
-            }
+            filtroDesdeValores:true,
         },{
             key:'acciones',
             render: (_,m)=>{
                 return  <Space size="middle">
-                    <Dropdown visible={menuAccionVisible === m.id} onVisibleChange={(r)=>setMenuAccionVisible(r?m.id:undefined)} overlay={<Menu onClick={onAccionesClick} items={crearMenuAccion(m)}/>} trigger={['click']}>
+                    <Dropdown visible={menuAccionVisible === m.id} onVisibleChange={(r)=>setMenuAccionVisible(r?m.id:undefined)} overlay={<Menu onClick={onAccionesClick} items={crearMenuAccionMesa(m)}/>} trigger={['click']}>
                         <a href='/#' onClick={e => e.preventDefault()}>
                             <Space>
                                 Accion
@@ -174,24 +229,49 @@ export default function Trabajo() {
                 </Space>
             }
         }
-    ],[crearMenuAccion, menuAccionVisible, onAccionesClick])
+    ],[crearMenuAccionMesa, menuAccionVisible, onAccionesClick, pedidosOriginales])
     const {
         items,
         setSortBy,
         onFiltroValuesChange,
         configuracionColumnas
-    } = useTablaOfflineAuxiliar(paginacion.data, configuracionColumnasSimple)
+    } = useTablaOfflineAuxiliar(mesas, configuracionColumnasSimple)
+    const cabezeraTablaPedidos = useMemo(()=><>
+        <Row justify="space-between">
+            <Col lg={12}>
+                <h3>Lista de pedidos actuales</h3>
+            </Col>
+            <Col offset={4} lg={8}>
+                <Button onClick={()=>setCarritoIdViendo({})} style={{float:'right'}} type="primary" icon={<PlusOutlined />}>
+                    Crear Carrito
+                </Button>
+            </Col>
+        </Row>
+    </>,[])
     return <>
         {errorMesas || <TablaClientes
-            rowClassName={(m) => getStatusFromMesa(m) === EstadoMesa.ESTADO_LIBRE ? '' :  'table-row-dark'}
+            rowClassName={(m) => {
+                const estado: EstadoCarrito|undefined = pedidosOriginales.find(p=>p.mesa_id === m.id)?.status
+                return (!estado || !ESTADO_CARRITO_OCUPADO.includes(estado)) ? '' :  'table-row-dark'
+            }}
             loading={isMesasLoading || asignacionLoading}
             title='Estado de mesas'
             configuracionColumnas={configuracionColumnas}
             items={items}
-            totalItems={paginacion.total}
+            totalItems={mesas.length}
             onOrderByChange={setSortBy}
             onBusquedaValuesChange={onFiltroValuesChange}
             onFiltroValuesChange={onFiltroValuesChange}
+        />}
+        {errorMesas || <TablaClientes
+            loading={isPedidosLoading}
+            title='Lista de pedidos actuales'       //todo
+            configuracionColumnas={configuracionColumnasPedidos}
+            items={pedidos}
+            totalItems={pedidos.length}
+            onOrderByChange={setSortByPedidos}
+            onBusquedaValuesChange={onFiltroValuesChangePedidos}
+            onFiltroValuesChange={onFiltroValuesChangePedidos}
         />}
         <Modal
             destroyOnClose={true}
@@ -206,18 +286,18 @@ export default function Trabajo() {
                 titulo={'Seleccione cliente para mesa ' + mesaAsignacion?.code}
             />
         </Modal>
-        <Modal  //Modal para mostrar los productos actuales
+        <Modal  //Modal para mostrar los carritos actuales
             destroyOnClose={true}
             width={'85%'}
             footer={null}
-            visible={!!carritoViendo}
-            onCancel={()=>setCarritoViendo(undefined)}
+            visible={!!carritoViendo.carrito}
+            onCancel={()=>setCarritoIdViendo({})}
         >
-            <SelectDeCliente
-                handleSelectCliente={setClienteSeleccionado}
-                clienteSelected={clienteSeleccionado}
-                titulo={'Seleccione cliente para mesa ' + mesaAsignacion?.code}
-            />
+            {carritoViendo.carrito && <VisorDeCarrito
+                carrito={carritoViendo.carrito}
+                abrirSelectProducto={carritoViendo.abrirSelectProducto}
+                carritoChange={pedidoUpdate}
+            />}
         </Modal>
     </>
 }

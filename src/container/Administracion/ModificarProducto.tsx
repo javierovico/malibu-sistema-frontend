@@ -14,7 +14,7 @@ import {AuthContext} from "../../context/AuthProvider";
 import {mostrarMensaje} from "../../utils/utils";
 import {errorToFormik} from "../../modelos/ErrorModel";
 import * as Yup from 'yup';
-import TablaProductos from "./TablaProductos";
+import TablaGenerica from "./TablaGenerica";
 import {DeleteOutlined, PlusOutlined} from "@ant-design/icons";
 import {IconText} from "./AdminProducto";
 import SelectDeProductos, {ProductoSelected} from "./SelectDeProductos";
@@ -166,7 +166,7 @@ export default function ModificarProducto ({producto, productoChange}: Argumento
                 </Col>
             </Row>
             {values.tipo_producto?.code === PRODUCTO_TIPO_COMBO && (<>
-                <TablaProductos
+                <TablaGenerica
                     title={<>
                         <Row justify="space-between">
                             <Col lg={12}>
