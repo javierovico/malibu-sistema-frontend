@@ -15,7 +15,19 @@ import {
     generadorColumnaSimple,
     ValorCambiado
 } from "../container/Trabajo/TablaClientes";
-import {isNaN} from "formik";
+
+/** Zona de clases */
+
+export abstract class ClaseModel<M> implements PostableClass<M>{
+    public constructor(m: M) {
+        Object.assign(this,m)
+    }
+    abstract postable(original: M | undefined): { [p: string]: any };
+}
+
+export interface PostableClass<T> {
+    postable(original: T|undefined): {[n:string]:any}
+}
 
 export type WithQuery = Record<string, LaravelBoolean|undefined>
 
@@ -192,7 +204,7 @@ export const useGenericModel = <Model extends Ideable, ModelSort extends string,
     },[sortBy, page, perPage, setErrorException, itemsBusqueda, url])
     const [modelModificando, setModelModificando] = useState<Model>()
     const modelUpdate = useCallback((p: Model, borrar: boolean = false)=>{
-        return new Promise<void>((res,rej) => {
+        return new Promise<Model|undefined>((res,rej) => {
             if (editor) {
                 const posicionItem: number = paginacion.data.findIndex(pItem => pItem.id === p.id)      // -1 si se va agregar nuevo
                 const modelOriginal = (posicionItem>=0) ? paginacion.data[posicionItem] : undefined  //undefind si se vacrear
@@ -202,30 +214,20 @@ export const useGenericModel = <Model extends Ideable, ModelSort extends string,
                         nuevaPaginacion.data.splice((posicionItem<0)?0:posicionItem,(posicionItem<0)?0:1,...(modelSubido?[modelSubido]:[]))
                         setPaginacion(nuevaPaginacion)
                         setModelModificando(modelSubido)
-                        res()
+                        res(modelSubido)
                     })
-                    .catch(rej)
+                    .catch((e)=>{
+                        setErrorException(e)
+                        rej(e)
+                    })
             } else {
                 rej(new Error("No esta definido el editor"))
             }
         });
-    },[editor, paginacion, url])
+    },[editor, paginacion, setErrorException, url])
 
     const handleBorrarModel = useCallback((p: Model) => {
         return modelUpdate(p,true)
-        // return new Promise<void>(res=>{
-        //     modelUpdate(p, true)
-        //         .then(()=>{
-        //             const nuevaPaginacion = {...paginacion}
-        //             const posicionItem: number = paginacion.data.findIndex(pItem => pItem.id === p.id)
-        //             nuevaPaginacion.data.splice(posicionItem,1)
-        //             setPaginacion(nuevaPaginacion)
-        //         })
-        //         .catch((e)=>{
-        //             setErrorException(e)
-        //         })
-        //         .finally(res)
-        // })
     },[modelUpdate])
 
     return {
@@ -360,7 +362,7 @@ export function useTablaOfflineAuxiliar<T extends Ideable>(itemsOriginales: T[],
         if (sortBy.filter(sb=>sb.orden).length) {
             itemsFiltrados = itemsFiltrados.sort((p1,p2)=>{
                 let ret = 0
-                sortBy.forEach(s=>{
+                sortBy.filter(s=>s.orden).forEach(s=>{
                     if (ret === 0) {
                         const multiplicador = (s.orden === 'ascend' ? 1 : -1)
                         const configuracion = configuracionColumnasSimple?.find(r=>r.key === s.code )
