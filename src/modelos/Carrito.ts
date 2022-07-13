@@ -1,7 +1,6 @@
-import {ItemSorteado, LaravelBoolean, Postable, useGenericModel, WithQuery} from "./Generico";
-import {useCallback, useContext, useEffect, useMemo, useState} from "react";
+import {LaravelBoolean, Postable, useGenericModel, WithQuery} from "./Generico";
+import {useCallback, useContext, useEffect, useMemo} from "react";
 import {ICliente} from "./Cliente";
-import axios from "axios";
 import {AuthContext} from "../context/AuthProvider";
 import {mostrarMensaje} from "../utils/utils";
 import {IUsuario} from "./Usuario";
@@ -35,24 +34,88 @@ export interface ICarrito {
     productos?: IProducto[]
 }
 
-export enum EstadoMesa {
-    ESTADO_LIBRE= 'Libre',
-    ESTADO_ASIGNADO = 'Asignado'
+
+// export class Carrito extends ClaseModel<ICarrito> implements ICarrito{
+//     static readonly url: string = 'carrito'
+//     static readonly nombreGet: string = 'carrito'
+//
+//     id: number;
+//     cliente?: ICliente;
+//     mesa?: IMesa;
+//     cliente_id: number|null;
+//     fecha_creacion: string;
+//     is_delivery: boolean;
+//     mesa_id: number|null;
+//     pagado: boolean;
+//     status: EstadoCarrito;
+//     mozo?: IUsuario;
+//     mozo_id: number;
+//     productos?: IProducto[];
+//
+//     public constructor(m: ICarrito) {
+//         super()
+//         this.id = m.id
+//         this.cliente = m.cliente
+//         this.mesa = m.mesa
+//         this.cliente_id = m.cliente_id
+//         this.fecha_creacion = m.fecha_creacion
+//         this.is_delivery = m.is_delivery
+//         this.mesa_id = m.mesa_id
+//         this.pagado = m.pagado
+//         this.status = m.status
+//         this.mozo = m.mozo
+//         this.mozo_id = m.mozo_id
+//         this.productos = m.productos
+//     }
+//
+//     postable (carritoOriginal?: ICarrito): ParametrosAPICarrito {       //TODO: VER COMO SE COMPORTA EL THIS
+//         const data: ParametrosAPICarrito = {
+//             withProductos: "1",
+//             withCliente: '1',
+//             withMesa: '1',
+//             withMozo: '1',
+//         }
+//         data.productosIdAgrega = this.productos?.filter(p1=>p1.id && !carritoOriginal?.productos?.find(p2 => p2.id === p1.id))?.map(p=>p.id as number) || []
+//         data.productosIdQuita = carritoOriginal?.productos?.filter(p1=>p1.id && !this?.productos?.find(p2 => p2.id === p1.id))?.map(p=>p.id as number) || []
+//         if (this.mesa_id !== carritoOriginal?.mesa_id) {
+//             data.mesaId = this.mesa_id || null
+//         }
+//         if (this.cliente_id !== carritoOriginal?.cliente_id) {
+//             data.clienteId = this.cliente_id || null
+//         }
+//         return data
+//     }
+//
+// }
+//
+// const c: Carrito = new Carrito( {
+//     id: 0,
+//     mesa_id: null,
+//     pagado: false,
+//     status: EstadoCarrito.CREADO,
+//     mozo_id: 0,
+//     is_delivery: false,
+//     fecha_creacion: 'now',
+//     cliente_id: null
+// })
+
+export const carritoVacio: ICarrito = {
+    id: 0,
+    mesa_id: null,
+    pagado: false,
+    status: EstadoCarrito.CREADO,
+    mozo_id: 0,
+    is_delivery: false,
+    fecha_creacion: 'now',
+    cliente_id: null
 }
+
 export interface IMesa {
     id:number,
     code:string,
     descripcion: string,
     activo: "1" | "0",
     carrito_activo?: ICarrito
-}
-
-export function getStatusFromMesa(m: IMesa): EstadoMesa {
-    if (m.carrito_activo) {
-        return EstadoMesa.ESTADO_ASIGNADO
-    } else {
-        return EstadoMesa.ESTADO_LIBRE
-    }
 }
 
 interface ParametrosAPI {
@@ -63,6 +126,8 @@ interface ParametrosAPI {
 type ParametrosAPICarrito = WithCarrito & {
     productosIdAgrega?: number[],
     productosIdQuita?: number[],
+    clienteId?: number|null,    //null para desasignar cliente
+    mesaId?: number|null,   //null es para desasignar la mesa, undefined para no hacer nada
 }
 
 type SortMesa = "id" | "code"
@@ -116,24 +181,19 @@ const postableCarrito: Postable<ICarrito> = (carritoNuevo, carritoOriginal): Par
         withMesa: '1',
         withMozo: '1',
     }
+    console.log({carritoNuevo, carritoOriginal})
     data.productosIdAgrega = carritoNuevo.productos?.filter(p1=>p1.id && !carritoOriginal?.productos?.find(p2 => p2.id === p1.id))?.map(p=>p.id as number) || []
     data.productosIdQuita = carritoOriginal?.productos?.filter(p1=>p1.id && !carritoNuevo?.productos?.find(p2 => p2.id === p1.id))?.map(p=>p.id as number) || []
+    if (carritoNuevo.mesa_id !== carritoOriginal?.mesa_id) {
+        data.mesaId = carritoNuevo.mesa_id || null
+    }
+    if (carritoNuevo.cliente_id !== carritoOriginal?.cliente_id) {
+        data.clienteId = carritoNuevo.cliente_id || null
+    }
     return data
 }
 
 export const useCarrito =  () => {
-    const {
-        setErrorException
-    } = useContext(AuthContext)
-    const [asignacionLoading,setAsignacionLoading] = useState(false)
-    const reservarMesa = useCallback((m:IMesa, c?:ICliente)=>{        //cuando ya tenemos la mesa reservada y con el posible cliente (puede ser anonimo)
-        setAsignacionLoading(true)
-        axios.post(URL_MESA + '/' + m.id + '/asignar',{
-            clienteId: c?.id
-        })
-            .catch(setErrorException)
-            .finally(()=>setAsignacionLoading(false))
-    },[setErrorException])
     const busquedaCarritos = useMemo<QueryBusquedaCarrito>(()=>({
         soloActivos: '1',
         withCliente: '1',
@@ -151,6 +211,12 @@ export const useCarrito =  () => {
         // setModelModificando: setPedidoModificando,
         // handleBorrarModel: handleBorrarPedido
     } = useGenericModel<ICarrito, "", QueryBusquedaCarrito>(URL_CARRITO,'carrito', 1, 1000, postableCarrito,undefined,busquedaCarritos)
+    const reservarMesa = useCallback((m:IMesa, c?:ICliente)=>{        //cuando ya tenemos la mesa reservada y con el posible cliente (puede ser anonimo)
+        const nuevoPedido = {...carritoVacio}
+        nuevoPedido.mesa_id = m.id
+        nuevoPedido.cliente_id = c?.id || null
+        return pedidoUpdate(nuevoPedido)
+    },[pedidoUpdate])
     const busquedaMesas = useMemo((): Partial<QueryBusquedaMesa>=>({
         activo: "1",
         // withCarrito: "1",
@@ -203,7 +269,6 @@ export const useCarrito =  () => {
         setProductoModificando,
         handleBorrarProducto,
         reservarMesa,
-        asignacionLoading,
         isPedidosLoading,
         pedidos: paginacionCarrito.data,
         pedidoUpdate

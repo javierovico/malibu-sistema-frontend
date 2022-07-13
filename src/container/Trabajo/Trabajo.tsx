@@ -1,5 +1,6 @@
 import React, {useCallback, useMemo, useState} from "react";
 import {
+    carritoVacio,
     ESTADO_CARRITO_OCUPADO,
     EstadoCarrito,
     ICarrito,
@@ -35,7 +36,6 @@ export default function Trabajo() {
         errorMesas,
         isMesasLoading,
         reservarMesa,
-        asignacionLoading,
         isPedidosLoading,
         // errorPedidos,
         pedidoUpdate,
@@ -45,8 +45,8 @@ export default function Trabajo() {
         pedidos: pedidosOriginales,
     } = useCarrito()
     const [menuAccionPedidoVisible,setMenuAccionPedidoVisible] = useState<number|undefined>(undefined)  // indica de cual pedido (id) estara abierto
-    const [carritoIdViendo, setCarritoIdViendo] = useState<{ id?: number, abrirSelectProducto?: boolean }>({})
-    const carritoViendo = useMemo(()=>({carrito: pedidosOriginales.find(p=>p.id === carritoIdViendo?.id), abrirSelectProducto: carritoIdViendo.abrirSelectProducto}),[carritoIdViendo, pedidosOriginales])
+    const [carritoIdViendo, setCarritoIdViendo] = useState<{ id?: number, abrirSelectProducto?: boolean, crearNuevo?:boolean }>({})
+    const carritoViendo = useMemo(()=>({carrito: carritoIdViendo.crearNuevo ? (carritoVacio) : pedidosOriginales.find(p=>p.id === carritoIdViendo?.id), abrirSelectProducto: carritoIdViendo.abrirSelectProducto}),[carritoIdViendo, pedidosOriginales])
     const crearMenuAccionPedido = useCallback((c:ICarrito):ItemType[]=>{
         const menus: ItemType[] = []
         if (c.status === EstadoCarrito.CREADO) {
@@ -236,13 +236,18 @@ export default function Trabajo() {
         onFiltroValuesChange,
         configuracionColumnas
     } = useTablaOfflineAuxiliar(mesas, configuracionColumnasSimple)
+    const handleCarritoChange = useCallback((c: ICarrito)=>{
+        pedidoUpdate(c).then((cSubido)=>{
+            setCarritoIdViendo({id:cSubido?.id})
+        })
+    },[pedidoUpdate])
     const cabezeraTablaPedidos = useMemo(()=><>
         <Row justify="space-between">
             <Col lg={12}>
                 <h3>Lista de pedidos actuales</h3>
             </Col>
             <Col offset={4} lg={8}>
-                <Button onClick={()=>setCarritoIdViendo({})} style={{float:'right'}} type="primary" icon={<PlusOutlined />}>
+                <Button onClick={()=>setCarritoIdViendo({crearNuevo: true})} style={{float:'right'}} type="primary" icon={<PlusOutlined />}>
                     Crear Carrito
                 </Button>
             </Col>
@@ -254,7 +259,7 @@ export default function Trabajo() {
                 const estado: EstadoCarrito|undefined = pedidosOriginales.find(p=>p.mesa_id === m.id)?.status
                 return (!estado || !ESTADO_CARRITO_OCUPADO.includes(estado)) ? '' :  'table-row-dark'
             }}
-            loading={isMesasLoading || asignacionLoading}
+            loading={isMesasLoading || isPedidosLoading}
             title='Estado de mesas'
             configuracionColumnas={configuracionColumnas}
             items={items}
@@ -265,7 +270,7 @@ export default function Trabajo() {
         />}
         {errorMesas || <TablaClientes
             loading={isPedidosLoading}
-            title='Lista de pedidos actuales'       //todo
+            title={cabezeraTablaPedidos}
             configuracionColumnas={configuracionColumnasPedidos}
             items={pedidos}
             totalItems={pedidos.length}
@@ -296,7 +301,7 @@ export default function Trabajo() {
             {carritoViendo.carrito && <VisorDeCarrito
                 carrito={carritoViendo.carrito}
                 abrirSelectProducto={carritoViendo.abrirSelectProducto}
-                carritoChange={pedidoUpdate}
+                carritoChange={handleCarritoChange}
             />}
         </Modal>
     </>

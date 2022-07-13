@@ -21,7 +21,7 @@ import SelectDeProductos, {ProductoSelected} from "./SelectDeProductos";
 
 interface ArgumentosModificarProducto {
     producto?: IProducto,       //si esta definido es el producto a editar (se usa para notificar al padre)
-    productoChange: {(p: IProducto) : void|boolean|Error|Promise<void>}
+    productoChange: {(p: IProducto) : void|boolean|Error|Promise<IProducto|undefined>}
 }
 
 // function useProducto(productoId: number|undefined) {
