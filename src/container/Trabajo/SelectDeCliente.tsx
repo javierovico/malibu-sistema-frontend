@@ -1,8 +1,8 @@
-import TablaClientes, {
+import TablaGenerica, {
     ConfiguracionColumna,
     generadorColumna, ItemsSelected,
     ValorCambiado,
-} from "./TablaClientes";
+} from "./TablaGenerica";
 import {ItemSorteado} from "../../modelos/Generico";
 import {clienteVacio, ICliente, QueryBusquedaCliente, SortCliente, useCliente} from "../../modelos/Cliente";
 import React, {useCallback, useMemo, useState} from "react";
@@ -137,7 +137,7 @@ export default function SelectDeCliente ({handleSelectCliente,clienteSelected,ti
         </Tooltip>
     </Space>,[handleBorrarCliente, setClienteModificando])
     return <>
-        <TablaClientes
+        <TablaGenerica
             loading={isClientesLoading}
             title={tituloCreado}
             itemsIdSelected={clienteSelected?.id?[clienteSelected.id]:[]}

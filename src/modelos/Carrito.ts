@@ -9,10 +9,11 @@ import {IProducto} from "./Producto";
 
 export enum EstadoCarrito {
     CREADO = 'creado',
+    MODIFICADO = 'modificado',
     FINALIZADO = 'finalizado',
 }
 
-export const ESTADO_CARRITO_OCUPADO: EstadoCarrito[] = [EstadoCarrito.CREADO]
+export const ESTADO_CARRITO_OCUPADO: EstadoCarrito[] = [EstadoCarrito.CREADO, EstadoCarrito.MODIFICADO]
 
 // type EstadoCarrito2 = "creado" | "finalizado"
 // export const CARRITO_ESTADO_CREADO: EstadoCarrito = "creado"
@@ -193,7 +194,43 @@ const postableCarrito: Postable<ICarrito> = (carritoNuevo, carritoOriginal): Par
     return data
 }
 
+export const useMesas = () => {
+    const busquedaMesas = useMemo((): Partial<QueryBusquedaMesa>=>({
+        activo: "1",
+    }),[])
+    const {
+        paginacion: paginacionMesas,
+        setPaginacion: setPaginacionMesas,
+        isModelLoading: isMesasLoading,
+        errorModel: errorMesas,
+        modelUpdate: productoUpdate,
+        modelModificando: productoModificando,
+        setModelModificando: setProductoModificando,
+        handleBorrarModel: handleBorrarProducto
+    } = useGenericModel<IMesa, SortMesa, QueryBusquedaMesa>(URL_MESA,'mesa', 1, 1000, postableMesa, undefined, busquedaMesas)
+    return {
+        paginacionMesas,
+        setPaginacionMesas,
+        isMesasLoading,
+        errorMesas,
+        productoUpdate,
+        productoModificando,
+        setProductoModificando,
+        handleBorrarProducto,
+    }
+}
+
 export const useCarrito =  () => {
+    const {
+        paginacionMesas,
+        setPaginacionMesas,
+        isMesasLoading,
+        errorMesas,
+        productoUpdate,
+        productoModificando,
+        setProductoModificando,
+        handleBorrarProducto,
+    } = useMesas()
     const busquedaCarritos = useMemo<QueryBusquedaCarrito>(()=>({
         soloActivos: '1',
         withCliente: '1',
@@ -217,23 +254,6 @@ export const useCarrito =  () => {
         nuevoPedido.cliente_id = c?.id || null
         return pedidoUpdate(nuevoPedido)
     },[pedidoUpdate])
-    const busquedaMesas = useMemo((): Partial<QueryBusquedaMesa>=>({
-        activo: "1",
-        // withCarrito: "1",
-        // withMozo: '1',
-        // withCliente: '1',
-        // withCarritoProductos: '1',
-    }),[])
-    const {
-        paginacion: paginacionMesas,
-        setPaginacion: setPaginacionMesas,
-        isModelLoading: isMesasLoading,
-        errorModel: errorMesas,
-        modelUpdate: productoUpdate,
-        modelModificando: productoModificando,
-        setModelModificando: setProductoModificando,
-        handleBorrarModel: handleBorrarProducto
-    } = useGenericModel<IMesa, SortMesa, QueryBusquedaMesa>(URL_MESA,'mesa', 1, 1000, postableMesa, undefined, busquedaMesas)
     const {
         channelCarrito,
     } = useContext(AuthContext)

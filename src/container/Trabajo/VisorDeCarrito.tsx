@@ -1,18 +1,23 @@
-import {ICarrito} from "../../modelos/Carrito";
+import {ICarrito, IMesa} from "../../modelos/Carrito";
 import React, {useCallback, useContext, useMemo} from "react";
-import {Alert, Button, Col, Modal, Row, Space, Spin} from "antd";
+import {Alert, Button, Col, Modal, Row, Space, Spin, Card, Select, Form as FormAntd} from "antd";
 import {DeleteOutlined, PlusOutlined} from "@ant-design/icons";
 import SelectDeProductos, {ProductoSelected} from "../Administracion/SelectDeProductos";
 import {mostrarMensaje} from "../../utils/utils";
 import {AuthContext} from "../../context/AuthProvider";
-import {Form, FormikBag, FormikProps, withFormik} from "formik";
+import {Field, Form, FormikBag, FormikProps, withFormik} from "formik";
 import TablaGenerica from "../Administracion/TablaGenerica";
 import {IconText} from "../Administracion/AdminProducto";
 import {errorToFormik} from "../../modelos/ErrorModel";
 import {FormTitle} from "../Administracion/ModificarProducto.style";
+import SelectDeCliente from "./SelectDeCliente";
+import SelectDeMesa from "./SelectDeMesa";
+import {AntdSelectV2, AntdSelectV2Option} from "../../components/UI/Antd/AntdInputWithFormikTypescript";
 
 interface VariablesExtraFormulario {
-    modalSelectProducto: boolean
+    modalSelectProducto: boolean,
+    modalSelectCliente: boolean,
+    modalSelectMesa: boolean,
 }
 
 type FormValue = ICarrito & VariablesExtraFormulario
@@ -20,7 +25,8 @@ type FormValue = ICarrito & VariablesExtraFormulario
 interface Argumentos {
     carrito:ICarrito,
     carritoChange: {(c:ICarrito):void|boolean|Error|Promise<void>},
-    abrirSelectProducto?: boolean
+    abrirSelectProducto?: boolean,
+    mesas?: IMesa[]
 }
 
 export default function VisorDeCarrito(arg: Argumentos) {
@@ -28,15 +34,50 @@ export default function VisorDeCarrito(arg: Argumentos) {
         carrito,
         carritoChange,
         abrirSelectProducto,
+        mesas,
     } = arg
     const {
         setErrorException
     } = useContext(AuthContext)
-    const InnerForm = useCallback(({ setValues, isSubmitting, values, errors, dirty}: FormikProps<FormValue>) => {
-        const handleCerrar = () => setValues({...values,modalSelectProducto:false})
+    const InnerForm = useCallback(({ setValues, isSubmitting, values, errors, dirty, submitCount}: FormikProps<FormValue>) => {
+        const handleCerrar = () => setValues({...values,modalSelectProducto:false, modalSelectCliente: false, modalSelectMesa: false})
         return <Spin spinning={isSubmitting}>
+            <Row justify='space-evenly'>
+                <Col lg={8}>
+                    <Card title="Datos del cliente" extra={<a href="/#" onClick={(e)=>{e.preventDefault();setValues({...values,modalSelectCliente:true})}}>Cambiar</a>}>
+                        <p>Nombre: {values.cliente?.nombre??'ANONIMO'}</p>
+                        <p>Telefono: {values.cliente?.telefono}</p>
+                        <p>Ruc: {values.cliente?.ruc}</p>
+                        <p>Ciudad: {values.cliente?.ciudad}</p>
+                        <p>Barrio: {values.cliente?.barrio}</p>
+                    </Card>
+                </Col>
+                <Col lg={8}>
+                    <Card title="Datos de la mesa" extra={<a href="/#" onClick={(e)=>{e.preventDefault();setValues({...values,modalSelectMesa:true})}}>Cambiar</a>}>
+                        <p>Nombre: {values.cliente?.nombre??'ANONIMO'}</p>
+                        <p>Telefono: {values.cliente?.telefono}</p>
+                        <p>Ruc: {values.cliente?.ruc}</p>
+                        <p>Ciudad: {values.cliente?.ciudad}</p>
+                        <p>Barrio: {values.cliente?.barrio}</p>
+                    </Card>
+                </Col>
+            </Row>
             <Form className='form-container'>
                 <>
+                    <Row justify='space-evenly'>
+                        <Col lg={8}>
+                            <Field
+                                component={AntdSelectV2}
+                                name='mesa.id'
+                                label='Mesa'
+                                submitCount={submitCount}
+                                selectOptions={mesas?.map<AntdSelectV2Option<number>>(m=>({key:m.id,value:m.code}))}
+                                onChange={(mesa_id:number)=>setValues({...values,mesa_id,mesa:mesas?.find(m=>m.id===mesa_id)})}
+                            />
+                        </Col>
+                        <Col lg={8}>
+                        </Col>
+                    </Row>
                     <TablaGenerica
                         title={<>
                             <Row justify="space-between">
@@ -105,13 +146,45 @@ export default function VisorDeCarrito(arg: Argumentos) {
                     }}
                 />
             </Modal>
+            <Modal
+                destroyOnClose={true}
+                width={'85%'}
+                footer={[
+                    <Button key='aceptar' type='primary' onClick={handleCerrar} disabled={!values.cliente}>Aceptar</Button>,
+                ]}
+                visible={values.modalSelectCliente}
+                onCancel={handleCerrar}
+            >
+                <SelectDeCliente
+                    handleSelectCliente={(c)=>{setValues({...values,cliente:c,cliente_id:c.id??0})}}
+                    clienteSelected={values.cliente}
+                    titulo={'Seleccione cliente para asignar a pedido'}
+                />
+            </Modal>
+            <Modal
+                destroyOnClose={true}
+                width={'85%'}
+                footer={[
+                    <Button key='aceptar' type='primary' onClick={handleCerrar} disabled={!values.cliente}>Aceptar</Button>,
+                ]}
+                visible={values.modalSelectMesa}
+                onCancel={handleCerrar}
+            >
+                <SelectDeMesa
+                    handleSelectMesa={(m)=>{setValues({...values,mesa:m,mesa_id:m.id??0})}}
+                    mesaSelected={values.mesa}
+                    titulo={'Seleccione mesa para asignar a pedido'}
+                />
+            </Modal>
         </Spin>
-    },[])
+    },[mesas])
     const MyForm = useMemo(()=>withFormik<{}, FormValue>({
         // Ignoramos las propiedades y asignamos el producto que tenemos nomas
         mapPropsToValues: () =>  ({
             ...carrito,
-            modalSelectProducto: !!abrirSelectProducto
+            modalSelectProducto: !!abrirSelectProducto,
+            modalSelectCliente: false,
+            modalSelectMesa: false,
         }),
         handleSubmit: (values, {setSubmitting, setErrors}: FormikBag<{ }, FormValue>) => {
             const result = carritoChange(values)
@@ -126,6 +199,7 @@ export default function VisorDeCarrito(arg: Argumentos) {
                 result.then(()=>mostrarMensaje(`Se guardaron los cambios`))
                     .catch((e)=> {
                         mostrarMensaje(`Error Guadando`, 'error')
+                        console.log(e)
                         const errorFormik = errorToFormik(e)
                         if (errorFormik) {
                             setErrors(errorFormik)

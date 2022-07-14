@@ -1,4 +1,4 @@
-import {Button, Upload, UploadProps} from "antd";
+import {Button, Form, Select, Upload, UploadProps} from "antd";
 import React, {useContext, useMemo} from "react";
 import { LoadingOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons';
 import {CreateAntField} from "./AntdInputWithFormik";
@@ -6,6 +6,8 @@ import type { UploadRequestOption } from 'rc-upload/lib/interface';
 import {UploadChangeParam, UploadFile} from "antd/lib/upload/interface";
 import {convertAndResizeImage} from "../../../utils/utils";
 import {AuthContext} from "../../../context/AuthProvider";
+import {FieldProps} from "formik";
+const FormItem = Form.Item;
 
 interface ArchivoSubible {
     base64: string
@@ -78,3 +80,58 @@ const FileSelect = ({ value, onChange }: FileSelectParams) => {
 };
 
 export const AntFileSelect = CreateAntField(FileSelect);
+
+export type AntdSelectV2Option<T> = { key: T, value: string}
+
+interface ArgSelect<T extends string|number> {
+    hasFeedback:boolean,
+    label: string,
+    selectOptions?: AntdSelectV2Option<T>[],
+    submitCount: number,
+    onChange: {(item: T):void}
+}
+
+export function AntdSelectV2<T extends string|number>(arg: FieldProps & ArgSelect<T>) {
+    const {
+        field,
+        form,
+        meta,
+        hasFeedback,
+        label,
+        selectOptions,
+        submitCount,
+        onChange,
+    } = arg
+    const touched = form.touched[field.name];
+    const submitted = submitCount > 0;
+    const hasError = form.errors[field.name];
+    const submittedError = hasError && submitted;
+    const touchedError = hasError && touched;
+    return (
+        <div className="field-container">
+            <FormItem
+                label={label}
+                colon={false}
+                hasFeedback={
+                    !!((hasFeedback && submitted) || (hasFeedback && touched))
+                }
+                help={submittedError || touchedError ? (hasError.toString()??false) : false}
+                validateStatus={submittedError || touchedError ? 'error' : 'success'}
+            >
+                <Select
+                    showSearch
+                    placeholder="Select a person"
+                    optionFilterProp="children"
+                    // onChange={(mesa_id)=>setValues({...values,mesa_id,mesa:mesas?.find(m=>m.id===mesa_id)})}
+                    onChange={onChange}
+                    value={field.value}
+                    filterOption={(input, option) =>
+                        (option!.children as unknown as string).toLowerCase().includes(input.toLowerCase())
+                    }
+                >
+                    {selectOptions?.map(m=><Select.Option key={m.key} value={m.key}>{m.value}</Select.Option>)}
+                </Select>
+            </FormItem>
+        </div>
+    )
+}

@@ -12,7 +12,7 @@ import {
     ConfiguracionColumnaSimple,
     generadorColumnaSimple,
     ValorCambiado
-} from "../container/Trabajo/TablaClientes";
+} from "../container/Trabajo/TablaGenerica";
 
 // /** Zona de clases */
 //

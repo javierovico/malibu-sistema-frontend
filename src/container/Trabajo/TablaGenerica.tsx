@@ -144,7 +144,7 @@ export function generadorColumnaSimple<T extends Modelable,QueryBusqueda extends
     }
 }
 
-export default function TablaClientes<M extends Modelable> (arg: Parametros<M>){
+export default function TablaGenerica<M extends Modelable> (arg: Parametros<M>){
     const {
         items,
         totalItems,

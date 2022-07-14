@@ -13,7 +13,7 @@ import SelectDeCliente from "./SelectDeCliente";
 import {ICliente} from "../../modelos/Cliente";
 import {ItemType} from "antd/lib/menu/hooks/useItems";
 import './Trabajo.css'
-import TablaClientes, {ConfiguracionColumnaSimple} from "./TablaClientes";
+import TablaGenerica, {ConfiguracionColumnaSimple} from "./TablaGenerica";
 import {useTablaOfflineAuxiliar} from "../../modelos/Generico";
 import VisorDeCarrito from "./VisorDeCarrito";
 
@@ -61,7 +61,7 @@ export default function Trabajo() {
                         onClick: ()=> setCarritoIdViendo({id: c.id, abrirSelectProducto: true})
                     },
                     {
-                        label: 'Ver Lista de Pedidos',
+                        label: 'Ver Carrito',
                         key: Acciones.VER_LISTA_PRODUCTOS,
                         onClick: ()=> setCarritoIdViendo({id:c.id})
                     }
@@ -168,7 +168,7 @@ export default function Trabajo() {
                         onClick: ()=> setCarritoIdViendo({id: pedidosOriginales.find(p => p.mesa_id === m.id)?.id, abrirSelectProducto: true})
                     },
                     {
-                        label: 'Ver Lista de Pedidos',
+                        label: 'Ver Carrito',
                         key: Acciones.VER_LISTA_PRODUCTOS,
                         onClick: ()=> setCarritoIdViendo({id: pedidosOriginales.find(p => p.mesa_id === m.id)?.id})
                     }
@@ -237,9 +237,14 @@ export default function Trabajo() {
         configuracionColumnas
     } = useTablaOfflineAuxiliar(mesas, configuracionColumnasSimple)
     const handleCarritoChange = useCallback((c: ICarrito)=>{
-        pedidoUpdate(c).then((cSubido)=>{
-            setCarritoIdViendo({id:cSubido?.id})
-        })
+        return new Promise<void>(((resolve, reject) => {
+            pedidoUpdate(c)
+                .then((cSubido)=>{
+                    setCarritoIdViendo({id:cSubido?.id})
+                    resolve()
+                })
+                .catch(reject)
+        }))
     },[pedidoUpdate])
     const cabezeraTablaPedidos = useMemo(()=><>
         <Row justify="space-between">
@@ -254,7 +259,7 @@ export default function Trabajo() {
         </Row>
     </>,[])
     return <>
-        {errorMesas || <TablaClientes
+        {errorMesas || <TablaGenerica
             rowClassName={(m) => {
                 const estado: EstadoCarrito|undefined = pedidosOriginales.find(p=>p.mesa_id === m.id)?.status
                 return (!estado || !ESTADO_CARRITO_OCUPADO.includes(estado)) ? '' :  'table-row-dark'
@@ -268,7 +273,7 @@ export default function Trabajo() {
             onBusquedaValuesChange={onFiltroValuesChange}
             onFiltroValuesChange={onFiltroValuesChange}
         />}
-        {errorMesas || <TablaClientes
+        {errorMesas || <TablaGenerica
             loading={isPedidosLoading}
             title={cabezeraTablaPedidos}
             configuracionColumnas={configuracionColumnasPedidos}
@@ -299,6 +304,7 @@ export default function Trabajo() {
             onCancel={()=>setCarritoIdViendo({})}
         >
             {carritoViendo.carrito && <VisorDeCarrito
+                mesas={mesas}
                 carrito={carritoViendo.carrito}
                 abrirSelectProducto={carritoViendo.abrirSelectProducto}
                 carritoChange={handleCarritoChange}
