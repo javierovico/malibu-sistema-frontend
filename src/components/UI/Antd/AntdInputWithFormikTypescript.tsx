@@ -1,6 +1,6 @@
-import {Button, Form, Select, Upload, UploadProps} from "antd";
+import {Button, Form, Select, Switch, Upload, UploadProps} from "antd";
 import React, {useContext, useMemo} from "react";
-import { LoadingOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons';
+import {CheckOutlined, CloseOutlined, LoadingOutlined, PlusOutlined, UploadOutlined} from '@ant-design/icons';
 import {CreateAntField} from "./AntdInputWithFormik";
 import type { UploadRequestOption } from 'rc-upload/lib/interface';
 import {UploadChangeParam, UploadFile} from "antd/lib/upload/interface";
@@ -129,6 +129,48 @@ export function AntdSelectV2<T extends string|number>(arg: ArgSelect<T>) {
                 >
                     {selectOptions.map(m=><Select.Option key={m.key} value={m.key}>{m.value}</Select.Option>)}
                 </Select>
+            </FormItem>
+        </div>
+    )
+}
+
+interface ArgsSwitch {
+    label: string,
+    onChange: {(val: boolean):void},
+    value: boolean,
+    placeholder?: string,
+    submitCount: number,
+    touched?:boolean,
+    error?: string,
+    onBlur?:{():void}
+}
+
+export function SwitchV2(arg: ArgsSwitch) {
+    const {
+        label,
+        onChange,
+        value,
+        touched,
+        submitCount,
+        error,
+        onBlur
+    } = arg
+    const enviado: boolean = submitCount > 0
+    return (
+        <div className="field-container">
+            <FormItem
+                label={label}
+                colon={false}
+                hasFeedback={enviado || touched}
+                validateStatus={((enviado || touched) && error)? 'error':'success'}
+                help={((enviado || touched))? error:''}
+            >
+                <Switch
+                    checkedChildren={<CheckOutlined />}
+                    unCheckedChildren={<CloseOutlined />}
+                    checked={value}
+                    onChange={(v)=>{onChange(v);onBlur?.()}}
+                />
             </FormItem>
         </div>
     )

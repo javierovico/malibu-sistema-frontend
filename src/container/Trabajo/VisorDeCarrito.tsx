@@ -12,7 +12,7 @@ import {convertIError, errorToFormik, objectIsIError} from "../../modelos/ErrorM
 import {FormTitle} from "../Administracion/ModificarProducto.style";
 import SelectDeCliente from "./SelectDeCliente";
 import SelectDeMesa from "./SelectDeMesa";
-import {AntdSelectV2, AntdSelectV2Option} from "../../components/UI/Antd/AntdInputWithFormikTypescript";
+import {AntdSelectV2, AntdSelectV2Option, SwitchV2} from "../../components/UI/Antd/AntdInputWithFormikTypescript";
 
 interface VariablesExtraFormulario {
     modalSelectProducto: boolean,
@@ -45,7 +45,7 @@ export default function VisorDeCarrito(arg: Argumentos) {
             <Form className='form-container'>
                 <>
                     <Row justify='space-evenly'>
-                        <Col lg={8}>
+                        <Col lg={10}>
                             <Card title="Datos del cliente" extra={<a href="/#" onClick={(e)=>{e.preventDefault();setValues({...values,modalSelectCliente:true})}}>Cambiar</a>}>
                                 <p>Nombre: {values.cliente?.nombre??'ANONIMO'}</p>
                                 <p>Telefono: {values.cliente?.telefono}</p>
@@ -54,7 +54,7 @@ export default function VisorDeCarrito(arg: Argumentos) {
                                 <p>Barrio: {values.cliente?.barrio}</p>
                             </Card>
                         </Col>
-                        <Col lg={8}>
+                        <Col lg={10}>
                             <AntdSelectV2
                                 selectOptions={[{key:0, value: '[Sin Mesa]'}].concat(mesas?.map<AntdSelectV2Option<number>>(m=>({key:m.id,value:m.code}))??[])}
                                 value={values.mesa_id??0}
@@ -65,6 +65,16 @@ export default function VisorDeCarrito(arg: Argumentos) {
                                 submitCount={submitCount}
                                 error={errors.mesa_id}
                                 onBlur={()=>setFieldTouched('mesa_id')}
+                            />
+
+                            <SwitchV2
+                                value={values.is_delivery}
+                                label='Es delivery'
+                                onChange={(d:boolean)=>setValues({...values,is_delivery:d})}
+                                touched={touched.is_delivery}
+                                submitCount={submitCount}
+                                error={errors.mesa_id}
+                                onBlur={()=>setFieldTouched('is_delivery')}
                             />
                         </Col>
                     </Row>
