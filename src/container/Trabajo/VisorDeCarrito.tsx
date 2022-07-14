@@ -8,7 +8,7 @@ import {AuthContext} from "../../context/AuthProvider";
 import {Field, Form, FormikBag, FormikProps, withFormik} from "formik";
 import TablaGenerica from "../Administracion/TablaGenerica";
 import {IconText} from "../Administracion/AdminProducto";
-import {errorToFormik} from "../../modelos/ErrorModel";
+import {convertIError, errorToFormik, objectIsIError} from "../../modelos/ErrorModel";
 import {FormTitle} from "../Administracion/ModificarProducto.style";
 import SelectDeCliente from "./SelectDeCliente";
 import SelectDeMesa from "./SelectDeMesa";
@@ -39,43 +39,33 @@ export default function VisorDeCarrito(arg: Argumentos) {
     const {
         setErrorException
     } = useContext(AuthContext)
-    const InnerForm = useCallback(({ setValues, isSubmitting, values, errors, dirty, submitCount}: FormikProps<FormValue>) => {
+    const InnerForm = useCallback(({ setValues, isSubmitting, values, errors, dirty, submitCount, touched, setFieldTouched}: FormikProps<FormValue>) => {
         const handleCerrar = () => setValues({...values,modalSelectProducto:false, modalSelectCliente: false, modalSelectMesa: false})
         return <Spin spinning={isSubmitting}>
-            <Row justify='space-evenly'>
-                <Col lg={8}>
-                    <Card title="Datos del cliente" extra={<a href="/#" onClick={(e)=>{e.preventDefault();setValues({...values,modalSelectCliente:true})}}>Cambiar</a>}>
-                        <p>Nombre: {values.cliente?.nombre??'ANONIMO'}</p>
-                        <p>Telefono: {values.cliente?.telefono}</p>
-                        <p>Ruc: {values.cliente?.ruc}</p>
-                        <p>Ciudad: {values.cliente?.ciudad}</p>
-                        <p>Barrio: {values.cliente?.barrio}</p>
-                    </Card>
-                </Col>
-                <Col lg={8}>
-                    <Card title="Datos de la mesa" extra={<a href="/#" onClick={(e)=>{e.preventDefault();setValues({...values,modalSelectMesa:true})}}>Cambiar</a>}>
-                        <p>Nombre: {values.cliente?.nombre??'ANONIMO'}</p>
-                        <p>Telefono: {values.cliente?.telefono}</p>
-                        <p>Ruc: {values.cliente?.ruc}</p>
-                        <p>Ciudad: {values.cliente?.ciudad}</p>
-                        <p>Barrio: {values.cliente?.barrio}</p>
-                    </Card>
-                </Col>
-            </Row>
             <Form className='form-container'>
                 <>
                     <Row justify='space-evenly'>
                         <Col lg={8}>
-                            <Field
-                                component={AntdSelectV2}
-                                name='mesa.id'
-                                label='Mesa'
-                                submitCount={submitCount}
-                                selectOptions={mesas?.map<AntdSelectV2Option<number>>(m=>({key:m.id,value:m.code}))}
-                                onChange={(mesa_id:number)=>setValues({...values,mesa_id,mesa:mesas?.find(m=>m.id===mesa_id)})}
-                            />
+                            <Card title="Datos del cliente" extra={<a href="/#" onClick={(e)=>{e.preventDefault();setValues({...values,modalSelectCliente:true})}}>Cambiar</a>}>
+                                <p>Nombre: {values.cliente?.nombre??'ANONIMO'}</p>
+                                <p>Telefono: {values.cliente?.telefono}</p>
+                                <p>Ruc: {values.cliente?.ruc}</p>
+                                <p>Ciudad: {values.cliente?.ciudad}</p>
+                                <p>Barrio: {values.cliente?.barrio}</p>
+                            </Card>
                         </Col>
                         <Col lg={8}>
+                            <AntdSelectV2
+                                selectOptions={[{key:0, value: '[Sin Mesa]'}].concat(mesas?.map<AntdSelectV2Option<number>>(m=>({key:m.id,value:m.code}))??[])}
+                                value={values.mesa_id??0}
+                                placeholder='Seleccione mesa'
+                                label='Mesa'
+                                onChange={(mesa_id:number)=>setValues({...values,mesa_id:mesa_id || null,mesa:mesas?.find(m=>m.id===mesa_id)})}
+                                touched={touched.mesa_id}
+                                submitCount={submitCount}
+                                error={errors.mesa_id}
+                                onBlur={()=>setFieldTouched('mesa_id')}
+                            />
                         </Col>
                     </Row>
                     <TablaGenerica
@@ -199,7 +189,11 @@ export default function VisorDeCarrito(arg: Argumentos) {
                 result.then(()=>mostrarMensaje(`Se guardaron los cambios`))
                     .catch((e)=> {
                         mostrarMensaje(`Error Guadando`, 'error')
-                        console.log(e)
+                        if (objectIsIError(e)) {
+                            e = convertIError(e,{
+                                'mesaId': 'mesa_id'
+                            })
+                        }
                         const errorFormik = errorToFormik(e)
                         if (errorFormik) {
                             setErrors(errorFormik)

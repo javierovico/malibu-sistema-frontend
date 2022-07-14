@@ -44,12 +44,13 @@ export default function Trabajo() {
         // handleBorrarPedido,
         pedidos: pedidosOriginales,
     } = useCarrito()
+    const mesasDisponibles = useMemo(()=>mesas.filter(m=>!pedidosOriginales.find(p=>p.mesa_id === m.id)),[mesas, pedidosOriginales])
     const [menuAccionPedidoVisible,setMenuAccionPedidoVisible] = useState<number|undefined>(undefined)  // indica de cual pedido (id) estara abierto
     const [carritoIdViendo, setCarritoIdViendo] = useState<{ id?: number, abrirSelectProducto?: boolean, crearNuevo?:boolean }>({})
     const carritoViendo = useMemo(()=>({carrito: carritoIdViendo.crearNuevo ? (carritoVacio) : pedidosOriginales.find(p=>p.id === carritoIdViendo?.id), abrirSelectProducto: carritoIdViendo.abrirSelectProducto}),[carritoIdViendo, pedidosOriginales])
     const crearMenuAccionPedido = useCallback((c:ICarrito):ItemType[]=>{
         const menus: ItemType[] = []
-        if (c.status === EstadoCarrito.CREADO) {
+        if (ESTADO_CARRITO_OCUPADO.includes(c.status)) {
             menus.push({
                 key: 'menuPedidos',
                 type: 'group',
@@ -213,6 +214,7 @@ export default function Trabajo() {
             key:'estado',
             render: (_,m) =>  pedidosOriginales.find(p=>p.mesa_id === m.id)?.status,
             sortable: true,
+            // searchable: true,
             filtroDesdeValores:true,
         },{
             key:'acciones',
@@ -238,7 +240,7 @@ export default function Trabajo() {
     } = useTablaOfflineAuxiliar(mesas, configuracionColumnasSimple)
     const handleCarritoChange = useCallback((c: ICarrito)=>{
         return new Promise<void>(((resolve, reject) => {
-            pedidoUpdate(c)
+            pedidoUpdate(c,false,false)
                 .then((cSubido)=>{
                     setCarritoIdViendo({id:cSubido?.id})
                     resolve()
@@ -304,7 +306,7 @@ export default function Trabajo() {
             onCancel={()=>setCarritoIdViendo({})}
         >
             {carritoViendo.carrito && <VisorDeCarrito
-                mesas={mesas}
+                mesas={[...mesasDisponibles, ...(carritoViendo.carrito.mesa?[carritoViendo.carrito.mesa]:[])]}      // se les agrega las mesas disponibles mas la mesa actual (si esta)
                 carrito={carritoViendo.carrito}
                 abrirSelectProducto={carritoViendo.abrirSelectProducto}
                 carritoChange={handleCarritoChange}

@@ -127,8 +127,8 @@ export function generadorColumnaSimple<T extends Modelable,QueryBusqueda extends
     if (filtroDesdeValores) {
         valoresAdmitidosFiltro = itemsOriginlaes?.map(r=> render?render(r[key],r):r[key])?.filter((v,i,s)=>s.indexOf(v)===i)?.map(r=> {
             return {
-                value: ''+r,
-                text: ''+r,
+                value: r?(''+r):'%VALORVACIO%',
+                text: r?(''+r):'Sin Especificar',
             }
         }) || []
     }

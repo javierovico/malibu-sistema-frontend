@@ -69,3 +69,9 @@ export function errorRandomToIError(e: any, conversiones?: Record<string, string
         message
     }
 }
+
+export function convertIError(e: IError, conversiones: Record<string, string>): IError {
+    const nuevoE: IError = {...e, items: []}
+    nuevoE.items = e.items.map(ie=> ({...ie, name: conversiones.hasOwnProperty(ie.name)?conversiones[ie.name]:ie.name}))
+    return nuevoE
+}

@@ -248,7 +248,7 @@ export const useGenericModel = <Model extends Ideable, ModelSort extends string,
             .finally(()=>setIsModelLoading(false))
     },[sortBy, page, perPage, setErrorException, itemsBusqueda, url])
     const [modelModificando, setModelModificando] = useState<Model>()
-    const modelUpdate = useCallback((p: Model, borrar: boolean = false)=>{
+    const modelUpdate = useCallback((p: Model, borrar: boolean = false, mostrarError: boolean = true)=>{
         return new Promise<Model|undefined>((res,rej) => {
             if (editor) {
                 const posicionItem: number = paginacion.data.findIndex(pItem => pItem.id === p.id)      // -1 si se va agregar nuevo
@@ -262,7 +262,7 @@ export const useGenericModel = <Model extends Ideable, ModelSort extends string,
                         res(modelSubido)
                     })
                     .catch((e)=>{
-                        setErrorException(e)
+                        mostrarError && setErrorException(e)
                         rej(e)
                     })
             } else {
@@ -407,9 +407,9 @@ export function editorModel<T extends Ideable>(url: string, nombreGet:string, pr
 
 const filtroSimple = (vB: undefined|string|string[],dondeBuscar:any): boolean => {
     if (typeof vB == 'string' && vB){
-        return dondeBuscar.toString().toLowerCase().includes(vB.toLowerCase())
+        return dondeBuscar?(dondeBuscar.toString().toLowerCase().includes(vB.toLowerCase())):false
     } else if(Array.isArray(vB) && vB.length) {
-        return vB.includes(dondeBuscar.toString())
+        return vB.includes(dondeBuscar?dondeBuscar.toString():'%VALORVACIO%')
     } else {
         return false
     }

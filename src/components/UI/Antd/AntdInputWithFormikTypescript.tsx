@@ -6,7 +6,6 @@ import type { UploadRequestOption } from 'rc-upload/lib/interface';
 import {UploadChangeParam, UploadFile} from "antd/lib/upload/interface";
 import {convertAndResizeImage} from "../../../utils/utils";
 import {AuthContext} from "../../../context/AuthProvider";
-import {FieldProps} from "formik";
 const FormItem = Form.Item;
 
 interface ArchivoSubible {
@@ -84,52 +83,51 @@ export const AntFileSelect = CreateAntField(FileSelect);
 export type AntdSelectV2Option<T> = { key: T, value: string}
 
 interface ArgSelect<T extends string|number> {
-    hasFeedback:boolean,
     label: string,
-    selectOptions?: AntdSelectV2Option<T>[],
+    selectOptions: AntdSelectV2Option<T>[],
+    onChange: {(item: T):void},
+    value?: T,
+    placeholder?: string,
     submitCount: number,
-    onChange: {(item: T):void}
+    touched?:boolean,
+    error?: string,
+    onBlur?:{():void}
 }
 
-export function AntdSelectV2<T extends string|number>(arg: FieldProps & ArgSelect<T>) {
+export function AntdSelectV2<T extends string|number>(arg: ArgSelect<T>) {
     const {
-        field,
-        form,
-        meta,
-        hasFeedback,
         label,
         selectOptions,
-        submitCount,
         onChange,
+        value,
+        placeholder,
+        touched,
+        submitCount,
+        error,
+        onBlur
     } = arg
-    const touched = form.touched[field.name];
-    const submitted = submitCount > 0;
-    const hasError = form.errors[field.name];
-    const submittedError = hasError && submitted;
-    const touchedError = hasError && touched;
+    const enviado: boolean = submitCount > 0
     return (
         <div className="field-container">
             <FormItem
                 label={label}
                 colon={false}
-                hasFeedback={
-                    !!((hasFeedback && submitted) || (hasFeedback && touched))
-                }
-                help={submittedError || touchedError ? (hasError.toString()??false) : false}
-                validateStatus={submittedError || touchedError ? 'error' : 'success'}
+                hasFeedback={enviado || touched}
+                validateStatus={((enviado || touched) && error)? 'error':'success'}
+                help={((enviado || touched))? error:''}
             >
                 <Select
                     showSearch
-                    placeholder="Select a person"
+                    placeholder={placeholder}
                     optionFilterProp="children"
-                    // onChange={(mesa_id)=>setValues({...values,mesa_id,mesa:mesas?.find(m=>m.id===mesa_id)})}
-                    onChange={onChange}
-                    value={field.value}
+                    onChange={(v)=>{onChange(v);onBlur && onBlur()}}
+                    value={value}
                     filterOption={(input, option) =>
                         (option!.children as unknown as string).toLowerCase().includes(input.toLowerCase())
                     }
+                    onBlur={onBlur}
                 >
-                    {selectOptions?.map(m=><Select.Option key={m.key} value={m.key}>{m.value}</Select.Option>)}
+                    {selectOptions.map(m=><Select.Option key={m.key} value={m.key}>{m.value}</Select.Option>)}
                 </Select>
             </FormItem>
         </div>
