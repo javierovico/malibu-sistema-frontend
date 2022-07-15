@@ -3,7 +3,7 @@ import {
     TipoProductoAdmitido, useProductos,
 } from "../../modelos/Producto";
 import React, {useCallback, useMemo, useState} from "react";
-import TablaGenerica from "./TablaGenerica";
+import TablaProductos from "./TablaProductos";
 import {ItemSorteado} from "../../modelos/Generico";
 
 
@@ -46,7 +46,7 @@ export default function SelectDeProductos({tiposProductosAdmitidos, titulo,onPro
         paginacion
     } = useProductos(page, perPage, orderBy, itemsBusqueda)
     return <>
-        <TablaGenerica
+        <TablaProductos
             tiposProductosAdmitidos={tiposProductosAdmitidos}
             productos={paginacion.data}
             title={titulo}

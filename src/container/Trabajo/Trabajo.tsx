@@ -89,6 +89,13 @@ export default function Trabajo() {
             filtroDesdeValores:true
         },
         {
+            key: 'esDelivery',
+            titulo: 'Es delivery',
+            render: (_, c) => c.is_delivery? 'SI':'NO',
+            sortable: true,
+            filtroDesdeValores:true
+        },
+        {
             key: 'mesa',
             render: (_, c) => c.mesa?.code,
             searchable: true,

@@ -1,12 +1,12 @@
 import {ICarrito, IMesa} from "../../modelos/Carrito";
 import React, {useCallback, useContext, useMemo} from "react";
-import {Alert, Button, Col, Modal, Row, Space, Spin, Card, Select, Form as FormAntd} from "antd";
+import {Alert, Button, Col, Modal, Row, Space, Spin, Card, Statistic, Divider} from "antd";
 import {DeleteOutlined, PlusOutlined} from "@ant-design/icons";
 import SelectDeProductos, {ProductoSelected} from "../Administracion/SelectDeProductos";
-import {mostrarMensaje} from "../../utils/utils";
+import {formateadorNumero, mostrarMensaje} from "../../utils/utils";
 import {AuthContext} from "../../context/AuthProvider";
-import {Field, Form, FormikBag, FormikProps, withFormik} from "formik";
-import TablaGenerica from "../Administracion/TablaGenerica";
+import {Form, FormikBag, FormikProps, withFormik} from "formik";
+import TablaProductos from "../Administracion/TablaProductos";
 import {IconText} from "../Administracion/AdminProducto";
 import {convertIError, errorToFormik, objectIsIError} from "../../modelos/ErrorModel";
 import {FormTitle} from "../Administracion/ModificarProducto.style";
@@ -41,6 +41,8 @@ export default function VisorDeCarrito(arg: Argumentos) {
     } = useContext(AuthContext)
     const InnerForm = useCallback(({ setValues, isSubmitting, values, errors, dirty, submitCount, touched, setFieldTouched}: FormikProps<FormValue>) => {
         const handleCerrar = () => setValues({...values,modalSelectProducto:false, modalSelectCliente: false, modalSelectMesa: false})
+        const precio: number = values.productos?.reduce<number>((prev,curr)=>prev+(curr?.pivot?.precio??curr.precio),0)??0
+        const costo: number = values.productos?.reduce<number>((prev,curr)=>prev+(curr?.pivot?.costo??curr.costo),0)??0
         return <Spin spinning={isSubmitting}>
             <Form className='form-container'>
                 <>
@@ -55,18 +57,6 @@ export default function VisorDeCarrito(arg: Argumentos) {
                             </Card>
                         </Col>
                         <Col lg={10}>
-                            <AntdSelectV2
-                                selectOptions={[{key:0, value: '[Sin Mesa]'}].concat(mesas?.map<AntdSelectV2Option<number>>(m=>({key:m.id,value:m.code}))??[])}
-                                value={values.mesa_id??0}
-                                placeholder='Seleccione mesa'
-                                label='Mesa'
-                                onChange={(mesa_id:number)=>setValues({...values,mesa_id:mesa_id || null,mesa:mesas?.find(m=>m.id===mesa_id)})}
-                                touched={touched.mesa_id}
-                                submitCount={submitCount}
-                                error={errors.mesa_id}
-                                onBlur={()=>setFieldTouched('mesa_id')}
-                            />
-
                             <SwitchV2
                                 value={values.is_delivery}
                                 label='Es delivery'
@@ -76,9 +66,31 @@ export default function VisorDeCarrito(arg: Argumentos) {
                                 error={errors.mesa_id}
                                 onBlur={()=>setFieldTouched('is_delivery')}
                             />
+                            <AntdSelectV2
+                                disabled={values.is_delivery}
+                                selectOptions={[{
+                                    key: 0,
+                                    value: '[Sin Mesa]'
+                                }].concat(mesas?.map<AntdSelectV2Option<number>>(m => ({
+                                    key: m.id,
+                                    value: m.code
+                                })) ?? [])}
+                                value={values.mesa_id ?? 0}
+                                placeholder='Seleccione mesa'
+                                label='Mesa'
+                                onChange={(mesa_id: number) => setValues({
+                                    ...values,
+                                    mesa_id: mesa_id || null,
+                                    mesa: mesas?.find(m => m.id === mesa_id)
+                                })}
+                                touched={touched.mesa_id}
+                                submitCount={submitCount}
+                                error={errors.mesa_id}
+                                onBlur={() => setFieldTouched('mesa_id')}
+                            />
                         </Col>
                     </Row>
-                    <TablaGenerica
+                    <TablaProductos
                         title={<>
                             <Row justify="space-between">
                                 <Col lg={12}>
@@ -110,6 +122,15 @@ export default function VisorDeCarrito(arg: Argumentos) {
                     />
                     {errors.productos && <Alert message={errors.productos} type="error" showIcon />}
                 </>
+                <Divider>Total</Divider>
+                <Row justify='space-evenly'>
+                    <Col lg={10}>
+                        <Statistic title="Precio" value={formateadorNumero(precio) + ' Gs.'} />
+                    </Col>
+                    <Col lg={10}>
+                        <Statistic title="Costo" value={formateadorNumero(costo) + ' Gs.'} />
+                    </Col>
+                </Row>
                 <Row justify="end">
                     <Col span={4}>
                         <div className='submit-container'>

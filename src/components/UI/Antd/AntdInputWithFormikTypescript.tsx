@@ -1,11 +1,12 @@
 import {Button, Form, Select, Switch, Upload, UploadProps} from "antd";
-import React, {useContext, useMemo} from "react";
+import React, {useCallback, useContext, useMemo} from "react";
 import {CheckOutlined, CloseOutlined, LoadingOutlined, PlusOutlined, UploadOutlined} from '@ant-design/icons';
 import {CreateAntField} from "./AntdInputWithFormik";
 import type { UploadRequestOption } from 'rc-upload/lib/interface';
 import {UploadChangeParam, UploadFile} from "antd/lib/upload/interface";
 import {convertAndResizeImage} from "../../../utils/utils";
 import {AuthContext} from "../../../context/AuthProvider";
+import {SelectProps} from "antd/lib/select";
 const FormItem = Form.Item;
 
 interface ArchivoSubible {
@@ -94,19 +95,20 @@ interface ArgSelect<T extends string|number> {
     onBlur?:{():void}
 }
 
-export function AntdSelectV2<T extends string|number>(arg: ArgSelect<T>) {
+export function AntdSelectV2<T extends string|number>(arg: ArgSelect<T> & SelectProps) {
     const {
         label,
         selectOptions,
         onChange,
-        value,
-        placeholder,
         touched,
         submitCount,
         error,
-        onBlur
+        ...argSelect
     } = arg
-    const enviado: boolean = submitCount > 0
+    const {
+        onBlur
+    } = argSelect
+    const enviado: boolean = useMemo(()=>submitCount > 0,[submitCount])
     return (
         <div className="field-container">
             <FormItem
@@ -117,15 +119,13 @@ export function AntdSelectV2<T extends string|number>(arg: ArgSelect<T>) {
                 help={((enviado || touched))? error:''}
             >
                 <Select
+                    {...argSelect}
                     showSearch
-                    placeholder={placeholder}
                     optionFilterProp="children"
                     onChange={(v)=>{onChange(v);onBlur && onBlur()}}
-                    value={value}
                     filterOption={(input, option) =>
                         (option!.children as unknown as string).toLowerCase().includes(input.toLowerCase())
                     }
-                    onBlur={onBlur}
                 >
                     {selectOptions.map(m=><Select.Option key={m.key} value={m.key}>{m.value}</Select.Option>)}
                 </Select>

@@ -129,6 +129,7 @@ type ParametrosAPICarrito = WithCarrito & {
     productosIdQuita?: number[],
     clienteId?: number|null,    //null para desasignar cliente
     mesaId?: number|null,   //null es para desasignar la mesa, undefined para no hacer nada
+    is_delivery?: LaravelBoolean
 }
 
 type SortMesa = "id" | "code"
@@ -183,13 +184,19 @@ const postableCarrito: Postable<ICarrito> = (carritoNuevo, carritoOriginal): Par
         withMozo: '1',
     }
     console.log({carritoNuevo, carritoOriginal})
-    data.productosIdAgrega = carritoNuevo.productos?.filter(p1=>p1.id && !carritoOriginal?.productos?.find(p2 => p2.id === p1.id))?.map(p=>p.id as number) || []
-    data.productosIdQuita = carritoOriginal?.productos?.filter(p1=>p1.id && !carritoNuevo?.productos?.find(p2 => p2.id === p1.id))?.map(p=>p.id as number) || []
+    data.productosIdAgrega = carritoNuevo.productos?.filter(p1=>p1.id && !carritoOriginal?.productos?.find(p2 => p2.id === p1.id && (p2.pivot?.precio === p1.pivot?.precio && p2.pivot?.costo === p1.pivot?.costo)))?.map(p=>p.id as number) || []
+    data.productosIdQuita = carritoOriginal?.productos?.filter(p1=>p1.id && !carritoNuevo?.productos?.find(p2 => p2.id === p1.id && (p2.pivot?.precio === p1.pivot?.precio && p2.pivot?.costo === p1.pivot?.costo)))?.map(p=>p.id as number) || []
     if (carritoNuevo.mesa_id !== carritoOriginal?.mesa_id) {
         data.mesaId = carritoNuevo.mesa_id || null
     }
     if (carritoNuevo.cliente_id !== carritoOriginal?.cliente_id) {
         data.clienteId = carritoNuevo.cliente_id || null
+    }
+    if (carritoNuevo.is_delivery !== carritoOriginal?.is_delivery) {
+        data.is_delivery = carritoNuevo.is_delivery ? '1' : '0'
+        if (data.is_delivery) {
+            data.mesaId = null      //si es delivery, le sacamos la mesa
+        }
     }
     return data
 }

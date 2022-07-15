@@ -24,6 +24,18 @@ export const PRODUCTO_TIPOS_ADMITIDOS: ITipoProducto[] = [
 
 export type TipoProductoAdmitido = typeof PRODUCTO_TIPO_SIMPLE | typeof PRODUCTO_TIPO_COMBO
 
+type CarritoProductoEstado = 'preparacion'
+
+interface PivotCarritoProducto {
+    carrito_id: number,
+    costo: number,
+    precio: number,
+    estado: CarritoProductoEstado,
+    producto_id: number,
+    created_at: string,
+    updated_at: string,
+}
+
 export interface IProducto {
     producto_combos?: IProducto[]
     tipo_producto?: ITipoProducto,
@@ -35,7 +47,8 @@ export interface IProducto {
     precio: number,
     costo: number,
     s3_key: string,
-    url: string
+    url: string,
+    pivot?: PivotCarritoProducto
 }
 
 export const productoVacio: IProducto = {

@@ -191,7 +191,7 @@ const RELACIONES_SORT: {[k:string]:SortsProductos}= {
 }
 
 
-export default function TablaGenerica(arg: ParametrosRecibidos) {
+export default function TablaProductos(arg: ParametrosRecibidos) {
     const {
         title,
         acciones,
@@ -365,7 +365,7 @@ export default function TablaGenerica(arg: ParametrosRecibidos) {
                 title: 'Precio',
                 key: 'precio',
                 dataIndex: 'precio',
-                render: value => formateadorNumero(value) + ' Gs.',
+                render: (value, p) => formateadorNumero(p.pivot?.precio??value) + ' Gs.',
                 sorter: {
                     multiple: 1
                 },
@@ -375,7 +375,7 @@ export default function TablaGenerica(arg: ParametrosRecibidos) {
                 title: 'Costo',
                 key: 'costo',
                 dataIndex: 'costo',
-                render: value => formateadorNumero(value) + ' Gs.',
+                render: (value,p) => formateadorNumero(p.pivot?.costo??value) + ' Gs.',
                 sorter: {
                     multiple: 1
                 },
