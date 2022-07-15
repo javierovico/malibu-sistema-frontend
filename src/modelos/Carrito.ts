@@ -19,6 +19,7 @@ export const ESTADO_CARRITO_OCUPADO: EstadoCarrito[] = [EstadoCarrito.CREADO, Es
 // export const CARRITO_ESTADO_CREADO: EstadoCarrito = "creado"
 
 const ENVENTO_CARRITO_CREADO: EstadoCarrito = EstadoCarrito.CREADO
+const ENVENTO_CARRITO_MODIFICADO: EstadoCarrito = EstadoCarrito.MODIFICADO
 
 export interface ICarrito {
     id: number,
@@ -247,7 +248,7 @@ export const useCarrito =  () => {
     }),[])
     const {
         paginacion: paginacionCarrito,
-        setPaginacion: setPaginacionCarrito,
+        updateModelInPagination: updateCarritoInPagination,
         isModelLoading: isPedidosLoading,
         // errorModel: errorPedidos,
         modelUpdate: pedidoUpdate,
@@ -264,29 +265,17 @@ export const useCarrito =  () => {
     const {
         channelCarrito,
     } = useContext(AuthContext)
-    const handleMesaAsignada = useCallback((mesa: IMesa)=>{
-        const mesas = [...paginacionMesas.data]
-        const indexMesa = mesas.findIndex(m=> m.id === mesa.id)
-        if (indexMesa >= 0) {   //se encontro
-            mesas.splice(indexMesa, 1, mesa)
-            setPaginacionMesas({...paginacionMesas, data: mesas})
-        } else {
-            mostrarMensaje("No se encontro la mesa o no se recibio la mesa", 'error')
-        }
-    },[paginacionMesas, setPaginacionMesas])
-    const handleCarritoCreado = useCallback((carrito: ICarrito)=>{      // se dio de alta un nuevo carrito
-        console.log(carrito)
-        if (carrito.mesa) {
-            handleMesaAsignada({...carrito.mesa, carrito_activo: carrito})
-        }
-        setPaginacionCarrito({...paginacionCarrito, data: [...paginacionCarrito.data,carrito]})
-    },[handleMesaAsignada, paginacionCarrito, setPaginacionCarrito])
+    const handleCarritoChange = useCallback((carrito: ICarrito)=>{      // se dio de alta o se modifico un carrito
+        updateCarritoInPagination(carrito)
+    },[updateCarritoInPagination])
     useEffect(()=>{
-        channelCarrito?.bind(ENVENTO_CARRITO_CREADO,handleCarritoCreado)
+        channelCarrito?.bind(ENVENTO_CARRITO_CREADO,handleCarritoChange)
+        channelCarrito?.bind(ENVENTO_CARRITO_MODIFICADO,handleCarritoChange)
         return ()=>{
-            channelCarrito?.unbind(ENVENTO_CARRITO_CREADO,handleCarritoCreado)
+            channelCarrito?.unbind(ENVENTO_CARRITO_CREADO,handleCarritoChange)
+            channelCarrito?.unbind(ENVENTO_CARRITO_MODIFICADO,handleCarritoChange)
         }
-    },[channelCarrito, handleCarritoCreado])
+    },[channelCarrito, handleCarritoChange])
     return {
         mesas: paginacionMesas.data,
         isMesasLoading,
