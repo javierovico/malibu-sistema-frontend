@@ -30,7 +30,7 @@ enum Acciones {
     VER_LISTA_PRODUCTOS = 'listaProductos',
 }
 
-export default function Trabajo() {
+export default function Operacion() {
     const {
         mesas,
         errorMesas,

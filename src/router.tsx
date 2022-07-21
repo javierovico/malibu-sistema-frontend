@@ -3,7 +3,7 @@ import {Navigate, RouteObject, useRoutes} from 'react-router-dom';
 import {AuthContext} from './context/AuthProvider';
 import {
     HOME_PAGE,
-    LOGIN_PAGE, PRODUCTO_ADMINISTRAR_PRODUCTO, ROL_ADMIN_PRODUCTOS, ROL_OPERADOR, SUBORDINADOS_PAGE,
+    LOGIN_PAGE, PRODUCTO_ADMINISTRAR_PRODUCTO, ROL_ADMIN_PRODUCTOS, ROL_COCINERO, ROL_OPERADOR, SUBORDINADOS_PAGE,
 } from './settings/constant';
 import loadable from '@loadable/component'
 import {comprobarRol} from "./modelos/Usuario";
@@ -29,11 +29,19 @@ export const routes: TipoRuta[] = [
     },
     {
         nombre: 'Operacion',
-        link: '/trabajo',
-        import2: () => import('./container/Trabajo/Trabajo'),
+        link: '/operacion',
+        import2: () => import('./container/Trabajo/Operacion'),
         import: 'container/Trabajo/Trabajo',
         protected: true,
         rolRequerido: ROL_OPERADOR
+    },
+    {
+        nombre: 'Cocina',
+        link: '/cocina',
+        import2: () => import('./container/Trabajo/Cocina'),
+        import: 'container/Trabajo/Trabajo',
+        protected: true,
+        rolRequerido: ROL_COCINERO
     },
     {
         nombre: "Productos",

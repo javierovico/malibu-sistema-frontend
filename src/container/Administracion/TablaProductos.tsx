@@ -41,7 +41,10 @@ interface ParametrosRecibidos {
     perPage?: number,
     onPaginationChange?: {(page:number,perPage:number): void},
     productosIdSelected?: number[],
-    onProductosIdSelectedChange?: {(items: ProductoSelected[]):void}
+    productosIdNoSeleccionables?: number[],     //los que no se puede seleccionar (o desseleccionar)
+    onProductosIdSelectedChange?: {(items: ProductoSelected[]):void},
+    estadoPreparacion?:boolean, // Muestra el estado de la preparacion del producto,
+    loading?:boolean
 }
 
 type DataIndex = keyof IProducto
@@ -197,7 +200,10 @@ export default function TablaProductos(arg: ParametrosRecibidos) {
         acciones,
         onProductosIdSelectedChange,
         productosIdSelected,
-        tiposProductosAdmitidos
+        productosIdNoSeleccionables,
+        tiposProductosAdmitidos,
+        estadoPreparacion,
+        loading
     } = arg
     const {
         onFilterTipoProductoChange,
@@ -382,6 +388,17 @@ export default function TablaProductos(arg: ParametrosRecibidos) {
                 sortOrder: orderItems.find(r=>r.code === 'costo')?.orden,
             },
         ]
+        if (estadoPreparacion) {
+            columnas.splice(
+                columnas.findIndex(c=>c.key === 'tipo_producto.code'),
+                0,
+                {
+                    title: 'Estado',
+                    key: 'estado',
+                    render: (_, p) => p.pivot?.estado,
+                },
+            )
+        }
         if (acciones) {
             columnas.push({
                 title: 'Acciones',
@@ -390,7 +407,7 @@ export default function TablaProductos(arg: ParametrosRecibidos) {
             })
         }
         return columnas
-    },[acciones, busquedaCode, busquedaId, busquedaNombre, getColumnSearchProps, orderItems, tiposProductos, tiposProductosAdmitidos])
+    },[acciones, busquedaCode, busquedaId, busquedaNombre, estadoPreparacion, getColumnSearchProps, orderItems, tiposProductos, tiposProductosAdmitidos])
     const onChange = useCallback((pagination: TablePaginationConfig, filters: Record<string, FilterValue | null>, sorter: SorterResult<IProducto> | SorterResult<IProducto>[])=>{
         onFilterTipoProductoChange(filters['tipo_producto.code']?.filter(f=>isTipoProductoAdmitido(f)).map(f=> isTipoProductoAdmitido(f)?f:'simple') || [])
         onBusquedaIdChange((filters.id && !isNaN(parseInt(filters.id[0] as string))) ? parseInt(filters.id[0] as string): undefined)
@@ -407,6 +424,9 @@ export default function TablaProductos(arg: ParametrosRecibidos) {
         if (productosIdSelected && onProductosIdSelectedChange) {
             return {
                 selectedRowKeys:productosIdSelected,
+                getCheckboxProps: (p) => ({
+                    disabled: p.id ? productosIdNoSeleccionables?.includes(p.id) : undefined
+                }),
                 onChange: (selectedRowKeys: React.Key[]) => {
                     onProductosIdSelectedChange(productos
                         .filter(p1=> (p1.id) && ( productosIdSelected.includes(p1.id) !== selectedRowKeys.includes(p1.id))) //trae solo los que cambiaron de estado
@@ -419,11 +439,12 @@ export default function TablaProductos(arg: ParametrosRecibidos) {
         } else {
             return undefined
         }
-    },[onProductosIdSelectedChange, productos, productosIdSelected])
+    },[onProductosIdSelectedChange, productos, productosIdNoSeleccionables, productosIdSelected])
     // useEffect(()=>console.log({long:productos.length}),[productos.length])
     // useEffect(()=>console.log({totalItems}),[totalItems])
     // useEffect(()=>console.log({perPage}),[perPage])
     return <Table
+        loading={loading}
         pagination={{
             pageSizeOptions:[4,10,20,50],
             showQuickJumper:true,

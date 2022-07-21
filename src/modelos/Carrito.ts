@@ -2,18 +2,18 @@ import {LaravelBoolean, Postable, useGenericModel, WithQuery} from "./Generico";
 import {useCallback, useContext, useEffect, useMemo} from "react";
 import {ICliente} from "./Cliente";
 import {AuthContext} from "../context/AuthProvider";
-import {mostrarMensaje} from "../utils/utils";
 import {IUsuario} from "./Usuario";
-import {IProducto} from "./Producto";
+import {CarritoProductoEstado, IProducto} from "./Producto";
 
 
 export enum EstadoCarrito {
     CREADO = 'creado',
     MODIFICADO = 'modificado',
+    PAGADO = 'pagado',
     FINALIZADO = 'finalizado',
 }
 
-export const ESTADO_CARRITO_OCUPADO: EstadoCarrito[] = [EstadoCarrito.CREADO, EstadoCarrito.MODIFICADO]
+export const ESTADO_CARRITO_OCUPADO: EstadoCarrito[] = [EstadoCarrito.CREADO, EstadoCarrito.MODIFICADO, EstadoCarrito.PAGADO]
 
 // type EstadoCarrito2 = "creado" | "finalizado"
 // export const CARRITO_ESTADO_CREADO: EstadoCarrito = "creado"
@@ -25,10 +25,10 @@ export interface ICarrito {
     id: number,
     cliente?: ICliente,
     mesa?: IMesa,
-    cliente_id: number|null,
+    cliente_id: number | null,
     fecha_creacion: string,
     is_delivery: boolean,
-    mesa_id: number|null,
+    mesa_id: number | null,
     pagado: boolean,
     status: EstadoCarrito,
     mozo?: IUsuario,
@@ -113,8 +113,8 @@ export const carritoVacio: ICarrito = {
 }
 
 export interface IMesa {
-    id:number,
-    code:string,
+    id: number,
+    code: string,
     descripcion: string,
     activo: "1" | "0",
     carrito_activo?: ICarrito
@@ -125,12 +125,19 @@ interface ParametrosAPI {
     descripcion?: string
 }
 
+interface CambiosEstadosApi {
+    id: number,
+    estado: CarritoProductoEstado
+}
+
 type ParametrosAPICarrito = WithCarrito & {
     productosIdAgrega?: number[],
     productosIdQuita?: number[],
-    clienteId?: number|null,    //null para desasignar cliente
-    mesaId?: number|null,   //null es para desasignar la mesa, undefined para no hacer nada
-    is_delivery?: LaravelBoolean
+    clienteId?: number | null,    //null para desasignar cliente
+    mesaId?: number | null,   //null es para desasignar la mesa, undefined para no hacer nada
+    is_delivery?: LaravelBoolean,
+    pagado?: LaravelBoolean,
+    cambiosEstados?: CambiosEstadosApi[]
 }
 
 type SortMesa = "id" | "code"
@@ -185,8 +192,8 @@ const postableCarrito: Postable<ICarrito> = (carritoNuevo, carritoOriginal): Par
         withMozo: '1',
     }
     console.log({carritoNuevo, carritoOriginal})
-    data.productosIdAgrega = carritoNuevo.productos?.filter(p1=>p1.id && !carritoOriginal?.productos?.find(p2 => p2.id === p1.id && (p2.pivot?.precio === p1.pivot?.precio && p2.pivot?.costo === p1.pivot?.costo)))?.map(p=>p.id as number) || []
-    data.productosIdQuita = carritoOriginal?.productos?.filter(p1=>p1.id && !carritoNuevo?.productos?.find(p2 => p2.id === p1.id && (p2.pivot?.precio === p1.pivot?.precio && p2.pivot?.costo === p1.pivot?.costo)))?.map(p=>p.id as number) || []
+    data.productosIdAgrega = carritoNuevo.productos?.filter(p1 => p1.id && !carritoOriginal?.productos?.find(p2 => p2.id === p1.id && (p2.pivot?.precio === p1.pivot?.precio && p2.pivot?.costo === p1.pivot?.costo)))?.map(p => p.id as number) || []
+    data.productosIdQuita = carritoOriginal?.productos?.filter(p1 => p1.id && !carritoNuevo?.productos?.find(p2 => p2.id === p1.id && (p2.pivot?.precio === p1.pivot?.precio && p2.pivot?.costo === p1.pivot?.costo)))?.map(p => p.id as number) || []
     if (carritoNuevo.mesa_id !== carritoOriginal?.mesa_id) {
         data.mesaId = carritoNuevo.mesa_id || null
     }
@@ -195,17 +202,21 @@ const postableCarrito: Postable<ICarrito> = (carritoNuevo, carritoOriginal): Par
     }
     if (carritoNuevo.is_delivery !== carritoOriginal?.is_delivery) {
         data.is_delivery = carritoNuevo.is_delivery ? '1' : '0'
-        if (data.is_delivery) {
+        if (carritoNuevo.is_delivery) {
             data.mesaId = null      //si es delivery, le sacamos la mesa
         }
     }
+    if (carritoNuevo.pagado !== carritoOriginal?.pagado) {
+        data.pagado = carritoNuevo.pagado ? '1' : '0'
+    }
+    data.cambiosEstados = carritoNuevo.productos?.filter(p1 => p1.pivot?.estado && carritoOriginal?.productos?.find(p2 => p2.id === p1.id)?.pivot?.estado !== p1.pivot.estado).map(p1 => ({id: p1.id!!, estado: p1.pivot!!.estado}))
     return data
 }
 
 export const useMesas = () => {
-    const busquedaMesas = useMemo((): Partial<QueryBusquedaMesa>=>({
+    const busquedaMesas = useMemo((): Partial<QueryBusquedaMesa> => ({
         activo: "1",
-    }),[])
+    }), [])
     const {
         paginacion: paginacionMesas,
         setPaginacion: setPaginacionMesas,
@@ -215,7 +226,7 @@ export const useMesas = () => {
         modelModificando: productoModificando,
         setModelModificando: setProductoModificando,
         handleBorrarModel: handleBorrarProducto
-    } = useGenericModel<IMesa, SortMesa, QueryBusquedaMesa>(URL_MESA,'mesa', 1, 1000, postableMesa, undefined, busquedaMesas)
+    } = useGenericModel<IMesa, SortMesa, QueryBusquedaMesa>(URL_MESA, 'mesa', 1, 1000, postableMesa, undefined, busquedaMesas)
     return {
         paginacionMesas,
         setPaginacionMesas,
@@ -228,10 +239,9 @@ export const useMesas = () => {
     }
 }
 
-export const useCarrito =  () => {
+export const useCarrito = () => {
     const {
         paginacionMesas,
-        setPaginacionMesas,
         isMesasLoading,
         errorMesas,
         productoUpdate,
@@ -239,13 +249,13 @@ export const useCarrito =  () => {
         setProductoModificando,
         handleBorrarProducto,
     } = useMesas()
-    const busquedaCarritos = useMemo<QueryBusquedaCarrito>(()=>({
+    const busquedaCarritos = useMemo<QueryBusquedaCarrito>(() => ({
         soloActivos: '1',
         withCliente: '1',
         withProductos: '1',
         withMozo: '1',
         withMesa: '1',
-    }),[])
+    }), [])
     const {
         paginacion: paginacionCarrito,
         updateModelInPagination: updateCarritoInPagination,
@@ -255,27 +265,27 @@ export const useCarrito =  () => {
         // modelModificando: pedidoModificando,
         // setModelModificando: setPedidoModificando,
         // handleBorrarModel: handleBorrarPedido
-    } = useGenericModel<ICarrito, "", QueryBusquedaCarrito>(URL_CARRITO,'carrito', 1, 1000, postableCarrito,undefined,busquedaCarritos)
-    const reservarMesa = useCallback((m:IMesa, c?:ICliente)=>{        //cuando ya tenemos la mesa reservada y con el posible cliente (puede ser anonimo)
+    } = useGenericModel<ICarrito, "", QueryBusquedaCarrito>(URL_CARRITO, 'carrito', 1, 1000, postableCarrito, undefined, busquedaCarritos)
+    const reservarMesa = useCallback((m: IMesa, c?: ICliente) => {        //cuando ya tenemos la mesa reservada y con el posible cliente (puede ser anonimo)
         const nuevoPedido = {...carritoVacio}
         nuevoPedido.mesa_id = m.id
         nuevoPedido.cliente_id = c?.id || null
         return pedidoUpdate(nuevoPedido)
-    },[pedidoUpdate])
+    }, [pedidoUpdate])
     const {
         channelCarrito,
     } = useContext(AuthContext)
-    const handleCarritoChange = useCallback((carrito: ICarrito)=>{      // se dio de alta o se modifico un carrito
+    const handleCarritoChange = useCallback((carrito: ICarrito) => {      // se dio de alta o se modifico un carrito
         updateCarritoInPagination(carrito)
-    },[updateCarritoInPagination])
-    useEffect(()=>{
-        channelCarrito?.bind(ENVENTO_CARRITO_CREADO,handleCarritoChange)
-        channelCarrito?.bind(ENVENTO_CARRITO_MODIFICADO,handleCarritoChange)
-        return ()=>{
-            channelCarrito?.unbind(ENVENTO_CARRITO_CREADO,handleCarritoChange)
-            channelCarrito?.unbind(ENVENTO_CARRITO_MODIFICADO,handleCarritoChange)
+    }, [updateCarritoInPagination])
+    useEffect(() => {
+        channelCarrito?.bind(ENVENTO_CARRITO_CREADO, handleCarritoChange)
+        channelCarrito?.bind(ENVENTO_CARRITO_MODIFICADO, handleCarritoChange)
+        return () => {
+            channelCarrito?.unbind(ENVENTO_CARRITO_CREADO, handleCarritoChange)
+            channelCarrito?.unbind(ENVENTO_CARRITO_MODIFICADO, handleCarritoChange)
         }
-    },[channelCarrito, handleCarritoChange])
+    }, [channelCarrito, handleCarritoChange])
     return {
         mesas: paginacionMesas.data,
         isMesasLoading,

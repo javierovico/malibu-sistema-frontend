@@ -22,3 +22,4 @@ export const ERROR_CODE_NO_VALIDO = 'tkn_inv';
 export const ROL_ADMIN_PRODUCTOS = 'admin_productos'
 export const ROL_VISOR_INGRESOS = 'visor_ingresos'
 export const ROL_OPERADOR = 'operador'
+export const ROL_COCINERO = 'cocinero'

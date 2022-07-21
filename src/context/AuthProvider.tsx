@@ -89,7 +89,7 @@ const AuthProvider = (props: any) => {
         },
     }),[token])
 
-    const channelCarrito = useMemo<Channel|undefined>(()=>pusher?.subscribe(CHANNEL_PRIVATE_CARRITO),[pusher])
+    const channelCarrito = useMemo<Channel|undefined>(()=>(token && pusher) ? pusher.subscribe(CHANNEL_PRIVATE_CARRITO): undefined,[pusher, token])
 
     /** Establece el token en el axio*/
     useEffect(() => {

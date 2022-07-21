@@ -8,7 +8,6 @@ interface IRol {
 
 interface IUsuario {
     user: string,
-    nombre: string,
     id: number,
     roles?: IRol[],
 }
