@@ -30,7 +30,7 @@ export type TipoProductoAdmitido = typeof PRODUCTO_TIPO_SIMPLE | typeof PRODUCTO
 // type CarritoProductoEstado2 = typeof CARRITO_PRODUCTO_ESTADO_INICIADO | typeof CARRITO_PRODUCTO_ESTADO_PREPARACION
 
 export enum CarritoProductoEstado {
-    CARRITO_PRODUCTO_ESTADO_INICIADO = 'iniciado',
+    CARRITO_PRODUCTO_ESTADO_PENDIENTE = 'pendiente',
     CARRITO_PRODUCTO_ESTADO_PREPARACION = 'preparacion',
     CARRITO_PRODUCTO_ESTADO_FINALIZADO = 'finalizado',
 }
@@ -42,7 +42,7 @@ export const CARRITO_PRODUCTO_ESTADOS_CANCELABLES: CarritoProductoEstado[] = [Ca
  * Indica el orden en el que debe transcurrir el estado del producto
  */
 export const CARRITO_PRODUCTO_SUCESION_ESTADOS: CarritoProductoEstado[] = [
-    CarritoProductoEstado.CARRITO_PRODUCTO_ESTADO_INICIADO,
+    CarritoProductoEstado.CARRITO_PRODUCTO_ESTADO_PENDIENTE,
     CarritoProductoEstado.CARRITO_PRODUCTO_ESTADO_PREPARACION,
     CarritoProductoEstado.CARRITO_PRODUCTO_ESTADO_FINALIZADO
 ]

@@ -13,8 +13,8 @@ import {IconText} from "./AdminProducto";
 interface ArgsProps {
     productos: IProducto[],
     anadirProductosHandle?: { (): void },
-    quitarProductoHandle?: { (p:IProducto) : void},
-    avanzarProductoHandle?: {(p:IProducto) : void}
+    quitarProductoHandle?: { (p: IProducto): void },
+    avanzarProductoHandle?: { (p: IProducto): void },
 }
 
 export default function TablaProductosCarrito(arg: ArgsProps) {
@@ -22,7 +22,7 @@ export default function TablaProductosCarrito(arg: ArgsProps) {
         productos,
         anadirProductosHandle,
         quitarProductoHandle,
-        avanzarProductoHandle
+        avanzarProductoHandle,
     } = arg
     const configuracionColumnasSimple: ConfiguracionColumnaSimple<IProducto>[] = useMemo<ConfiguracionColumnaSimple<IProducto>[]>(() => [
         {
@@ -54,12 +54,12 @@ export default function TablaProductosCarrito(arg: ArgsProps) {
         },
         {
             key: 'precio',
-            render: (_, item) => item.pivot?.precio??item.precio,
+            render: (_, item) => item.pivot?.precio ?? item.precio,
             sortable: true
         },
         {
             key: 'costo',
-            render: (_, item) => item.pivot?.costo??item.costo,
+            render: (_, item) => item.pivot?.costo ?? item.costo,
             sortable: true
         },
         {
@@ -83,22 +83,23 @@ export default function TablaProductosCarrito(arg: ArgsProps) {
                             <IconText icon={DeleteOutlined} text=""/>
                         </Button>
                     </Tooltip>}
-                {avanzarProductoHandle && (p.pivot?.estado) && (CarritoProductoEstado.CARRITO_PRODUCTO_ESTADO_FINALIZADO !== p.pivot.estado) && <Tooltip title="Avanzar estado">
-                    <Button
-                        type="link"
-                        onClick={() => {
-                            const estadoAvance: number = CARRITO_PRODUCTO_SUCESION_ESTADOS.findIndex(se => se === p.pivot?.estado) + 1
-                            Modal.confirm({
-                                title: '¿Avanzar estado del producto?',
-                                content: `Se establecera el estado del producto a "${CARRITO_PRODUCTO_SUCESION_ESTADOS[estadoAvance]}"`,
-                                okText: 'Avanzar',
-                                onOk: () => avanzarProductoHandle(p)
-                            })
-                        }}
-                    >
-                        <IconText icon={CheckSquareOutlined} text=""/>
-                    </Button>
-                </Tooltip>}
+                {avanzarProductoHandle && (!p.pivot?.estado || CarritoProductoEstado.CARRITO_PRODUCTO_ESTADO_FINALIZADO !== p.pivot.estado) &&
+                    <Tooltip title="Avanzar estado">
+                        <Button
+                            type="link"
+                            onClick={() => {
+                                const estadoAvance: number = CARRITO_PRODUCTO_SUCESION_ESTADOS.findIndex(se => se === p.pivot?.estado) + 1
+                                Modal.confirm({
+                                    title: '¿Avanzar estado del producto?',
+                                    content: `Se establecera el estado del producto a "${CARRITO_PRODUCTO_SUCESION_ESTADOS[estadoAvance]}"`,
+                                    okText: 'Avanzar',
+                                    onOk: () => avanzarProductoHandle(p)
+                                })
+                            }}
+                        >
+                            <IconText icon={CheckSquareOutlined} text=""/>
+                        </Button>
+                    </Tooltip>}
             </Space>
         }
     ], [avanzarProductoHandle, quitarProductoHandle])
@@ -108,18 +109,20 @@ export default function TablaProductosCarrito(arg: ArgsProps) {
         onFiltroValuesChange,
         configuracionColumnas
     } = useTablaOfflineAuxiliar(productos, configuracionColumnasSimple)
-    const title = useMemo(()=><>
+    const title = useMemo(() => <>
         <Row justify="space-between">
             <Col lg={12}>
                 <h3>Productos en el carrito</h3>
             </Col>
             <Col offset={4} lg={8}>
-                {anadirProductosHandle && <Button onClick={anadirProductosHandle} style={{float: 'right'}} type="primary" icon={<PlusOutlined/>}>
-                    Añadir Producto
-                </Button>}
+                {anadirProductosHandle &&
+                    <Button onClick={anadirProductosHandle} style={{float: 'right'}} type="primary"
+                            icon={<PlusOutlined/>}>
+                        Añadir Producto
+                    </Button>}
             </Col>
         </Row>
-    </>,[anadirProductosHandle])
+    </>, [anadirProductosHandle])
     return <>
         <TablaGenerica
             title={title}

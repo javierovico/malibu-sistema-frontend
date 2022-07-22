@@ -9,7 +9,12 @@ import {convertIError, errorToFormik, objectIsIError} from "../../modelos/ErrorM
 import {FormTitle} from "../Administracion/ModificarProducto.style";
 import SelectDeCliente from "./SelectDeCliente";
 import SelectDeMesa from "./SelectDeMesa";
-import {AntdSelectV2, AntdSelectV2Option, SwitchV2} from "../../components/UI/Antd/AntdInputWithFormikTypescript";
+import {
+    AntdSelectV2,
+    AntdSelectV2Option,
+    DatosClienteCard,
+    SwitchV2
+} from "../../components/UI/Antd/AntdInputWithFormikTypescript";
 import {
     CARRITO_PRODUCTO_SUCESION_ESTADOS,
     IProducto,
@@ -46,6 +51,7 @@ export default function VisorDeCarrito(arg: Argumentos) {
                                        setValues,
                                        isSubmitting,
                                        values,
+                                       initialValues,
                                        errors,
                                        dirty,
                                        submitCount,
@@ -60,11 +66,14 @@ export default function VisorDeCarrito(arg: Argumentos) {
         })
         const precio: number = values.productos?.reduce<number>((prev, curr) => prev + (curr?.pivot?.precio ?? curr.precio), 0) ?? 0
         const costo: number = values.productos?.reduce<number>((prev, curr) => prev + (curr?.pivot?.costo ?? curr.costo), 0) ?? 0
-        const anadirProductosHandle = () => setValues(v => ({...v, modalSelectProducto: true}))
-        const quitarProductoHandle = (p: IProducto) => setValues(v => ({
+        const anadirProductosHandle = initialValues.pagado ? undefined : (() => setValues(v => ({
+            ...v,
+            modalSelectProducto: true
+        })))
+        const quitarProductoHandle = initialValues.pagado ? undefined :((p: IProducto) => setValues(v => ({
             ...v,
             productos: v.productos?.filter(pF => pF.id !== p.id)
-        }))
+        })))
         const avanzarProductoHandle = (p: IProducto) => setValues(v => ({
             ...v, productos: v.productos?.map(pM => {
                 if (pM.id === p.id) {
@@ -85,25 +94,21 @@ export default function VisorDeCarrito(arg: Argumentos) {
                 }
             })
         }))
+        const handleChangeCliente = initialValues.pagado ? undefined : (()=>setValues({...values, modalSelectCliente: true}))
         return <Spin spinning={isSubmitting}>
             <Form className='form-container'>
                 <>
                     <Row justify='space-evenly'>
                         <Col lg={10}>
-                            <Card title="Datos del cliente" extra={<a href="/#" onClick={(e) => {
-                                e.preventDefault();
-                                setValues({...values, modalSelectCliente: true})
-                            }}>Cambiar</a>}>
-                                <p>Nombre: {values.cliente?.nombre ?? 'ANONIMO'}</p>
-                                <p>Telefono: {values.cliente?.telefono}</p>
-                                <p>Ruc: {values.cliente?.ruc}</p>
-                                <p>Ciudad: {values.cliente?.ciudad}</p>
-                                <p>Barrio: {values.cliente?.barrio}</p>
-                            </Card>
+                            <DatosClienteCard
+                                cliente={values.cliente}
+                                handleChangeCliente={handleChangeCliente}
+                            />
                         </Col>
                         <Col lg={10}>
                             <SwitchV2
-                                value={values.is_delivery}
+                                disabled={initialValues.pagado}
+                                checked={values.is_delivery}
                                 label='Es delivery'
                                 onChange={(d: boolean) => setValues({...values, is_delivery: d})}
                                 touched={touched.is_delivery}
@@ -134,7 +139,8 @@ export default function VisorDeCarrito(arg: Argumentos) {
                                 onBlur={() => setFieldTouched('mesa_id')}
                             />
                             <SwitchV2
-                                value={values.pagado}
+                                disabled={initialValues.pagado}
+                                checked={values.pagado}
                                 label='Pagado'
                                 onChange={(d: boolean) => {
                                     if (d) {
@@ -308,8 +314,10 @@ export default function VisorDeCarrito(arg: Argumentos) {
                         mostrarMensaje(`Error Guadando`, 'error')
                         if (objectIsIError(e)) {
                             e = convertIError(e, {
-                                'mesaId': 'mesa_id',
-                                cambiosEstados: 'productos'
+                                mesaId: 'mesa_id',
+                                cambiosEstados: 'productos',
+                                productosIdQuita: 'productos',
+                                productosIdAgrega: 'productos',
                             })
                         }
                         console.error(e)

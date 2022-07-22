@@ -1,4 +1,4 @@
-import {Button, Form, Select, Switch, Upload, UploadProps} from "antd";
+import {Button, Card, Form, Select, Switch, Upload, UploadProps} from "antd";
 import React, {useCallback, useContext, useMemo} from "react";
 import {CheckOutlined, CloseOutlined, LoadingOutlined, PlusOutlined, UploadOutlined} from '@ant-design/icons';
 import {CreateAntField} from "./AntdInputWithFormik";
@@ -7,6 +7,8 @@ import {UploadChangeParam, UploadFile} from "antd/lib/upload/interface";
 import {convertAndResizeImage} from "../../../utils/utils";
 import {AuthContext} from "../../../context/AuthProvider";
 import {SelectProps} from "antd/lib/select";
+import {SwitchProps} from "antd/lib/switch";
+import {ICliente} from "../../../modelos/Cliente";
 const FormItem = Form.Item;
 
 interface ArchivoSubible {
@@ -136,24 +138,23 @@ export function AntdSelectV2<T extends string|number>(arg: ArgSelect<T> & Select
 
 interface ArgsSwitch {
     label: string,
-    onChange: {(val: boolean):void},
-    value: boolean,
-    placeholder?: string,
+    onChange: {(val: boolean):void}, //comparte con SwitchProps
+    checked: boolean,       //comparte con SwitchProps
     submitCount: number,
     touched?:boolean,
     error?: string,
     onBlur?:{():void}
 }
 
-export function SwitchV2(arg: ArgsSwitch) {
+export function SwitchV2(arg: ArgsSwitch & SwitchProps) {
     const {
         label,
         onChange,
-        value,
-        touched,
         submitCount,
+        touched,
         error,
-        onBlur
+        onBlur,
+        ...switchProps
     } = arg
     const enviado: boolean = submitCount > 0
     return (
@@ -166,12 +167,38 @@ export function SwitchV2(arg: ArgsSwitch) {
                 help={((enviado || touched))? error:''}
             >
                 <Switch
+                    {...switchProps}
                     checkedChildren={<CheckOutlined />}
                     unCheckedChildren={<CloseOutlined />}
-                    checked={value}
                     onChange={(v)=>{onChange(v);onBlur?.()}}
                 />
             </FormItem>
         </div>
     )
+}
+
+interface ArgClienteCard {
+    cliente?: ICliente,
+    handleChangeCliente?: {() : void}
+}
+
+export function DatosClienteCard(arg: ArgClienteCard) {
+    const {
+        cliente,
+        handleChangeCliente
+    } = arg
+    const extra = useMemo(()=>handleChangeCliente?<a href="/#" onClick={(e) => {
+        e.preventDefault();
+        handleChangeCliente()
+    }}>Cambiar</a>:undefined,[handleChangeCliente])
+    
+    return <Card title="Datos del cliente" extra={extra}>
+        {cliente ? <>
+            <p>Nombre: {cliente.nombre ?? 'ANONIMO'}</p>
+            <p>Telefono: {cliente.telefono}</p>
+            <p>Ruc: {cliente.ruc}</p>
+            <p>Ciudad: {cliente.ciudad}</p>
+            <p>Barrio: {cliente.barrio}</p>
+        </>: <p>Sin cliente</p>}
+    </Card>
 }
