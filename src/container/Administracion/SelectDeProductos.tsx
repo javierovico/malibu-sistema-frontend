@@ -1,6 +1,6 @@
 import {
-    IProducto, QueryGetProductos, SortsProductos, TipoBusquedaProductos,
-    TipoProductoAdmitido, useProductos,
+    EnumTipoProducto,
+    IProducto, QueryGetProductos, SortsProductos, TipoBusquedaProductos, useProductos,
 } from "../../modelos/Producto";
 import React, {useCallback, useMemo, useState} from "react";
 import TablaProductos from "./TablaProductos";
@@ -17,7 +17,7 @@ interface Parametros {
     onProductosSelectChange: { (items: ProductoSelected[]): void },
     productosExistentes?: number[],      //lista de productos que ya estan en la lista
     productosIdNoSeleccionables?: number[], //lista de productos que no se puede seleccionar o desseleccionar
-    tiposProductosAdmitidos?: TipoProductoAdmitido[]
+    tiposProductosAdmitidos?: EnumTipoProducto[]
 }
 
 export default function SelectDeProductos({
@@ -32,7 +32,7 @@ export default function SelectDeProductos({
     const [busqueda, setBusqueda] = useState<string>('')
     const [tipoBusqueda, setTipoBusqueda] = useState<TipoBusquedaProductos>('nombre')
     const [orderBy, setOrderBy] = useState<ItemSorteado<SortsProductos>[]>([])
-    const [tiposProducto, setTiposProducto] = useState<TipoProductoAdmitido[]>(tiposProductosAdmitidos || [])
+    const [tiposProducto, setTiposProducto] = useState<EnumTipoProducto[]>(tiposProductosAdmitidos || [])
     const tiposProductosFiltro = useMemo(() => (tiposProductosAdmitidos && tiposProducto.length === 0) ? tiposProductosAdmitidos : tiposProducto, [tiposProducto, tiposProductosAdmitidos])
     const busquedaNombre = useMemo(() => tipoBusqueda === 'nombre' ? busqueda : '', [busqueda, tipoBusqueda])
     const busquedaCode = useMemo(() => tipoBusqueda === 'codigo' ? busqueda : '', [busqueda, tipoBusqueda])

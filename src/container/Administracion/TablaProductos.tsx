@@ -1,9 +1,9 @@
 import { Button, Input, InputRef, Space, Table} from "antd";
 import Highlighter from 'react-highlight-words';
 import {
+    EnumTipoProducto,
     IProducto,
     isTipoProductoAdmitido, PRODUCTO_TIPOS_ADMITIDOS, SortsProductos,
-    TipoProductoAdmitido
 } from "../../modelos/Producto";
 import {useCallback, useMemo, useRef, useState} from "react";
 import {
@@ -25,9 +25,9 @@ interface ParametrosRecibidos {
     productos: IProducto[],
     acciones?: (p: IProducto) => JSX.Element,
     title?: JSX.Element | string,
-    onFilterTipoProductoChange?: (tipos: TipoProductoAdmitido[]) => void,
-    tiposProductosAdmitidos?: TipoProductoAdmitido[],
-    tiposProductos?: TipoProductoAdmitido[],
+    onFilterTipoProductoChange?: (tipos: EnumTipoProducto[]) => void,
+    tiposProductosAdmitidos?: EnumTipoProducto[],
+    tiposProductos?: EnumTipoProducto[],
     onBusquedaIdChange?:(id: number|undefined) => void,
     busquedaId?: number,
     onBusquedaCodeChange?:(id: string) => void,
@@ -51,8 +51,8 @@ type DataIndex = keyof IProducto
 
 function useConversorArg(
     argProductos: IProducto[],
-    argOnFilterTipoProductoChange?: ((tipos: TipoProductoAdmitido[])=>void),
-    argTiposProductos?: TipoProductoAdmitido[],
+    argOnFilterTipoProductoChange?: ((tipos: EnumTipoProducto[])=>void),
+    argTiposProductos?: EnumTipoProducto[],
     argOnBusquedaIdChange?: ((s:number|undefined)=>void),
     argBusquedaId?: number,
     argOnBusquedaCodeChange?: ((s:string)=>void),
@@ -66,7 +66,7 @@ function useConversorArg(
     argPage?: number,
     argTotalItems?: number
 ) {
-    const [tiposProductoDefault, setTiposProductoDefault] = useState<TipoProductoAdmitido[]>([])
+    const [tiposProductoDefault, setTiposProductoDefault] = useState<EnumTipoProducto[]>([])
     const [busquedaIdDefault, setBusquedaIdDefault] = useState<number|undefined>(undefined)
     const [busquedaCodeDefault, setBusquedaCodeDefault] = useState<string>("")
     const [busquedaNombreDefault, setBusquedaNombreDefault] = useState<string>("")
@@ -80,7 +80,7 @@ function useConversorArg(
     const orderItems = useMemo(()=>argOrderBy || orderByDefault,[argOrderBy, orderByDefault])
     const perPage = useMemo(()=>argPerPage || perPageDefault,[argPerPage, perPageDefault])
     const page = useMemo(()=>argPage || pageDefault,[argPage, pageDefault])
-    const onFilterTipoProductoChange = useCallback((tps: TipoProductoAdmitido[])=>{
+    const onFilterTipoProductoChange = useCallback((tps: EnumTipoProducto[])=>{
         if (tiposProductos.length !== tps.length || tiposProductos.some(t1 => !tps.find(t2=>t2===t1))) {
             (argOnFilterTipoProductoChange || setTiposProductoDefault)(tps)
         }
@@ -409,7 +409,7 @@ export default function TablaProductos(arg: ParametrosRecibidos) {
         return columnas
     },[acciones, busquedaCode, busquedaId, busquedaNombre, estadoPreparacion, getColumnSearchProps, orderItems, tiposProductos, tiposProductosAdmitidos])
     const onChange = useCallback((pagination: TablePaginationConfig, filters: Record<string, FilterValue | null>, sorter: SorterResult<IProducto> | SorterResult<IProducto>[])=>{
-        onFilterTipoProductoChange(filters['tipo_producto.code']?.filter(f=>isTipoProductoAdmitido(f)).map(f=> isTipoProductoAdmitido(f)?f:'simple') || [])
+        onFilterTipoProductoChange(filters['tipo_producto.code']?.filter(f=>isTipoProductoAdmitido(f)).map(f=> isTipoProductoAdmitido(f)?f:EnumTipoProducto.TIPO_SIMPLE) || [])
         onBusquedaIdChange((filters.id && !isNaN(parseInt(filters.id[0] as string))) ? parseInt(filters.id[0] as string): undefined)
         onBusquedaCodeChange(filters.codigo ? filters.codigo[0] as string: '')
         onBusquedaNombreChange(filters.nombre ? filters.nombre[0] as string: '')

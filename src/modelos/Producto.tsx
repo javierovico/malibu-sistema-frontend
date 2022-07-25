@@ -3,26 +3,45 @@ import {IArchivo} from "./Archivo";
 
 export const URL_GET_PRODUCTOS = 'producto'
 
-export const PRODUCTO_TIPO_SIMPLE = 'simple'
-export const PRODUCTO_TIPO_COMBO = 'combo'
+/**
+ * TIPO PRODUCTO
+ * Donde Actualizar:
+ * EnumTipoProducto
+ * PRODUCTO_TIPOS_ADMITIDOS
+ * TipoProductoAdmitido
+ */
 
 export interface ITipoProducto {
-    code: TipoProductoAdmitido,
+    code: EnumTipoProducto,
     descripcion: string,
 }
 
+
+// export type TipoProductoAdmitido = typeof PRODUCTO_TIPO_SIMPLE | typeof PRODUCTO_TIPO_COMBO
+
+export enum EnumTipoProducto {
+    TIPO_SIMPLE = 'simple',
+    TIPO_COMBO = 'combo',
+    TIPO_DELIVERY = 'delivery'
+}
+
+// export const PRODUCTO_TIPO_SIMPLE = 'simple'
+// export const PRODUCTO_TIPO_COMBO = 'combo'
+
 export const PRODUCTO_TIPOS_ADMITIDOS: ITipoProducto[] = [
     {
-        code: PRODUCTO_TIPO_SIMPLE,
+        code: EnumTipoProducto.TIPO_SIMPLE,
         descripcion: 'Tipo Simple'
     },
     {
-        code: PRODUCTO_TIPO_COMBO,
+        code: EnumTipoProducto.TIPO_COMBO,
         descripcion: 'Tipo Combo'
+    },
+    {
+        code: EnumTipoProducto.TIPO_DELIVERY,
+        descripcion: 'Costo Delivery'
     }
 ]
-
-export type TipoProductoAdmitido = typeof PRODUCTO_TIPO_SIMPLE | typeof PRODUCTO_TIPO_COMBO
 
 // export const CARRITO_PRODUCTO_ESTADO_INICIADO = 'iniciado'
 // export const CARRITO_PRODUCTO_ESTADO_PREPARACION = 'preparacion'
@@ -34,6 +53,8 @@ export enum CarritoProductoEstado {
     CARRITO_PRODUCTO_ESTADO_PREPARACION = 'preparacion',
     CARRITO_PRODUCTO_ESTADO_FINALIZADO = 'finalizado',
 }
+
+export const TIPOS_PRODUCTOS_SELECCIONABLES = [EnumTipoProducto.TIPO_COMBO,EnumTipoProducto.TIPO_SIMPLE]
 
 /** Son los estados en los cuales todavia se puede cancelar el producto*/
 export const CARRITO_PRODUCTO_ESTADOS_CANCELABLES: CarritoProductoEstado[] = [CarritoProductoEstado.CARRITO_PRODUCTO_ESTADO_PREPARACION, CarritoProductoEstado.CARRITO_PRODUCTO_ESTADO_FINALIZADO]
@@ -82,7 +103,7 @@ export const productoVacio: IProducto = {
     descripcion: '',
     s3_key: '',
     tipo_producto: {
-        code: PRODUCTO_TIPO_SIMPLE,
+        code: EnumTipoProducto.TIPO_SIMPLE,
         descripcion: 'Tipo Simple'
     }
 }
@@ -92,7 +113,7 @@ export interface QueryGetProductos {
     id: number,
     codigo: string,
     nombre: string,
-    tiposProducto: TipoProductoAdmitido[]
+    tiposProducto: EnumTipoProducto[]
 }
 
 export type SortsProductos = 'id' | 'codigo' | 'nombre' | 'tipo_producto_id' | 'precio' | 'costo' | 'estado'
@@ -171,7 +192,7 @@ const postableProducto: Postable<IProducto> = (productoSubiendo, productoOrigina
     if (productoSubiendo.tipo_producto?.code && productoSubiendo.tipo_producto.code !== productoOriginal?.tipo_producto?.code) {
         data.tipoProducto = productoSubiendo.tipo_producto.code
     }
-    if (productoSubiendo.tipo_producto?.code === PRODUCTO_TIPO_COMBO) {
+    if (productoSubiendo.tipo_producto?.code === EnumTipoProducto.TIPO_COMBO) {
         const combosNuevos: IProducto[] = productoSubiendo.producto_combos || []
         const combosViejos: IProducto[] = productoOriginal?.producto_combos || []
         if (combosNuevos.length !== combosViejos.length || combosNuevos.some(p1 => !combosViejos.find(p2 => p2.id === p1.id))) {
@@ -181,6 +202,6 @@ const postableProducto: Postable<IProducto> = (productoSubiendo, productoOrigina
     return data
 }
 
-export function isTipoProductoAdmitido(a: any): a is TipoProductoAdmitido {
-    return PRODUCTO_TIPOS_ADMITIDOS.map(tp => tp.code.toString()).includes(a)
+export function isTipoProductoAdmitido(a: any): a is EnumTipoProducto {
+    return Object.values(EnumTipoProducto).includes(a)
 }

@@ -1,9 +1,9 @@
 import React, {useCallback, useContext, useMemo} from "react";
 import {
+    EnumTipoProducto,
     IProducto,
-    PRODUCTO_TIPO_COMBO,
-    productoVacio,
-    PRODUCTO_TIPOS_ADMITIDOS
+    PRODUCTO_TIPOS_ADMITIDOS,
+    productoVacio
 } from "../../modelos/Producto";
 import {Alert, Button, Col, Modal, Row, Space, Spin} from "antd";
 import {Field, Form, FormikBag, FormikProps, withFormik} from "formik";
@@ -165,7 +165,7 @@ export default function ModificarProducto ({producto, productoChange}: Argumento
                     />
                 </Col>
             </Row>
-            {values.tipo_producto?.code === PRODUCTO_TIPO_COMBO && (<>
+            {values.tipo_producto?.code === EnumTipoProducto.TIPO_COMBO && (<>
                 <TablaProductos
                     title={<>
                         <Row justify="space-between">
@@ -210,7 +210,7 @@ export default function ModificarProducto ({producto, productoChange}: Argumento
         </Form>
         <Modal destroyOnClose={true} width={'85%'} footer={null} visible={values.modalSelectProducto} onCancel={()=>setValues({...values,modalSelectProducto:false})}>
             <SelectDeProductos
-                tiposProductosAdmitidos={["simple"]}
+                tiposProductosAdmitidos={[EnumTipoProducto.TIPO_SIMPLE]}
                 titulo='Seleccione nuevos productos a añadir'
                 productosExistentes={values.producto_combos?.filter(p=>p.id).map(p=>p.id as number) || []}
                 onProductosSelectChange={(prods)=>{

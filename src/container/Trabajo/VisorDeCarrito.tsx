@@ -1,6 +1,6 @@
 import {ICarrito, IMesa} from "../../modelos/Carrito";
 import React, {useCallback, useContext, useMemo} from "react";
-import {Alert, Button, Card, Col, Divider, Modal, Row, Spin, Statistic} from "antd";
+import {Alert, Button, Col, Divider, Modal, Row, Spin, Statistic} from "antd";
 import SelectDeProductos, {ProductoSelected} from "../Administracion/SelectDeProductos";
 import {formateadorNumero, mostrarMensaje} from "../../utils/utils";
 import {AuthContext} from "../../context/AuthProvider";
@@ -17,8 +17,10 @@ import {
 } from "../../components/UI/Antd/AntdInputWithFormikTypescript";
 import {
     CARRITO_PRODUCTO_SUCESION_ESTADOS,
+    EnumTipoProducto,
     IProducto,
-    PivotCarritoProducto, productoQuitable
+    PivotCarritoProducto,
+    productoQuitable, TIPOS_PRODUCTOS_SELECCIONABLES
 } from "../../modelos/Producto";
 import TablaProductosCarrito from "../Administracion/TablaProductosCarrito";
 
@@ -228,6 +230,7 @@ export default function VisorDeCarrito(arg: Argumentos) {
                    footer={[<Button key='1' type="primary" onClick={handleCerrar}>Aceptar</Button>]}
                    visible={values.modalSelectProducto} onCancel={handleCerrar}>
                 <SelectDeProductos
+                    tiposProductosAdmitidos={TIPOS_PRODUCTOS_SELECCIONABLES}
                     titulo='Seleccione nuevos productos a añadir'
                     productosExistentes={values.productos?.filter(p => p.id).map(p => p.id as number) || []}
                     productosIdNoSeleccionables={values.productos?.filter(p => !productoQuitable(p)).map(p => p.id as number) || []}
