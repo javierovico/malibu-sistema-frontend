@@ -1,10 +1,15 @@
 import {
     EnumTipoProducto,
-    IProducto, QueryGetProductos, SortsProductos, TipoBusquedaProductos, useProductos,
+    IProducto, PRODUCTO_TIPOS_ADMITIDOS, QueryGetProductos, TipoBusquedaProductos, useProductos,
 } from "../../modelos/Producto";
 import React, {useCallback, useMemo, useState} from "react";
-import TablaProductos from "./TablaProductos";
 import {ItemSorteado} from "../../modelos/Generico";
+import TablaGenerica, {
+    ConfiguracionColumna,
+    generadorColumna,
+    ItemsSelected, ValorBuscado
+} from "../Trabajo/TablaGenerica";
+import {formateadorNumero} from "../../utils/utils";
 
 
 export interface ProductoSelected {
@@ -14,7 +19,7 @@ export interface ProductoSelected {
 
 interface Parametros {
     titulo: string,
-    onProductosSelectChange: { (items: ProductoSelected[]): void },
+    onProductosSelectChange: { (items: ItemsSelected<IProducto>[]): void },
     productosExistentes?: number[],      //lista de productos que ya estan en la lista
     productosIdNoSeleccionables?: number[], //lista de productos que no se puede seleccionar o desseleccionar
     tiposProductosAdmitidos?: EnumTipoProducto[]
@@ -31,52 +36,63 @@ export default function SelectDeProductos({
     const [perPage, setPerpage] = useState<number>(5)
     const [busqueda, setBusqueda] = useState<string>('')
     const [tipoBusqueda, setTipoBusqueda] = useState<TipoBusquedaProductos>('nombre')
-    const [orderBy, setOrderBy] = useState<ItemSorteado<SortsProductos>[]>([])
+    const [orderBy, setOrderBy] = useState<ItemSorteado<string>[]>([])
     const [tiposProducto, setTiposProducto] = useState<EnumTipoProducto[]>(tiposProductosAdmitidos || [])
     const tiposProductosFiltro = useMemo(() => (tiposProductosAdmitidos && tiposProducto.length === 0) ? tiposProductosAdmitidos : tiposProducto, [tiposProducto, tiposProductosAdmitidos])
-    const busquedaNombre = useMemo(() => tipoBusqueda === 'nombre' ? busqueda : '', [busqueda, tipoBusqueda])
-    const busquedaCode = useMemo(() => tipoBusqueda === 'codigo' ? busqueda : '', [busqueda, tipoBusqueda])
-    const busquedaId = useMemo<number | undefined>(() => (tipoBusqueda === 'id' && !isNaN(parseInt(busqueda))) ? parseInt(busqueda) : undefined, [busqueda, tipoBusqueda])
     const changeBusqueda = useCallback((key: TipoBusquedaProductos, value: string) => {
         setTipoBusqueda(key)
         setBusqueda(value)
     }, [])
     const itemsBusqueda = useMemo((): Partial<QueryGetProductos> => ({
-        id: (tipoBusqueda === 'id' && busqueda && !isNaN(parseInt(busqueda))) ? parseInt(busqueda) : undefined,
+        id: (tipoBusqueda === 'id' && busqueda) ? busqueda : undefined,
         codigo: (tipoBusqueda === 'codigo' && busqueda) ? busqueda : undefined,
         nombre: (tipoBusqueda === 'nombre' && busqueda) ? busqueda : undefined,
-        tiposProducto: tiposProductosFiltro.length ? tiposProductosFiltro : undefined
+        tiposProducto: tiposProductosFiltro.length ? tiposProductosFiltro : undefined,
     }), [busqueda, tipoBusqueda, tiposProductosFiltro])
     const {
         paginacion,
         isProductosLoading
     } = useProductos(page, perPage, orderBy, itemsBusqueda)
+    const configuracionColumnas = useMemo((): ConfiguracionColumna<IProducto>[]=> [
+        generadorColumna<IProducto,QueryGetProductos>('id',orderBy,true,true,undefined, itemsBusqueda),
+        generadorColumna<IProducto,QueryGetProductos>('codigo',orderBy,true,true,undefined, itemsBusqueda),
+        generadorColumna<IProducto,QueryGetProductos>('nombre',orderBy,true,true,undefined, itemsBusqueda),
+        generadorColumna<IProducto,QueryGetProductos>('tiposProducto',orderBy,true,false,PRODUCTO_TIPOS_ADMITIDOS.filter(tpa => !tiposProductosAdmitidos || tiposProductosAdmitidos.includes(tpa.code)).map(tp=> ({
+            text: tp.descripcion,
+            value: tp.code
+        })), itemsBusqueda, (_, item) => item.tipo_producto?.descripcion, 'Tipo',(values)=>{
+            setTiposProducto(values as EnumTipoProducto[])
+        }),
+        generadorColumna<IProducto,QueryGetProductos>('precio',orderBy,true,false,undefined, itemsBusqueda, (_, item) => formateadorNumero(item.pivot?.precio ?? item.precio) + ' Gs.'),
+        generadorColumna<IProducto,QueryGetProductos>('costo',orderBy,true,false,undefined, itemsBusqueda,(_,item) => formateadorNumero(item.pivot?.costo ?? item.costo) + ' Gs.'),
+    ],[itemsBusqueda, orderBy, tiposProductosAdmitidos])
+    const onBusquedaValuesChange = useCallback((v: ValorBuscado[])=>{
+        const primero = v.find(a => a.value)
+        if (primero) {
+            changeBusqueda(primero.code as TipoBusquedaProductos, primero.value!)
+        } else {
+            setBusqueda('')
+        }
+    },[changeBusqueda])
     return <>
-        <TablaProductos
+        <TablaGenerica
+            items={paginacion.data}
             loading={isProductosLoading}
-            tiposProductosAdmitidos={tiposProductosAdmitidos}
-            productos={paginacion.data}
             title={titulo}
-            busquedaId={busquedaId}
-            onBusquedaIdChange={(s) => changeBusqueda('id', s ? ('' + s) : '')}
-            busquedaCode={busquedaCode}
-            onBusquedaCodeChange={(s) => changeBusqueda('codigo', s)}
-            busquedaNombre={busquedaNombre}
-            onBusquedaNombreChange={(s) => changeBusqueda('nombre', s)}
-            onFilterTipoProductoChange={setTiposProducto}
-            tiposProductos={tiposProductosFiltro}
-            orderBy={orderBy}
-            onOrderByChange={setOrderBy}
-            page={page}
-            perPage={perPage}
+            itemsIdSelected={productosExistentes || []}
+            itemsIdNoSeleccionables={productosIdNoSeleccionables}
+            onItemsIdSelectedChange={onProductosSelectChange}
+            configuracionColumnas={configuracionColumnas}
             totalItems={paginacion.total}
+            perPage={perPage}
+            page={page}
             onPaginationChange={(p, pp) => {
                 setPerpage(pp)
                 setPage(p)
             }}
-            productosIdSelected={productosExistentes || []}
-            productosIdNoSeleccionables={productosIdNoSeleccionables}
-            onProductosIdSelectedChange={onProductosSelectChange}
+            onOrderByChange={setOrderBy}
+            onBusquedaValuesChange={onBusquedaValuesChange}
+            typeSelcted={'checkbox'}
         />
     </>
 }

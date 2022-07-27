@@ -5,16 +5,19 @@ import {
     CarritoProductoEstado,
     IProducto, productoQuitable
 } from "../../modelos/Producto";
-import {useTablaOfflineAuxiliar} from "../../modelos/Generico";
-import {Button, Col, Modal, Row, Space, Tooltip} from "antd";
+import {ordenamientoSimple, useTablaOfflineAuxiliar} from "../../modelos/Generico";
+import {Button, Col, InputNumber, Modal, Row, Space, Tooltip} from "antd";
 import {CheckSquareOutlined, DeleteOutlined, PlusOutlined} from "@ant-design/icons";
 import {IconText} from "./AdminProducto";
+import {formateadorNumero} from "../../utils/utils";
+import {costoCarritoProducto, precioCarritoProducto} from "../../modelos/Carrito";
 
 interface ArgsProps {
     productos: IProducto[],
     anadirProductosHandle?: { (): void },
     quitarProductoHandle?: { (p: IProducto): void },
     avanzarProductoHandle?: { (p: IProducto): void },
+    cambiarCantidadHandle?: { (p:IProducto, nuevaCantidad: number) : void}
 }
 
 export default function TablaProductosCarrito(arg: ArgsProps) {
@@ -23,6 +26,7 @@ export default function TablaProductosCarrito(arg: ArgsProps) {
         anadirProductosHandle,
         quitarProductoHandle,
         avanzarProductoHandle,
+        cambiarCantidadHandle,
     } = arg
     const configuracionColumnasSimple: ConfiguracionColumnaSimple<IProducto>[] = useMemo<ConfiguracionColumnaSimple<IProducto>[]>(() => [
         {
@@ -53,13 +57,19 @@ export default function TablaProductosCarrito(arg: ArgsProps) {
             filtroDesdeValores: true,
         },
         {
+            key: 'cantidad',
+            render: (_, item) => (cambiarCantidadHandle && productoQuitable(item)) ? <InputNumber min={1} value={item.pivot?.cantidad ?? 1} onChange={(d) => cambiarCantidadHandle(item, Math.round(d))} /> : item.pivot?.cantidad ?? 1,
+            sortable: true,
+            sorter: (i1, i2) => ordenamientoSimple(i1.pivot?.cantidad ?? 1, i2.pivot?.cantidad ?? 1)
+        },
+        {
             key: 'precio',
-            render: (_, item) => item.pivot?.precio ?? item.precio,
+            render: (_, item) => formateadorNumero(precioCarritoProducto(item)) + ' Gs.',
             sortable: true
         },
         {
             key: 'costo',
-            render: (_, item) => item.pivot?.costo ?? item.costo,
+            render: (_, item) => formateadorNumero(costoCarritoProducto(item)) + ' Gs.',
             sortable: true
         },
         {

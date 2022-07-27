@@ -17,7 +17,7 @@ import * as Yup from 'yup';
 import TablaProductos from "./TablaProductos";
 import {DeleteOutlined, PlusOutlined} from "@ant-design/icons";
 import {IconText} from "./AdminProducto";
-import SelectDeProductos, {ProductoSelected} from "./SelectDeProductos";
+import SelectDeProductos from "./SelectDeProductos";
 
 interface ArgumentosModificarProducto {
     producto?: IProducto,       //si esta definido es el producto a editar (se usa para notificar al padre)
@@ -215,19 +215,19 @@ export default function ModificarProducto ({producto, productoChange}: Argumento
                 productosExistentes={values.producto_combos?.filter(p=>p.id).map(p=>p.id as number) || []}
                 onProductosSelectChange={(prods)=>{
                     const productosCombo = values.producto_combos ? [...values.producto_combos] : []
-                    prods.forEach((prod: ProductoSelected) => {
-                        const indexSacar = productosCombo.findIndex(pc => pc.id === prod.producto.id)  // por si sea un producto repetido (-1: nuevo, 0<=:sacar)
+                    prods.forEach((prod) => {
+                        const indexSacar = productosCombo.findIndex(pc => pc.id === prod.item.id)  // por si sea un producto repetido (-1: nuevo, 0<=:sacar)
                         if (indexSacar >= 0) {  //ya existia
                             if (prod.selected) {
-                                mostrarMensaje("El producto " + prod.producto.nombre + " ya estaba en la lista",'error')
+                                mostrarMensaje("El producto " + prod.item.nombre + " ya estaba en la lista",'error')
                             } else {
                                 productosCombo.splice(indexSacar,1)
                             }
                         } else {
                             if (!prod.selected) {
-                                mostrarMensaje("El producto " + prod.producto.nombre + " No se encontro en la lista para sacar",'error')
+                                mostrarMensaje("El producto " + prod.item.nombre + " No se encontro en la lista para sacar",'error')
                             } else {
-                                productosCombo.splice(0, 0, prod.producto)
+                                productosCombo.splice(0, 0, prod.item)
                             }
                         }
                     })

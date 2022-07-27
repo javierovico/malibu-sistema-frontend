@@ -19,7 +19,7 @@ import { SearchOutlined } from '@ant-design/icons';
 import {ProductoSelected} from "./SelectDeProductos";
 import {ItemSorteado} from "../../modelos/Generico";
 
-type SortItems = ItemSorteado<SortsProductos>[]
+type SortItems = ItemSorteado<string>[]
 
 interface ParametrosRecibidos {
     productos: IProducto[],

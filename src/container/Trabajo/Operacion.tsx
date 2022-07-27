@@ -4,7 +4,7 @@ import {
     ESTADO_CARRITO_OCUPADO,
     EstadoCarrito,
     ICarrito,
-    IMesa,
+    IMesa, isCarritoHasDelivery,
     useCarrito
 } from "../../modelos/Carrito";
 import {Button, Col, Dropdown, Menu, MenuProps, Modal, Row, Space, Tooltip} from "antd";
@@ -37,12 +37,9 @@ export default function Operacion() {
         isMesasLoading,
         reservarMesa,
         isPedidosLoading,
-        // errorPedidos,
         pedidoUpdate,
-        // pedidoModificando,
-        // setPedidoModificando,
-        // handleBorrarPedido,
         pedidos: pedidosOriginales,
+        deliveris
     } = useCarrito()
     const mesasDisponibles = useMemo(()=>mesas.filter(m=>!pedidosOriginales.find(p=>p.mesa_id === m.id)),[mesas, pedidosOriginales])
     const [menuAccionPedidoVisible,setMenuAccionPedidoVisible] = useState<number|undefined>(undefined)  // indica de cual pedido (id) estara abierto
@@ -91,7 +88,7 @@ export default function Operacion() {
         {
             key: 'esDelivery',
             titulo: 'Es delivery',
-            render: (_, c) => c.is_delivery? 'SI':'NO',
+            render: (_, c) => isCarritoHasDelivery(c) ? 'SI':'NO',
             sortable: true,
             filtroDesdeValores:true
         },
@@ -313,6 +310,7 @@ export default function Operacion() {
             onCancel={()=>setCarritoIdViendo({})}
         >
             {carritoViendo.carrito && <VisorDeCarrito
+                deliveris={deliveris}
                 mesas={[...mesasDisponibles, ...(carritoViendo.carrito.mesa?[carritoViendo.carrito.mesa]:[])]}      // se les agrega las mesas disponibles mas la mesa actual (si esta)
                 carrito={carritoViendo.carrito}
                 abrirSelectProducto={carritoViendo.abrirSelectProducto}

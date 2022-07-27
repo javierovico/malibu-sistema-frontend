@@ -1,7 +1,7 @@
-import {ICarrito, IMesa} from "../../modelos/Carrito";
+import {ICarrito, IMesa, isCarritoHasDelivery} from "../../modelos/Carrito";
 import React, {useCallback, useContext, useMemo} from "react";
 import {Alert, Button, Col, Divider, Modal, Row, Spin, Statistic} from "antd";
-import SelectDeProductos, {ProductoSelected} from "../Administracion/SelectDeProductos";
+import SelectDeProductos from "../Administracion/SelectDeProductos";
 import {formateadorNumero, mostrarMensaje} from "../../utils/utils";
 import {AuthContext} from "../../context/AuthProvider";
 import {Form, FormikBag, FormikProps, withFormik} from "formik";
@@ -17,7 +17,6 @@ import {
 } from "../../components/UI/Antd/AntdInputWithFormikTypescript";
 import {
     CARRITO_PRODUCTO_SUCESION_ESTADOS,
-    EnumTipoProducto,
     IProducto,
     PivotCarritoProducto,
     productoQuitable, TIPOS_PRODUCTOS_SELECCIONABLES
@@ -36,7 +35,8 @@ interface Argumentos {
     carrito: ICarrito,
     carritoChange: { (c: ICarrito): void | boolean | Error | Promise<void> },
     abrirSelectProducto?: boolean,
-    mesas?: IMesa[]
+    mesas?: IMesa[],
+    deliveris?: IProducto[],
 }
 
 export default function VisorDeCarrito(arg: Argumentos) {
@@ -45,6 +45,7 @@ export default function VisorDeCarrito(arg: Argumentos) {
         carritoChange,
         abrirSelectProducto,
         mesas,
+        deliveris,
     } = arg
     const {
         setErrorException
@@ -86,6 +87,7 @@ export default function VisorDeCarrito(arg: Argumentos) {
                             carrito_id: v.id,
                             costo: pM.costo,
                             precio: pM.precio,
+                            cantidad: 1,
                             created_at: '',
                             updated_at: '',
                         }), estado: CARRITO_PRODUCTO_SUCESION_ESTADOS[indexAvance]
@@ -97,6 +99,10 @@ export default function VisorDeCarrito(arg: Argumentos) {
             })
         }))
         const handleChangeCliente = initialValues.pagado ? undefined : (()=>setValues({...values, modalSelectCliente: true}))
+        const cambiarCantidadHandle = (!initialValues.pagado) ? ((productoModificar: IProducto, nuevaCantidad: number) => setValues(v => ({
+            ...v,
+            productos: v.productos?.map(p => p.id === productoModificar.id ? {...p, pivot: {...p.pivot!!, cantidad: nuevaCantidad}} : p)
+        }))) : undefined
         return <Spin spinning={isSubmitting}>
             <Form className='form-container'>
                 <>
@@ -108,18 +114,30 @@ export default function VisorDeCarrito(arg: Argumentos) {
                             />
                         </Col>
                         <Col lg={10}>
-                            <SwitchV2
+                            <AntdSelectV2
                                 disabled={initialValues.pagado}
-                                checked={values.is_delivery}
-                                label='Es delivery'
-                                onChange={(d: boolean) => setValues({...values, is_delivery: d})}
-                                touched={touched.is_delivery}
+                                selectOptions={[{
+                                    key: 0,
+                                    value: '[Sin Delivery]'
+                                }].concat(deliveris?.map<AntdSelectV2Option<number>>(m => ({
+                                    key: m.id!!,
+                                    value: `${m.nombre} (${formateadorNumero(m.precio) + ' Gs.'})`
+                                })) ?? [])}
+                                value={values.delivery?.id ?? 0}
+                                placeholder='Seleccione Delivery'
+                                label='Precio Delivery'
+                                onChange={(producto_id: number) => setValues({
+                                    ...values,
+                                    producto_delivery_id: producto_id || null,
+                                    delivery: deliveris?.find(m => m.id === producto_id)
+                                })}
+                                touched={touched.delivery}
                                 submitCount={submitCount}
-                                error={errors.is_delivery}
-                                onBlur={() => setFieldTouched('is_delivery')}
+                                error={errors.delivery}
+                                onBlur={() => setFieldTouched('delivery')}
                             />
                             <AntdSelectV2
-                                disabled={values.is_delivery}
+                                disabled={isCarritoHasDelivery(values)}
                                 selectOptions={[{
                                     key: 0,
                                     value: '[Sin Mesa]'
@@ -170,42 +188,9 @@ export default function VisorDeCarrito(arg: Argumentos) {
                         quitarProductoHandle={quitarProductoHandle}
                         avanzarProductoHandle={avanzarProductoHandle}
                         productos={values.productos || []}
+                        cambiarCantidadHandle={cambiarCantidadHandle}
                     />
                     {errors.productos && <Alert message={errors.productos} type="error" showIcon/>}
-                    {/*<TablaProductos*/}
-                    {/*    estadoPreparacion={true}*/}
-                    {/*    title={<>*/}
-                    {/*        <Row justify="space-between">*/}
-                    {/*            <Col lg={12}>*/}
-                    {/*                <h3>Productos en el carrito</h3>*/}
-                    {/*            </Col>*/}
-                    {/*            <Col offset={4} lg={8}>*/}
-                    {/*                <Button onClick={() => setValues({...values, modalSelectProducto: true})}*/}
-                    {/*                        style={{float: 'right'}} type="primary" icon={<PlusOutlined/>}>*/}
-                    {/*                    Añadir Producto*/}
-                    {/*                </Button>*/}
-                    {/*            </Col>*/}
-                    {/*        </Row>*/}
-                    {/*    </>}*/}
-                    {/*    productos={values.productos || []}*/}
-                    {/*    acciones={(p) => <Space size="middle">*/}
-                    {/*        {(!(p.pivot?.estado) || !CARRITO_PRODUCTO_ESTADOS_CANCELABLES.includes(p.pivot?.estado)) &&*/}
-                    {/*            <Button*/}
-                    {/*                type="link"*/}
-                    {/*                onClick={() => {*/}
-                    {/*                    if (values.productos?.length) {*/}
-                    {/*                        const indexSacar = values.productos.findIndex(prod => prod.id === p.id)*/}
-                    {/*                        const nuevoCarrito = {...values, productos: [...values.productos]}*/}
-                    {/*                        nuevoCarrito.productos?.splice(indexSacar, 1)*/}
-                    {/*                        setValues(nuevoCarrito)*/}
-                    {/*                    }*/}
-                    {/*                }}*/}
-                    {/*            >*/}
-                    {/*                <IconText icon={DeleteOutlined} text="Quitar"/>*/}
-                    {/*            </Button>}*/}
-                    {/*    </Space>}*/}
-                    {/*/>*/}
-                    {/*{errors.productos && <Alert message={errors.productos} type="error" showIcon/>}*/}
                 </>
                 <Divider>Total</Divider>
                 <Row justify='space-evenly'>
@@ -236,19 +221,19 @@ export default function VisorDeCarrito(arg: Argumentos) {
                     productosIdNoSeleccionables={values.productos?.filter(p => !productoQuitable(p)).map(p => p.id as number) || []}
                     onProductosSelectChange={(prods) => {
                         const productosCombo = values.productos ? [...values.productos] : []
-                        prods.forEach((prod: ProductoSelected) => {
-                            const indexSacar = productosCombo.findIndex(pc => pc.id === prod.producto.id)  // por si sea un producto repetido (-1: nuevo, 0<=:sacar)
+                        prods.forEach((prod) => {
+                            const indexSacar = productosCombo.findIndex(pc => pc.id === prod.item.id)  // por si sea un producto repetido (-1: nuevo, 0<=:sacar)
                             if (indexSacar >= 0) {  //ya existia
                                 if (prod.selected) {
-                                    mostrarMensaje("El producto " + prod.producto.nombre + " ya estaba en la lista", 'error')
+                                    mostrarMensaje("El producto " + prod.item.nombre + " ya estaba en la lista", 'error')
                                 } else {
                                     productosCombo.splice(indexSacar, 1)
                                 }
                             } else {
                                 if (!prod.selected) {
-                                    mostrarMensaje("El producto " + prod.producto.nombre + " No se encontro en la lista para sacar", 'error')
+                                    mostrarMensaje("El producto " + prod.item.nombre + " No se encontro en la lista para sacar", 'error')
                                 } else {
-                                    productosCombo.splice(0, 0, prod.producto)
+                                    productosCombo.splice(0, 0, prod.item)
                                 }
                             }
                         })
@@ -293,7 +278,7 @@ export default function VisorDeCarrito(arg: Argumentos) {
                 />
             </Modal>
         </Spin>
-    }, [mesas])
+    }, [deliveris, mesas])
     const MyForm = useMemo(() => withFormik<{}, FormValue>({
         // Ignoramos las propiedades y asignamos el producto que tenemos nomas
         mapPropsToValues: () => ({
@@ -321,6 +306,7 @@ export default function VisorDeCarrito(arg: Argumentos) {
                                 cambiosEstados: 'productos',
                                 productosIdQuita: 'productos',
                                 productosIdAgrega: 'productos',
+                                producto_delivery_id: 'delivery',
                             })
                         }
                         console.error(e)

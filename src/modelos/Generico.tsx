@@ -435,7 +435,7 @@ function toNumber(s: any) : number|false {
     }
 }
 
-const ordenamientoSimple = (item1: any, item2:any): number => {
+export const ordenamientoSimple = (item1: any, item2:any): number => {
     const n1 = toNumber(item1)
     const n2 = toNumber(item2)
     const a1 = item1?.toString() || ''

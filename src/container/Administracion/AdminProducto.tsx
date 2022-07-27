@@ -70,7 +70,7 @@ export default function AdminProducto() {
     // const itemsBusqueda = useMemo<ItemBusqueda[]>(()=>busqueda?[{columna:tipoBusqueda, valor:busqueda}]:[],[busqueda, tipoBusqueda])
 
     const itemsBusqueda = useMemo<Partial<QueryGetProductos>>(()=>({
-        id: (tipoBusqueda === 'id' && busqueda && !isNaN(parseInt(busqueda))) ? parseInt(busqueda) : undefined,
+        id: (tipoBusqueda === 'id' && busqueda) ? busqueda : undefined,
         codigo: (tipoBusqueda === 'codigo' && busqueda) ? busqueda : undefined,
         nombre: (tipoBusqueda === 'nombre' && busqueda) ? busqueda : undefined,
     }),[busqueda, tipoBusqueda])

@@ -1,5 +1,6 @@
 import {ItemSorteado, Postable, useGenericModel} from "./Generico";
 import {IArchivo} from "./Archivo";
+import {TipoBusqueda} from "./Cliente";
 
 export const URL_GET_PRODUCTOS = 'producto'
 
@@ -72,6 +73,7 @@ export interface PivotCarritoProducto {
     carrito_id: number,
     costo: number,
     precio: number,
+    cantidad: number,
     estado: CarritoProductoEstado,
     producto_id: number,
     created_at: string,
@@ -109,8 +111,8 @@ export const productoVacio: IProducto = {
 }
 
 
-export interface QueryGetProductos {
-    id: number,
+export interface QueryGetProductos extends TipoBusqueda{
+    id: string,
     codigo: string,
     nombre: string,
     tiposProducto: EnumTipoProducto[]
@@ -140,7 +142,7 @@ export function productoQuitable(p: IProducto): boolean
     return (!(p.pivot?.estado) || !CARRITO_PRODUCTO_ESTADOS_CANCELABLES.includes(p.pivot?.estado))
 }
 
-export const useProductos = (page: number, perPage: number, sortBy?: ItemSorteado<SortsProductos>[], itemsBusqueda?: Partial<QueryGetProductos>) => {
+export const useProductos = (page: number, perPage: number, sortBy?: ItemSorteado<string>[], itemsBusqueda?: Partial<QueryGetProductos>) => {
     const {
         paginacion,
         isModelLoading: isProductosLoading,

@@ -3,7 +3,7 @@ import {useCallback, useContext, useEffect, useMemo} from "react";
 import {ICliente} from "./Cliente";
 import {AuthContext} from "../context/AuthProvider";
 import {IUsuario} from "./Usuario";
-import {CarritoProductoEstado, IProducto} from "./Producto";
+import {CarritoProductoEstado, EnumTipoProducto, IProducto, QueryGetProductos, useProductos} from "./Producto";
 
 
 export enum EstadoCarrito {
@@ -27,13 +27,14 @@ export interface ICarrito {
     mesa?: IMesa,
     cliente_id: number | null,
     fecha_creacion: string,
-    is_delivery: boolean,
     mesa_id: number | null,
     pagado: boolean,
     status: EstadoCarrito,
     mozo?: IUsuario,
     mozo_id: number,
-    productos?: IProducto[]
+    productos?: IProducto[],
+    producto_delivery_id?: number | null,
+    delivery?: IProducto
 }
 
 
@@ -107,7 +108,6 @@ export const carritoVacio: ICarrito = {
     pagado: false,
     status: EstadoCarrito.CREADO,
     mozo_id: 0,
-    is_delivery: false,
     fecha_creacion: 'now',
     cliente_id: null
 }
@@ -135,7 +135,7 @@ type ParametrosAPICarrito = WithCarrito & {
     productosIdQuita?: number[],
     clienteId?: number | null,    //null para desasignar cliente
     mesaId?: number | null,   //null es para desasignar la mesa, undefined para no hacer nada
-    is_delivery?: LaravelBoolean,
+    producto_delivery_id?: number | null,
     pagado?: LaravelBoolean,
     cambiosEstados?: CambiosEstadosApi[]
 }
@@ -154,6 +154,7 @@ interface WithCarrito extends WithQuery {
     withCliente?: LaravelBoolean,
     withProductos?: LaravelBoolean,
     withMesa?: LaravelBoolean,
+    withDelivery?: LaravelBoolean,
 }
 
 export type QueryBusquedaMesa = WithMesa & {
@@ -200,9 +201,9 @@ const postableCarrito: Postable<ICarrito> = (carritoNuevo, carritoOriginal): Par
     if (carritoNuevo.cliente_id !== carritoOriginal?.cliente_id) {
         data.clienteId = carritoNuevo.cliente_id || null
     }
-    if (carritoNuevo.is_delivery !== carritoOriginal?.is_delivery) {
-        data.is_delivery = carritoNuevo.is_delivery ? '1' : '0'
-        if (carritoNuevo.is_delivery) {
+    if (carritoNuevo.producto_delivery_id !== carritoOriginal?.producto_delivery_id) {
+        data.producto_delivery_id = carritoNuevo.producto_delivery_id
+        if (isCarritoHasDelivery(carritoNuevo)) {
             data.mesaId = null      //si es delivery, le sacamos la mesa
         }
     }
@@ -255,17 +256,19 @@ export const useCarrito = () => {
         withProductos: '1',
         withMozo: '1',
         withMesa: '1',
+        withDelivery: '1',
     }), [])
     const {
         paginacion: paginacionCarrito,
         updateModelInPagination: updateCarritoInPagination,
         isModelLoading: isPedidosLoading,
-        // errorModel: errorPedidos,
         modelUpdate: pedidoUpdate,
-        // modelModificando: pedidoModificando,
-        // setModelModificando: setPedidoModificando,
-        // handleBorrarModel: handleBorrarPedido
     } = useGenericModel<ICarrito, "", QueryBusquedaCarrito>(URL_CARRITO, 'carrito', 1, 1000, postableCarrito, undefined, busquedaCarritos)
+    const itemBusquedaDelivery: Partial<QueryGetProductos> = useMemo(()=>({tiposProducto: [EnumTipoProducto.TIPO_DELIVERY]}),[])
+    const {
+        paginacion: paginacionDeliveris
+    } = useProductos(1,1000,undefined,itemBusquedaDelivery)
+    const deliveris = useMemo(()=>paginacionDeliveris.data,[paginacionDeliveris.data])
     const reservarMesa = useCallback((m: IMesa, c?: ICliente) => {        //cuando ya tenemos la mesa reservada y con el posible cliente (puede ser anonimo)
         const nuevoPedido = {...carritoVacio}
         nuevoPedido.mesa_id = m.id
@@ -297,7 +300,19 @@ export const useCarrito = () => {
         reservarMesa,
         isPedidosLoading,
         pedidos: paginacionCarrito.data,
-        pedidoUpdate
+        pedidoUpdate,
+        deliveris
     }
 }
 
+export function isCarritoHasDelivery(c: ICarrito): boolean {
+    return !!c.producto_delivery_id
+}
+
+export function precioCarritoProducto(item: IProducto): number {
+    return (item.pivot?.cantidad ?? 1) * (item.pivot?.precio ?? item.precio)
+}
+
+export function costoCarritoProducto(item: IProducto): number {
+    return (item.pivot?.cantidad ?? 1) * (item.pivot?.costo ?? item.costo)
+}

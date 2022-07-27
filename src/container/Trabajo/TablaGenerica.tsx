@@ -4,8 +4,7 @@ import {useCallback, useMemo, useRef} from "react";
 import {
     ColumnTipoModel,
     compararArray,
-    existeItemEnArray, Ideable,
-    ItemSorteado,
+    existeItemEnArray, ItemSorteado,
     Modelable
 } from "../../modelos/Generico";
 import {
@@ -47,7 +46,8 @@ export interface ConfiguracionColumna<M> {
     valoresFiltro?: string|string[]|undefined,
     titulo?: string,
     render?: {(value: any, item:M):React.ReactNode | RenderedCell<M>},
-    filter?: FilterFunction<M>
+    filter?: FilterFunction<M>,
+    onFilterChange?: {(value: string[]):void}
 }
 
 
@@ -83,6 +83,7 @@ interface Parametros<M> {
     onFiltroValuesChange?: {(v:ValorFiltrado[]):void},
     onBusquedaValuesChange?: {(v:ValorBuscado[]):void}
     itemsIdSelected?: number[],
+    itemsIdNoSeleccionables?: number[],     //los que no se puede seleccionar (o desseleccionar)
     onItemsIdSelectedChange?: {(items: ItemsSelected<M>[]):void},
     typeSelcted?: RowSelectionType,
     acciones?: (p: M) => JSX.Element,
@@ -91,12 +92,15 @@ interface Parametros<M> {
 }
 
 export function generadorColumna<T,QueryBusqueda extends TipoBusqueda>(
-    key: keyof T & keyof QueryBusqueda,
+    key: keyof T & keyof QueryBusqueda | string,
     sortBy?: ItemSorteado<string>[],
     sortable?:boolean,
     searchable?: boolean,
     valoresAdmitidosFiltro?: ColumnFilterItem[],
-    busqueda?: Partial<QueryBusqueda>
+    busqueda?: Partial<QueryBusqueda>,
+    render?: {(value: any, item:T):React.ReactNode | RenderedCell<T>},
+    titulo?: string,
+    onFilterChange?: {(value:string[]):void}
 ): ConfiguracionColumna<T>{
     return {
         key,
@@ -105,6 +109,9 @@ export function generadorColumna<T,QueryBusqueda extends TipoBusqueda>(
         sortOrder: sortBy?.find(r=>r.code===(key as string))?.orden,
         valoresAdmitidosFiltro,
         valoresFiltro: ((busqueda && (busqueda.hasOwnProperty(key)))? busqueda[key]: (searchable?undefined:[])),
+        render,
+        titulo,
+        onFilterChange
     }
 }
 
@@ -156,6 +163,7 @@ export default function TablaGenerica<M extends Modelable> (arg: Parametros<M>){
         onFiltroValuesChange,
         onBusquedaValuesChange,
         itemsIdSelected,
+        itemsIdNoSeleccionables,
         onItemsIdSelectedChange,
         typeSelcted,
         title,
@@ -178,12 +186,14 @@ export default function TablaGenerica<M extends Modelable> (arg: Parametros<M>){
         const key = typeof k === 'number' ? k : k as string
         const title = titulo || ((k as string).charAt(0).toUpperCase() + (k as string).slice(1))
         const searchText = valoresFiltro?((Array.isArray(valoresFiltro) && valoresFiltro.length)?valoresFiltro[0]: (typeof valoresFiltro === 'string'?valoresFiltro:'')):''
-        const renderSearchable = (text: any) => <Highlighter    // Se trata del render que se va usar para resaltar las palabras buscadas
-            highlightStyle={{ backgroundColor: '#ffc069', padding: 0 }}
-            searchWords={[searchText]}
-            autoEscape
-            textToHighlight={text ? text.toString() : ''}
-        />
+        const renderSearchable = (text: any) => {
+            return <Highlighter    // Se trata del render que se va usar para resaltar las palabras buscadas
+                highlightStyle={{ backgroundColor: '#ffc069', padding: 0 }}
+                searchWords={[searchText]}
+                autoEscape
+                textToHighlight={text ? text.toString() : ''}
+            />
+        }
         let renderFinal: {(value:any, item:M):React.ReactNode | RenderedCell<M>}|undefined = undefined
         if (render) {
             if (searchable) {
@@ -306,18 +316,20 @@ export default function TablaGenerica<M extends Modelable> (arg: Parametros<M>){
                 onOrderByChange(nuevoSort)
             }
         }
-        if (onFiltroValuesChange) {
-            const nuevosValoresFiltrados: ValorFiltrado[] = Object.keys(filters).filter(r=>{
-                const configuracion = configuracionColumnas.find(c => c.key === r)
-                return configuracion && !configuracion?.searchable && Array.isArray(configuracion.valoresAdmitidosFiltro)
-            }).map(r=>({
-                code: r,
-                value: (filters[r] as string[]) ? (filters[r] as string[]) : []
-            }))
-            const diferenciaFiltrada = nuevosValoresFiltrados.filter(d=>!existeItemEnArray(d,valoresFiltroCalculado, [{key:'code'},{key:'value', comparador:(i1,i2)=>compararArray(i1,i2)}]))
-            if (diferenciaFiltrada.length) {
-                onFiltroValuesChange(diferenciaFiltrada)
-            }
+        const nuevosValoresFiltrados: (ValorFiltrado & {configuracion?: ConfiguracionColumna<M>})[] = Object.keys(filters).filter(r=>{
+            const configuracion = configuracionColumnas.find(c => c.key === r)
+            return configuracion && !configuracion?.searchable && Array.isArray(configuracion.valoresAdmitidosFiltro)
+        }).map(r=>({
+            code: r,
+            value: (filters[r] as string[]) ? (filters[r] as string[]) : [],
+            configuracion: configuracionColumnas.find(c => c.key === r)
+        }))
+        const diferenciaFiltrada = nuevosValoresFiltrados.filter(d=>!existeItemEnArray(d,valoresFiltroCalculado, [{key:'code'},{key:'value', comparador:(i1,i2)=>compararArray(i1,i2)}]))
+        if (diferenciaFiltrada.length) {
+            diferenciaFiltrada.forEach(df => {
+                df.configuracion?.onFilterChange?.(df.value)        //llama de forma independiente al handler de la columna (si existiese)
+            })
+            onFiltroValuesChange && onFiltroValuesChange(diferenciaFiltrada)
         }
         if (onBusquedaValuesChange) {
             const nuevosValoresBuscados: ValorBuscado[] = Object.keys(filters).filter(r=>{
@@ -341,6 +353,9 @@ export default function TablaGenerica<M extends Modelable> (arg: Parametros<M>){
             return {
                 type:typeSelcted,
                 selectedRowKeys:itemsIdSelected,
+                getCheckboxProps: (p) => ({
+                    disabled: p.id ? itemsIdNoSeleccionables?.includes(p.id) : undefined
+                }),
                 onChange: (selectedRowKeys: React.Key[]) => {
                     onItemsIdSelectedChange(items
                         .filter(p1=> (p1.id) && ( itemsIdSelected.includes(p1.id) !== selectedRowKeys.includes(p1.id))) //trae solo los que cambiaron de estado
@@ -353,8 +368,9 @@ export default function TablaGenerica<M extends Modelable> (arg: Parametros<M>){
         } else {
             return undefined
         }
-    },[items, itemsIdSelected, onItemsIdSelectedChange, typeSelcted])
+    },[items, itemsIdNoSeleccionables, itemsIdSelected, onItemsIdSelectedChange, typeSelcted])
     return <Table
+        scroll={{ x: 600 }}
         rowClassName={rowClassName}
         loading={loading}
         title={()=>title}
