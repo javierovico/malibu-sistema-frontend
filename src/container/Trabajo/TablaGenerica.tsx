@@ -18,7 +18,7 @@ import {SortOrder} from "antd/es/table/interface";
 import {SearchOutlined} from "@ant-design/icons";
 import Highlighter from "react-highlight-words";
 import * as React from "react";
-import {RenderedCell, RowClassName} from "rc-table/lib/interface";
+import {GetRowKey, RenderedCell, RowClassName} from "rc-table/lib/interface";
 
 export interface FilterFunction<M> { (item: M, filter:undefined|string|string[]): boolean }
 
@@ -88,7 +88,8 @@ interface Parametros<M> {
     typeSelcted?: RowSelectionType,
     acciones?: (p: M) => JSX.Element,
     loading?: boolean,
-    rowClassName?:string | RowClassName<M>
+    rowClassName?:string | RowClassName<M>,
+    rowKey?: GetRowKey<M>,
 }
 
 export function generadorColumna<T,QueryBusqueda extends TipoBusqueda>(
@@ -169,7 +170,8 @@ export default function TablaGenerica<M extends Modelable> (arg: Parametros<M>){
         title,
         acciones,
         loading,
-        rowClassName
+        rowClassName,
+        rowKey,
     } = arg
     const searchInput = useRef<InputRef>(null);
     const createColumnItemFromKey = useCallback(<M extends Modelable>(r: ConfiguracionColumna<M>): ColumnTipoModel<M> =>{
@@ -374,7 +376,7 @@ export default function TablaGenerica<M extends Modelable> (arg: Parametros<M>){
         rowClassName={rowClassName}
         loading={loading}
         title={()=>title}
-        rowKey={'id'}
+        rowKey={rowKey??'id'}
         columns={columnas}
         dataSource={items}
         pagination={paginacion}

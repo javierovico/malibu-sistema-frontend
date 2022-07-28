@@ -273,7 +273,7 @@ export const useGenericModel = <Model extends Ideable, ModelSort extends string,
                 rej(new Error("No esta definido el editor"))
             }
         });
-    },[editor, paginacion, setErrorException, url])
+    },[editor, paginacion.data, setErrorException, updateModelInPagination, url])
 
     const handleBorrarModel = useCallback((p: Model) => {
         return modelUpdate(p,true)

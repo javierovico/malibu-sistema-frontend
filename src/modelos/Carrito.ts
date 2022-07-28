@@ -3,7 +3,14 @@ import {useCallback, useContext, useEffect, useMemo} from "react";
 import {ICliente} from "./Cliente";
 import {AuthContext} from "../context/AuthProvider";
 import {IUsuario} from "./Usuario";
-import {CarritoProductoEstado, EnumTipoProducto, IProducto, QueryGetProductos, useProductos} from "./Producto";
+import {
+    CarritoProductoEstado,
+    EnumTipoProducto,
+    IProducto,
+    PivotCarritoProducto,
+    QueryGetProductos,
+    useProductos
+} from "./Producto";
 
 
 export enum EstadoCarrito {
@@ -130,6 +137,14 @@ interface CambiosEstadosApi {
     estado: CarritoProductoEstado
 }
 
+interface CambiosEstadosApiV2 {
+    carrito_producto_id?: number,        //si se trata de una actualizacion de un carritoProducto que ya existia (debe estar presente `cantidad`, `estado`, o `borrar` (1))
+    producto_id?: number,                //si se trata de un nuevo carritoProducto
+    cantidad?: number,                   //cantidad de producto pedido
+    estado?: CarritoProductoEstado,      //Estado de preparacion
+    borrar?: LaravelBoolean              //Si se va borrar el producto (debe estar presente el carrito_producto_id)
+}
+
 type ParametrosAPICarrito = WithCarrito & {
     productosIdAgrega?: number[],
     productosIdQuita?: number[],
@@ -137,7 +152,8 @@ type ParametrosAPICarrito = WithCarrito & {
     mesaId?: number | null,   //null es para desasignar la mesa, undefined para no hacer nada
     producto_delivery_id?: number | null,
     pagado?: LaravelBoolean,
-    cambiosEstados?: CambiosEstadosApi[]
+    cambiosEstados?: CambiosEstadosApi[],
+    productos?: CambiosEstadosApiV2[]
 }
 
 type SortMesa = "id" | "code"
@@ -193,8 +209,8 @@ const postableCarrito: Postable<ICarrito> = (carritoNuevo, carritoOriginal): Par
         withMozo: '1',
     }
     console.log({carritoNuevo, carritoOriginal})
-    data.productosIdAgrega = carritoNuevo.productos?.filter(p1 => p1.id && !carritoOriginal?.productos?.find(p2 => p2.id === p1.id && (p2.pivot?.precio === p1.pivot?.precio && p2.pivot?.costo === p1.pivot?.costo)))?.map(p => p.id as number) || []
-    data.productosIdQuita = carritoOriginal?.productos?.filter(p1 => p1.id && !carritoNuevo?.productos?.find(p2 => p2.id === p1.id && (p2.pivot?.precio === p1.pivot?.precio && p2.pivot?.costo === p1.pivot?.costo)))?.map(p => p.id as number) || []
+    // data.productosIdAgrega = carritoNuevo.productos?.filter(p1 => p1.id && !carritoOriginal?.productos?.find(p2 => p2.id === p1.id && (p2.pivot?.precio === p1.pivot?.precio && p2.pivot?.costo === p1.pivot?.costo)))?.map(p => p.id as number) || []
+    // data.productosIdQuita = carritoOriginal?.productos?.filter(p1 => p1.id && !carritoNuevo?.productos?.find(p2 => p2.id === p1.id && (p2.pivot?.precio === p1.pivot?.precio && p2.pivot?.costo === p1.pivot?.costo)))?.map(p => p.id as number) || []
     if (carritoNuevo.mesa_id !== carritoOriginal?.mesa_id) {
         data.mesaId = carritoNuevo.mesa_id || null
     }
@@ -210,7 +226,33 @@ const postableCarrito: Postable<ICarrito> = (carritoNuevo, carritoOriginal): Par
     if (carritoNuevo.pagado !== carritoOriginal?.pagado) {
         data.pagado = carritoNuevo.pagado ? '1' : '0'
     }
-    data.cambiosEstados = carritoNuevo.productos?.filter(p1 => p1.pivot?.estado && carritoOriginal?.productos?.find(p2 => p2.id === p1.id)?.pivot?.estado !== p1.pivot.estado).map(p1 => ({id: p1.id!!, estado: p1.pivot!!.estado}))
+    // data.cambiosEstados = carritoNuevo.productos?.filter(p1 => p1.pivot?.estado && carritoOriginal?.productos?.find(p2 => p2.id === p1.id)?.pivot?.estado !== p1.pivot.estado).map(p1 => ({id: p1.id!!, estado: p1.pivot!!.estado}))
+    //Primero vamos poblando los que se van a borrar
+    //luego los demas (modificacion o add)
+    data.productos = (carritoOriginal?.productos?.filter(prodOrig => !carritoNuevo?.productos?.find(prodNuev => productoCarritoCompare(prodOrig, prodNuev)))?.map((p): CambiosEstadosApiV2 => ({
+        carrito_producto_id: p.pivot!!.id!!,
+        borrar: "1"
+    })) ?? []).concat(carritoNuevo.productos?.map((pNuev) : CambiosEstadosApiV2 => {
+        const cambioEstado: CambiosEstadosApiV2 = {}
+        const pOrig = carritoOriginal?.productos?.find(pO => productoCarritoCompare(pO,pNuev))
+        //comprobar si es producto nuevo
+        if (!pOrig) {
+            cambioEstado.producto_id = pNuev.id!!
+            cambioEstado.estado = pNuev.pivot?.estado ?? CarritoProductoEstado.CARRITO_PRODUCTO_ESTADO_PENDIENTE
+            cambioEstado.cantidad = pNuev.pivot?.cantidad ?? 1
+        } else {
+            if (pNuev.pivot?.cantidad !== pOrig.pivot?.cantidad) {
+                cambioEstado.carrito_producto_id = pNuev.pivot!!.id     //Como todos los POrigniales tienen pivot.id, entonces pNuevo tambien tiene pivot.id
+                cambioEstado.cantidad = pNuev.pivot?.cantidad ?? 1
+            }
+            if (pNuev.pivot?.estado !== pOrig.pivot?.estado) {
+                cambioEstado.carrito_producto_id = pNuev.pivot!!.id     //Como todos los POrigniales tienen pivot.id, entonces pNuevo tambien tiene pivot.id
+                cambioEstado.estado = pNuev.pivot?.estado
+            }
+        }
+        return cambioEstado
+    })??[])
+        .filter(r=> r.producto_id || r.carrito_producto_id)     // solo sirven los que tengan uno de estas propiedades
     return data
 }
 
@@ -315,4 +357,26 @@ export function precioCarritoProducto(item: IProducto): number {
 
 export function costoCarritoProducto(item: IProducto): number {
     return (item.pivot?.cantidad ?? 1) * (item.pivot?.costo ?? item.costo)
+}
+
+/**
+ * Compara dos productos de un carrito, para determinar si se trata del mismo
+ * Condicion: Si al menos uno de los dos tienen `pivot.id` deben ser iguales (tambien deben ser iguales los precios y costos)
+ * Si ninguno de los dos tienen `pivot.id` entonces deben tener mismo `producto.id`
+ * @param p1
+ * @param p2
+ */
+export function productoCarritoCompare(p1: IProducto, p2: IProducto): boolean {
+    return (p1.pivot?.id || p2.pivot?.id) ? (p1.pivot?.id === p2.pivot?.id && p1.pivot?.precio === p2.pivot?.precio && p1.pivot?.costo === p2.pivot?.costo) : (p1.id === p2.id)
+}
+
+export function productoCarritoPivotFromProducto(item: IProducto, carrito: ICarrito): PivotCarritoProducto {
+    return {
+        producto_id: item.id!!,
+        cantidad: 1,
+        precio: item.precio,
+        costo: item.costo,
+        carrito_id: carrito.id,
+        estado: CarritoProductoEstado.CARRITO_PRODUCTO_ESTADO_PENDIENTE,
+    }
 }

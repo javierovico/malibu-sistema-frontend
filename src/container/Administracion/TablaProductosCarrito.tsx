@@ -1,5 +1,5 @@
 import TablaGenerica, {ConfiguracionColumnaSimple} from "../Trabajo/TablaGenerica";
-import React, {useMemo} from "react";
+import React, {useCallback, useMemo} from "react";
 import {
     CARRITO_PRODUCTO_SUCESION_ESTADOS,
     CarritoProductoEstado,
@@ -112,7 +112,7 @@ export default function TablaProductosCarrito(arg: ArgsProps) {
                     </Tooltip>}
             </Space>
         }
-    ], [avanzarProductoHandle, quitarProductoHandle])
+    ], [avanzarProductoHandle, cambiarCantidadHandle, quitarProductoHandle])
     const {
         items: productosFiltrados,
         setSortBy,
@@ -133,8 +133,10 @@ export default function TablaProductosCarrito(arg: ArgsProps) {
             </Col>
         </Row>
     </>, [anadirProductosHandle])
+    const getRowKey = useCallback((p:IProducto)=>p.pivot?.id ?? p.id!!,[])
     return <>
         <TablaGenerica
+            rowKey={getRowKey}
             title={title}
             configuracionColumnas={configuracionColumnas}
             items={productosFiltrados}

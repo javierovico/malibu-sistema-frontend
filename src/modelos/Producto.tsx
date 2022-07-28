@@ -58,7 +58,7 @@ export enum CarritoProductoEstado {
 export const TIPOS_PRODUCTOS_SELECCIONABLES = [EnumTipoProducto.TIPO_COMBO,EnumTipoProducto.TIPO_SIMPLE]
 
 /** Son los estados en los cuales todavia se puede cancelar el producto*/
-export const CARRITO_PRODUCTO_ESTADOS_CANCELABLES: CarritoProductoEstado[] = [CarritoProductoEstado.CARRITO_PRODUCTO_ESTADO_PREPARACION, CarritoProductoEstado.CARRITO_PRODUCTO_ESTADO_FINALIZADO]
+export const CARRITO_PRODUCTO_ESTADOS_CANCELABLES: CarritoProductoEstado[] = [CarritoProductoEstado.CARRITO_PRODUCTO_ESTADO_PENDIENTE]
 
 /**
  * Indica el orden en el que debe transcurrir el estado del producto
@@ -70,14 +70,15 @@ export const CARRITO_PRODUCTO_SUCESION_ESTADOS: CarritoProductoEstado[] = [
 ]
 
 export interface PivotCarritoProducto {
+    id?: number,        // si es undefined se asume que no esta creado en la base
     carrito_id: number,
     costo: number,
     precio: number,
     cantidad: number,
     estado: CarritoProductoEstado,
     producto_id: number,
-    created_at: string,
-    updated_at: string,
+    created_at?: string,
+    updated_at?: string,
 }
 
 export interface IProducto {
@@ -134,12 +135,15 @@ interface ParametrosAPI {
 }
 
 /**
- * Nos indica si el producto puede ser sacado de un carrito
+ * Un producto puede ser quitado del carrito si pasa una de las siguientes cosas:
+ * No tiene estado
+ * Su estado es cancelable
+ * Si no esta persistido en la base de datos
  * @param p
  */
 export function productoQuitable(p: IProducto): boolean
 {
-    return (!(p.pivot?.estado) || !CARRITO_PRODUCTO_ESTADOS_CANCELABLES.includes(p.pivot?.estado))
+    return (!(p.pivot?.estado) || CARRITO_PRODUCTO_ESTADOS_CANCELABLES.includes(p.pivot?.estado) || !p.pivot.id)
 }
 
 export const useProductos = (page: number, perPage: number, sortBy?: ItemSorteado<string>[], itemsBusqueda?: Partial<QueryGetProductos>) => {

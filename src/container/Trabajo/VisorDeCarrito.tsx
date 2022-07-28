@@ -1,4 +1,10 @@
-import {ICarrito, IMesa, isCarritoHasDelivery} from "../../modelos/Carrito";
+import {
+    ICarrito,
+    IMesa,
+    isCarritoHasDelivery,
+    productoCarritoCompare,
+    productoCarritoPivotFromProducto
+} from "../../modelos/Carrito";
 import React, {useCallback, useContext, useMemo} from "react";
 import {Alert, Button, Col, Divider, Modal, Row, Spin, Statistic} from "antd";
 import SelectDeProductos from "../Administracion/SelectDeProductos";
@@ -75,11 +81,11 @@ export default function VisorDeCarrito(arg: Argumentos) {
         })))
         const quitarProductoHandle = initialValues.pagado ? undefined :((p: IProducto) => setValues(v => ({
             ...v,
-            productos: v.productos?.filter(pF => pF.id !== p.id)
+            productos: v.productos?.filter(pF => !productoCarritoCompare(pF,p))
         })))
         const avanzarProductoHandle = (p: IProducto) => setValues(v => ({
             ...v, productos: v.productos?.map(pM => {
-                if (pM.id === p.id) {
+                if (productoCarritoCompare(pM,p)) {
                     const indexAvance: number = CARRITO_PRODUCTO_SUCESION_ESTADOS.findIndex(se => se === pM.pivot?.estado) + 1
                     const nuevoPivot: PivotCarritoProducto = {
                         ...(pM.pivot ? pM.pivot : {
@@ -101,7 +107,7 @@ export default function VisorDeCarrito(arg: Argumentos) {
         const handleChangeCliente = initialValues.pagado ? undefined : (()=>setValues({...values, modalSelectCliente: true}))
         const cambiarCantidadHandle = (!initialValues.pagado) ? ((productoModificar: IProducto, nuevaCantidad: number) => setValues(v => ({
             ...v,
-            productos: v.productos?.map(p => p.id === productoModificar.id ? {...p, pivot: {...p.pivot!!, cantidad: nuevaCantidad}} : p)
+            productos: v.productos?.map(p => productoCarritoCompare(p,productoModificar)? {...p, pivot: {...p.pivot!!, cantidad: nuevaCantidad}} : p)
         }))) : undefined
         return <Spin spinning={isSubmitting}>
             <Form className='form-container'>
@@ -217,12 +223,12 @@ export default function VisorDeCarrito(arg: Argumentos) {
                 <SelectDeProductos
                     tiposProductosAdmitidos={TIPOS_PRODUCTOS_SELECCIONABLES}
                     titulo='Seleccione nuevos productos a añadir'
-                    productosExistentes={values.productos?.filter(p => p.id).map(p => p.id as number) || []}
-                    productosIdNoSeleccionables={values.productos?.filter(p => !productoQuitable(p)).map(p => p.id as number) || []}
+                    productosExistentes={values.productos?.filter(p => p.id && productoQuitable(p)).map(p => p.id as number) || []}
+                    // productosIdNoSeleccionables={values.productos?.filter(p => !productoQuitable(p)).map(p => p.id as number) || []}
                     onProductosSelectChange={(prods) => {
                         const productosCombo = values.productos ? [...values.productos] : []
                         prods.forEach((prod) => {
-                            const indexSacar = productosCombo.findIndex(pc => pc.id === prod.item.id)  // por si sea un producto repetido (-1: nuevo, 0<=:sacar)
+                            const indexSacar = productosCombo.findIndex(pc => productoCarritoCompare(pc, prod.item) || (!prod.selected && prod.item.id === pc.id && productoQuitable(pc)))  // por si sea un producto repetido (-1: nuevo, 0<=:sacar)
                             if (indexSacar >= 0) {  //ya existia
                                 if (prod.selected) {
                                     mostrarMensaje("El producto " + prod.item.nombre + " ya estaba en la lista", 'error')
@@ -233,7 +239,10 @@ export default function VisorDeCarrito(arg: Argumentos) {
                                 if (!prod.selected) {
                                     mostrarMensaje("El producto " + prod.item.nombre + " No se encontro en la lista para sacar", 'error')
                                 } else {
-                                    productosCombo.splice(0, 0, prod.item)
+                                    productosCombo.splice(0, 0, {
+                                        ...prod.item,
+                                        pivot: productoCarritoPivotFromProducto(prod.item,carrito)
+                                    })
                                 }
                             }
                         })
@@ -278,7 +287,7 @@ export default function VisorDeCarrito(arg: Argumentos) {
                 />
             </Modal>
         </Spin>
-    }, [deliveris, mesas])
+    }, [carrito, deliveris, mesas])
     const MyForm = useMemo(() => withFormik<{}, FormValue>({
         // Ignoramos las propiedades y asignamos el producto que tenemos nomas
         mapPropsToValues: () => ({
