@@ -36,6 +36,7 @@ export interface ICarrito {
     fecha_creacion: string,
     mesa_id: number | null,
     pagado: boolean,
+    entregado: boolean,
     status: EstadoCarrito,
     mozo?: IUsuario,
     mozo_id: number,
@@ -110,6 +111,7 @@ export interface ICarrito {
 // })
 
 export const carritoVacio: ICarrito = {
+    entregado: false,
     id: 0,
     mesa_id: null,
     pagado: false,
@@ -379,4 +381,15 @@ export function productoCarritoPivotFromProducto(item: IProducto, carrito: ICarr
         carrito_id: carrito.id,
         estado: CarritoProductoEstado.CARRITO_PRODUCTO_ESTADO_PENDIENTE,
     }
+}
+
+/**
+ * Determina si el carrito puede finalizarse
+ * Debe tener al menos un producto
+ * Tiene que estar pagado
+ * y todos los productos debe estar finalizado
+ * @param c
+ */
+export function isCarritoFinalizable(c: ICarrito): boolean {
+    return c.pagado && !!c.productos?.length && (c.productos?.every(p => p.pivot?.estado === CarritoProductoEstado.CARRITO_PRODUCTO_ESTADO_FINALIZADO) ?? false)
 }

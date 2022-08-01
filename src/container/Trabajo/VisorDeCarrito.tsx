@@ -73,8 +73,8 @@ export default function VisorDeCarrito(arg: Argumentos) {
             modalSelectCliente: false,
             modalSelectMesa: false
         })
-        const precio: number = values.productos?.reduce<number>((prev, curr) => prev + (curr?.pivot?.precio ?? curr.precio), 0) ?? 0
-        const costo: number = values.productos?.reduce<number>((prev, curr) => prev + (curr?.pivot?.costo ?? curr.costo), 0) ?? 0
+        const precio: number = values.productos?.reduce<number>((prev, curr) => prev + (curr.pivot?.cantidad ?? 1) * (curr?.pivot?.precio ?? curr.precio), values.delivery?.precio ?? 0) ?? 0
+        const costo: number = values.productos?.reduce<number>((prev, curr) => prev + (curr.pivot?.cantidad ?? 1) * (curr?.pivot?.costo ?? curr.costo), values.delivery?.costo ?? 0) ?? 0
         const anadirProductosHandle = initialValues.pagado ? undefined : (() => setValues(v => ({
             ...v,
             modalSelectProducto: true

@@ -4,7 +4,7 @@ import {
     ESTADO_CARRITO_OCUPADO,
     EstadoCarrito,
     ICarrito,
-    IMesa, isCarritoHasDelivery,
+    IMesa, isCarritoFinalizable, isCarritoHasDelivery,
     useCarrito
 } from "../../modelos/Carrito";
 import {Button, Col, Dropdown, Menu, MenuProps, Modal, Row, Space, Tooltip} from "antd";
@@ -28,6 +28,7 @@ enum Acciones {
     ASIGNAR_MESA_A_ANONIMO = 'asignarMesaAAnonimo',
     ASIGNAR_PRODUCTO_A_CARRITO = 'asignarProductoACarrito',
     VER_LISTA_PRODUCTOS = 'listaProductos',
+    FINALIZAR_PEDIDO = 'finalizarPedido'
 }
 
 export default function Operacion() {
@@ -41,6 +42,16 @@ export default function Operacion() {
         pedidos: pedidosOriginales,
         deliveris
     } = useCarrito()
+    const handleFinalizarCarrito = useCallback((c: ICarrito)=> {
+        Modal.confirm({
+            title: '¿Finalizar Carrito?',
+            content: (c.mesa_id ? 'Esto supondrá que el cliente ya abandonó el local (se libera la mesa). ' : '') + 'El carrito va desaparecer de la pantalla de operacion.',
+            okText: 'Finalizar',
+            onOk: () => {
+
+            }
+        })
+    },[])
     const mesasDisponibles = useMemo(()=>mesas.filter(m=>!pedidosOriginales.find(p=>p.mesa_id === m.id)),[mesas, pedidosOriginales])
     const [menuAccionPedidoVisible,setMenuAccionPedidoVisible] = useState<number|undefined>(undefined)  // indica de cual pedido (id) estara abierto
     const [carritoIdViendo, setCarritoIdViendo] = useState<{ id?: number, abrirSelectProducto?: boolean, crearNuevo?:boolean }>({})
@@ -62,6 +73,12 @@ export default function Operacion() {
                         label: 'Ver Carrito',
                         key: Acciones.VER_LISTA_PRODUCTOS,
                         onClick: ()=> setCarritoIdViendo({id:c.id})
+                    },
+                    {
+                        label: 'Finalizar',
+                        key: Acciones.FINALIZAR_PEDIDO,
+                        onClick: () => handleFinalizarCarrito(c),
+                        disabled: !isCarritoFinalizable(c),
                     }
                 ]
             })
