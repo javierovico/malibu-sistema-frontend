@@ -55,7 +55,7 @@ export enum CarritoProductoEstado {
     CARRITO_PRODUCTO_ESTADO_FINALIZADO = 'finalizado',
 }
 
-export const TIPOS_PRODUCTOS_SELECCIONABLES = [EnumTipoProducto.TIPO_COMBO,EnumTipoProducto.TIPO_SIMPLE]
+export const TIPOS_PRODUCTOS_SELECCIONABLES = [EnumTipoProducto.TIPO_COMBO, EnumTipoProducto.TIPO_SIMPLE]
 
 /** Son los estados en los cuales todavia se puede cancelar el producto*/
 export const CARRITO_PRODUCTO_ESTADOS_CANCELABLES: CarritoProductoEstado[] = [CarritoProductoEstado.CARRITO_PRODUCTO_ESTADO_PENDIENTE]
@@ -112,7 +112,7 @@ export const productoVacio: IProducto = {
 }
 
 
-export interface QueryGetProductos extends TipoBusqueda{
+export interface QueryGetProductos extends TipoBusqueda {
     id: string,
     codigo: string,
     nombre: string,
@@ -141,8 +141,7 @@ interface ParametrosAPI {
  * Si no esta persistido en la base de datos
  * @param p
  */
-export function productoQuitable(p: IProducto): boolean
-{
+export function productoQuitable(p: IProducto): boolean {
     return (!(p.pivot?.estado) || CARRITO_PRODUCTO_ESTADOS_CANCELABLES.includes(p.pivot?.estado) || !p.pivot.id)
 }
 
@@ -210,4 +209,8 @@ const postableProducto: Postable<IProducto> = (productoSubiendo, productoOrigina
 
 export function isTipoProductoAdmitido(a: any): a is EnumTipoProducto {
     return Object.values(EnumTipoProducto).includes(a)
+}
+
+export function isProductoDelivery(p: IProducto): boolean {
+    return p.tipo_producto?.code === EnumTipoProducto.TIPO_DELIVERY
 }

@@ -7,6 +7,7 @@ import {
     CarritoProductoEstado,
     EnumTipoProducto,
     IProducto,
+    isProductoDelivery,
     PivotCarritoProducto,
     QueryGetProductos,
     useProductos
@@ -41,8 +42,7 @@ export interface ICarrito {
     mozo?: IUsuario,
     mozo_id: number,
     productos?: IProducto[],
-    producto_delivery_id?: number | null,
-    delivery?: IProducto
+    is_delivery: boolean
 }
 
 
@@ -118,7 +118,8 @@ export const carritoVacio: ICarrito = {
     status: EstadoCarrito.CREADO,
     mozo_id: 0,
     fecha_creacion: 'now',
-    cliente_id: null
+    cliente_id: null,
+    is_delivery: false,
 }
 
 export interface IMesa {
@@ -155,7 +156,8 @@ type ParametrosAPICarrito = WithCarrito & {
     producto_delivery_id?: number | null,
     pagado?: LaravelBoolean,
     cambiosEstados?: CambiosEstadosApi[],
-    productos?: CambiosEstadosApiV2[]
+    productos?: CambiosEstadosApiV2[],
+    is_delivery?: LaravelBoolean,
 }
 
 type SortMesa = "id" | "code"
@@ -219,8 +221,16 @@ const postableCarrito: Postable<ICarrito> = (carritoNuevo, carritoOriginal): Par
     if (carritoNuevo.cliente_id !== carritoOriginal?.cliente_id) {
         data.clienteId = carritoNuevo.cliente_id || null
     }
-    if (carritoNuevo.producto_delivery_id !== carritoOriginal?.producto_delivery_id) {
-        data.producto_delivery_id = carritoNuevo.producto_delivery_id
+    if (carritoNuevo.is_delivery !== carritoOriginal?.is_delivery) {
+        data.is_delivery = carritoNuevo.is_delivery ? '1' : '0'
+        if (!carritoNuevo.is_delivery) {
+            carritoNuevo.productos = addDeliveryToProductos(carritoNuevo)
+        } else {
+            data.mesaId = null      //si es delivery, le sacamos la mesa
+        }
+    }
+    if (getDeliveryFromCarrito(carritoNuevo)?.id !== getDeliveryFromCarrito(carritoOriginal)?.id) {
+        data.producto_delivery_id = getDeliveryFromCarrito(carritoNuevo)?.id ?? null
         if (isCarritoHasDelivery(carritoNuevo)) {
             data.mesaId = null      //si es delivery, le sacamos la mesa
         }
@@ -231,14 +241,15 @@ const postableCarrito: Postable<ICarrito> = (carritoNuevo, carritoOriginal): Par
     // data.cambiosEstados = carritoNuevo.productos?.filter(p1 => p1.pivot?.estado && carritoOriginal?.productos?.find(p2 => p2.id === p1.id)?.pivot?.estado !== p1.pivot.estado).map(p1 => ({id: p1.id!!, estado: p1.pivot!!.estado}))
     //Primero vamos poblando los que se van a borrar
     //luego los demas (modificacion o add)
-    data.productos = (carritoOriginal?.productos?.filter(prodOrig => !carritoNuevo?.productos?.find(prodNuev => productoCarritoCompare(prodOrig, prodNuev)))?.map((p): CambiosEstadosApiV2 => ({
+    data.productos = (carritoOriginal?.productos?.filter(prodOrig => !isProductoDelivery(prodOrig) && !carritoNuevo?.productos?.find(prodNuev => productoCarritoCompare(prodOrig, prodNuev)))?.map((p): CambiosEstadosApiV2 => ({
         carrito_producto_id: p.pivot!!.id!!,
         borrar: "1"
     })) ?? []).concat(carritoNuevo.productos?.map((pNuev) : CambiosEstadosApiV2 => {
         const cambioEstado: CambiosEstadosApiV2 = {}
         const pOrig = carritoOriginal?.productos?.find(pO => productoCarritoCompare(pO,pNuev))
-        //comprobar si es producto nuevo
-        if (!pOrig) {
+        if (isProductoDelivery(pNuev)) {
+
+        } else if (!pOrig) { //comprobar si es producto nuevo
             cambioEstado.producto_id = pNuev.id!!
             cambioEstado.estado = pNuev.pivot?.estado ?? CarritoProductoEstado.CARRITO_PRODUCTO_ESTADO_PENDIENTE
             cambioEstado.cantidad = pNuev.pivot?.cantidad ?? 1
@@ -350,7 +361,7 @@ export const useCarrito = () => {
 }
 
 export function isCarritoHasDelivery(c: ICarrito): boolean {
-    return !!c.producto_delivery_id
+    return !!getDeliveryFromCarrito(c)
 }
 
 export function precioCarritoProducto(item: IProducto): number {
@@ -372,14 +383,14 @@ export function productoCarritoCompare(p1: IProducto, p2: IProducto): boolean {
     return (p1.pivot?.id || p2.pivot?.id) ? (p1.pivot?.id === p2.pivot?.id && p1.pivot?.precio === p2.pivot?.precio && p1.pivot?.costo === p2.pivot?.costo) : (p1.id === p2.id)
 }
 
-export function productoCarritoPivotFromProducto(item: IProducto, carrito: ICarrito): PivotCarritoProducto {
+export function productoCarritoPivotFromProducto(item: IProducto, carrito: ICarrito, estado?: CarritoProductoEstado): PivotCarritoProducto {
     return {
         producto_id: item.id!!,
         cantidad: 1,
         precio: item.precio,
         costo: item.costo,
         carrito_id: carrito.id,
-        estado: CarritoProductoEstado.CARRITO_PRODUCTO_ESTADO_PENDIENTE,
+        estado: estado ?? CarritoProductoEstado.CARRITO_PRODUCTO_ESTADO_PENDIENTE,
     }
 }
 
@@ -392,4 +403,23 @@ export function productoCarritoPivotFromProducto(item: IProducto, carrito: ICarr
  */
 export function isCarritoFinalizable(c: ICarrito): boolean {
     return c.pagado && !!c.productos?.length && (c.productos?.every(p => p.pivot?.estado === CarritoProductoEstado.CARRITO_PRODUCTO_ESTADO_FINALIZADO) ?? false)
+}
+
+/**
+ * Obtiene el producto delivery del carrito
+ * @param c
+ */
+export function getDeliveryFromCarrito(c?: ICarrito): IProducto|undefined {
+    return c?.productos?.find(p=> p?.tipo_producto?.code === EnumTipoProducto.TIPO_DELIVERY)
+}
+
+export function addDeliveryToProductos(carrito: ICarrito, del?:IProducto): IProducto[] {
+    const nuevos = carrito.productos?.filter(p => p.tipo_producto?.code !== EnumTipoProducto.TIPO_DELIVERY) ?? []
+    if (del) {
+        nuevos.push({
+            ...del,
+            pivot: productoCarritoPivotFromProducto(del, carrito,CarritoProductoEstado.CARRITO_PRODUCTO_ESTADO_FINALIZADO)
+        })
+    }
+    return nuevos;
 }

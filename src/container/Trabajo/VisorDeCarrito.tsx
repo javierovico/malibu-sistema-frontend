@@ -1,4 +1,6 @@
 import {
+    addDeliveryToProductos,
+    getDeliveryFromCarrito,
     ICarrito,
     IMesa,
     isCarritoHasDelivery,
@@ -33,6 +35,7 @@ interface VariablesExtraFormulario {
     modalSelectProducto: boolean,
     modalSelectCliente: boolean,
     modalSelectMesa: boolean,
+    deliverySeleccionado: boolean,      //solo para indicar que se toco
 }
 
 type FormValue = ICarrito & VariablesExtraFormulario
@@ -73,8 +76,8 @@ export default function VisorDeCarrito(arg: Argumentos) {
             modalSelectCliente: false,
             modalSelectMesa: false
         })
-        const precio: number = values.productos?.reduce<number>((prev, curr) => prev + (curr.pivot?.cantidad ?? 1) * (curr?.pivot?.precio ?? curr.precio), values.delivery?.precio ?? 0) ?? 0
-        const costo: number = values.productos?.reduce<number>((prev, curr) => prev + (curr.pivot?.cantidad ?? 1) * (curr?.pivot?.costo ?? curr.costo), values.delivery?.costo ?? 0) ?? 0
+        const precio: number = values.productos?.reduce<number>((prev, curr) => prev + (curr.pivot?.cantidad ?? 1) * (curr?.pivot?.precio ?? curr.precio), 0) ?? 0
+        const costo: number = values.productos?.reduce<number>((prev, curr) => prev + (curr.pivot?.cantidad ?? 1) * (curr?.pivot?.costo ?? curr.costo), 0) ?? 0
         const anadirProductosHandle = initialValues.pagado ? undefined : (() => setValues(v => ({
             ...v,
             modalSelectProducto: true
@@ -120,30 +123,39 @@ export default function VisorDeCarrito(arg: Argumentos) {
                             />
                         </Col>
                         <Col lg={10}>
-                            <AntdSelectV2
+                            <SwitchV2
+                                disabled={initialValues.pagado}
+                                checked={values.is_delivery}
+                                label='Delivery'
+                                onChange={(d: boolean) =>  setValues(values => ({...values, is_delivery: d}))}
+                                touched={touched.is_delivery}
+                                submitCount={submitCount}
+                                error={errors.is_delivery}
+                                onBlur={() => setFieldTouched('is_delivery')}
+                            />
+                            {values.is_delivery && <AntdSelectV2
                                 disabled={initialValues.pagado}
                                 selectOptions={[{
                                     key: 0,
-                                    value: '[Sin Delivery]'
+                                    value: '[Sin costo]'
                                 }].concat(deliveris?.map<AntdSelectV2Option<number>>(m => ({
                                     key: m.id!!,
                                     value: `${m.nombre} (${formateadorNumero(m.precio) + ' Gs.'})`
                                 })) ?? [])}
-                                value={values.delivery?.id ?? 0}
+                                value={getDeliveryFromCarrito(values)?.id ?? 0}
                                 placeholder='Seleccione Delivery'
                                 label='Precio Delivery'
                                 onChange={(producto_id: number) => setValues({
                                     ...values,
-                                    producto_delivery_id: producto_id || null,
-                                    delivery: deliveris?.find(m => m.id === producto_id)
+                                    productos: addDeliveryToProductos(values, deliveris?.find(m => m.id === producto_id)),     // con el splice no detecta cambio
                                 })}
-                                touched={touched.delivery}
+                                touched={touched.deliverySeleccionado}
                                 submitCount={submitCount}
-                                error={errors.delivery}
-                                onBlur={() => setFieldTouched('delivery')}
-                            />
+                                error={errors.deliverySeleccionado}
+                                onBlur={() => setFieldTouched('deliverySeleccionado')}
+                            />}
                             <AntdSelectV2
-                                disabled={isCarritoHasDelivery(values)}
+                                disabled={values.is_delivery}
                                 selectOptions={[{
                                     key: 0,
                                     value: '[Sin Mesa]'
@@ -295,6 +307,7 @@ export default function VisorDeCarrito(arg: Argumentos) {
             modalSelectProducto: !!abrirSelectProducto,
             modalSelectCliente: false,
             modalSelectMesa: false,
+            deliverySeleccionado: true,
         }),
         handleSubmit: (values, {setSubmitting, setErrors}: FormikBag<{}, FormValue>) => {
             const result = carritoChange(values)
