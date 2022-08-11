@@ -2,7 +2,7 @@ import {
     addDeliveryToProductos,
     getDeliveryFromCarrito,
     ICarrito,
-    IMesa,
+    IMesa, isCarritoFinalizable,
     isCarritoHasDelivery,
     productoCarritoCompare,
     productoCarritoPivotFromProducto
@@ -198,6 +198,29 @@ export default function VisorDeCarrito(arg: Argumentos) {
                                 submitCount={submitCount}
                                 error={errors.pagado}
                                 onBlur={() => setFieldTouched('pagado')}
+                            />
+                            <SwitchV2
+                                disabled={!isCarritoFinalizable(values) || initialValues.finalizado}
+                                checked={values.finalizado}
+                                label='Finalizado'
+                                onChange={(d: boolean) => {
+                                    if (d) {
+                                        Modal.confirm({
+                                            title: '¿Marcar como finalizado?',
+                                            content: 'Una vez que esté marcado como finalizado y se guarde, el carrito desaparecerá',
+                                            okText: 'Finalizar',
+                                            onOk: () => {
+                                                setValues({...values, finalizado: d})
+                                            }
+                                        })
+                                    } else {
+                                        setValues({...values, finalizado: d})
+                                    }
+                                }}
+                                touched={touched.finalizado}
+                                submitCount={submitCount}
+                                error={errors.finalizado}
+                                onBlur={() => setFieldTouched('finalizado')}
                             />
                         </Col>
                     </Row>

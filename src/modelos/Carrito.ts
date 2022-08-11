@@ -38,6 +38,7 @@ export interface ICarrito {
     mesa_id: number | null,
     pagado: boolean,
     entregado: boolean,
+    finalizado: boolean,
     status: EstadoCarrito,
     mozo?: IUsuario,
     mozo_id: number,
@@ -112,6 +113,7 @@ export interface ICarrito {
 
 export const carritoVacio: ICarrito = {
     entregado: false,
+    finalizado: false,
     id: 0,
     mesa_id: null,
     pagado: false,
@@ -158,6 +160,7 @@ type ParametrosAPICarrito = WithCarrito & {
     cambiosEstados?: CambiosEstadosApi[],
     productos?: CambiosEstadosApiV2[],
     is_delivery?: LaravelBoolean,
+    finalizado?: LaravelBoolean,
 }
 
 type SortMesa = "id" | "code"
@@ -237,6 +240,9 @@ const postableCarrito: Postable<ICarrito> = (carritoNuevo, carritoOriginal): Par
     }
     if (carritoNuevo.pagado !== carritoOriginal?.pagado) {
         data.pagado = carritoNuevo.pagado ? '1' : '0'
+    }
+    if (carritoNuevo.finalizado !== carritoOriginal?.finalizado) {
+        data.finalizado = carritoNuevo.finalizado ? '1' : '0'
     }
     // data.cambiosEstados = carritoNuevo.productos?.filter(p1 => p1.pivot?.estado && carritoOriginal?.productos?.find(p2 => p2.id === p1.id)?.pivot?.estado !== p1.pivot.estado).map(p1 => ({id: p1.id!!, estado: p1.pivot!!.estado}))
     //Primero vamos poblando los que se van a borrar
