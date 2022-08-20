@@ -254,14 +254,14 @@ export const useGenericModel = <Model extends Ideable, ModelSort extends string,
         itemsNuevos.splice((posicionItem<0)?0:posicionItem,(posicionItem<0)?0:1,...(borrar?[]:[model]))
         setPaginacion({...paginacion, data: itemsNuevos})
     },[paginacion])
-    const modelUpdate = useCallback((p: Model, borrar: boolean = false, mostrarError: boolean = true)=>{
+    const modelUpdate = useCallback((p: Model, borrar: boolean = false, mostrarError: boolean = true, ocultar = false)=>{
         return new Promise<Model|undefined>((res,rej) => {
             if (editor) {
                 const posicionItem: number = paginacion.data.findIndex(pItem => pItem.id === p.id)      // -1 si se va agregar nuevo
                 const modelOriginal = (posicionItem>=0) ? paginacion.data[posicionItem] : undefined  //undefind si se vacrear
                 editor(url, borrar?undefined:p, modelOriginal)
                     .then((modelSubido)=>{
-                        updateModelInPagination(borrar?p:modelSubido!,borrar)
+                        updateModelInPagination(borrar?p:modelSubido!,borrar || ocultar)
                         setModelModificando(modelSubido)
                         res(modelSubido)
                     })

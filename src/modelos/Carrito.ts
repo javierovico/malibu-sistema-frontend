@@ -21,13 +21,10 @@ export enum EstadoCarrito {
     FINALIZADO = 'finalizado',
 }
 
-export const ESTADO_CARRITO_OCUPADO: EstadoCarrito[] = [EstadoCarrito.CREADO, EstadoCarrito.MODIFICADO, EstadoCarrito.PAGADO]
-
-// type EstadoCarrito2 = "creado" | "finalizado"
-// export const CARRITO_ESTADO_CREADO: EstadoCarrito = "creado"
-
 const ENVENTO_CARRITO_CREADO: EstadoCarrito = EstadoCarrito.CREADO
 const ENVENTO_CARRITO_MODIFICADO: EstadoCarrito = EstadoCarrito.MODIFICADO
+const ENVENTO_CARRITO_PAGADO: EstadoCarrito = EstadoCarrito.PAGADO
+const ENVENTO_CARRITO_FINALIZADO: EstadoCarrito = EstadoCarrito.FINALIZADO
 
 export interface ICarrito {
     id: number,
@@ -215,9 +212,6 @@ const postableCarrito: Postable<ICarrito> = (carritoNuevo, carritoOriginal): Par
         withMesa: '1',
         withMozo: '1',
     }
-    console.log({carritoNuevo, carritoOriginal})
-    // data.productosIdAgrega = carritoNuevo.productos?.filter(p1 => p1.id && !carritoOriginal?.productos?.find(p2 => p2.id === p1.id && (p2.pivot?.precio === p1.pivot?.precio && p2.pivot?.costo === p1.pivot?.costo)))?.map(p => p.id as number) || []
-    // data.productosIdQuita = carritoOriginal?.productos?.filter(p1 => p1.id && !carritoNuevo?.productos?.find(p2 => p2.id === p1.id && (p2.pivot?.precio === p1.pivot?.precio && p2.pivot?.costo === p1.pivot?.costo)))?.map(p => p.id as number) || []
     if (carritoNuevo.mesa_id !== carritoOriginal?.mesa_id) {
         data.mesaId = carritoNuevo.mesa_id || null
     }
@@ -339,15 +333,20 @@ export const useCarrito = () => {
     const {
         channelCarrito,
     } = useContext(AuthContext)
-    const handleCarritoChange = useCallback((carrito: ICarrito) => {      // se dio de alta o se modifico un carrito
-        updateCarritoInPagination(carrito)
+    const handleCarritoChange = useCallback((carrito: ICarrito) => {      // se dio de alta o se modifico un carrito, o se finalizo uno
+        console.log(carrito)
+        updateCarritoInPagination(carrito, carrito.finalizado)
     }, [updateCarritoInPagination])
     useEffect(() => {
         channelCarrito?.bind(ENVENTO_CARRITO_CREADO, handleCarritoChange)
         channelCarrito?.bind(ENVENTO_CARRITO_MODIFICADO, handleCarritoChange)
+        channelCarrito?.bind(ENVENTO_CARRITO_PAGADO, handleCarritoChange)
+        channelCarrito?.bind(ENVENTO_CARRITO_FINALIZADO, handleCarritoChange)
         return () => {
             channelCarrito?.unbind(ENVENTO_CARRITO_CREADO, handleCarritoChange)
             channelCarrito?.unbind(ENVENTO_CARRITO_MODIFICADO, handleCarritoChange)
+            channelCarrito?.unbind(ENVENTO_CARRITO_PAGADO, handleCarritoChange)
+            channelCarrito?.unbind(ENVENTO_CARRITO_FINALIZADO, handleCarritoChange)
         }
     }, [channelCarrito, handleCarritoChange])
     return {

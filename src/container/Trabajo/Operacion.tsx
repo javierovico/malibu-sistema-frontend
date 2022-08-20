@@ -1,10 +1,10 @@
 import React, {useCallback, useMemo, useState} from "react";
 import {
     carritoVacio,
-    ESTADO_CARRITO_OCUPADO,
-    EstadoCarrito,
     ICarrito,
-    IMesa, isCarritoFinalizable, isCarritoHasDelivery,
+    IMesa,
+    isCarritoFinalizable,
+    isCarritoHasDelivery,
     useCarrito
 } from "../../modelos/Carrito";
 import {Button, Col, Dropdown, Menu, MenuProps, Modal, Row, Space, Tooltip} from "antd";
@@ -16,6 +16,7 @@ import './Trabajo.css'
 import TablaGenerica, {ConfiguracionColumnaSimple} from "./TablaGenerica";
 import {useTablaOfflineAuxiliar} from "../../modelos/Generico";
 import VisorDeCarrito from "./VisorDeCarrito";
+import {mostrarMensaje} from "../../utils/utils";
 
 enum TipoAsignacion {
     TIPO_CLIENTE,
@@ -47,44 +48,37 @@ export default function Operacion() {
             title: '¿Finalizar Carrito?',
             content: (c.mesa_id ? 'Esto supondrá que el cliente ya abandonó el local (se libera la mesa). ' : '') + 'El carrito va desaparecer de la pantalla de operacion.',
             okText: 'Finalizar',
-            onOk: () => {
-
-            }
+            onOk: () => pedidoUpdate({...c,finalizado: true}, false, true, true)
+                .then(() => mostrarMensaje(`Se guardaron los cambios`))
         })
-    },[])
+    },[pedidoUpdate])
     const mesasDisponibles = useMemo(()=>mesas.filter(m=>!pedidosOriginales.find(p=>p.mesa_id === m.id)),[mesas, pedidosOriginales])
     const [menuAccionPedidoVisible,setMenuAccionPedidoVisible] = useState<number|undefined>(undefined)  // indica de cual pedido (id) estara abierto
     const [carritoIdViendo, setCarritoIdViendo] = useState<{ id?: number, abrirSelectProducto?: boolean, crearNuevo?:boolean }>({})
     const carritoViendo = useMemo(()=>({carrito: carritoIdViendo.crearNuevo ? (carritoVacio) : pedidosOriginales.find(p=>p.id === carritoIdViendo?.id), abrirSelectProducto: carritoIdViendo.abrirSelectProducto}),[carritoIdViendo, pedidosOriginales])
-    const crearMenuAccionPedido = useCallback((c:ICarrito):ItemType[]=>{
-        const menus: ItemType[] = []
-        if (ESTADO_CARRITO_OCUPADO.includes(c.status)) {
-            menus.push({
-                key: 'menuPedidos',
-                type: 'group',
-                label: 'Pedidos:',
-                children:[
-                    {
-                        label: 'Asignar Producto',
-                        key: Acciones.ASIGNAR_PRODUCTO_A_CARRITO,
-                        onClick: ()=> setCarritoIdViendo({id: c.id, abrirSelectProducto: true})
-                    },
-                    {
-                        label: 'Ver Carrito',
-                        key: Acciones.VER_LISTA_PRODUCTOS,
-                        onClick: ()=> setCarritoIdViendo({id:c.id})
-                    },
-                    {
-                        label: 'Finalizar',
-                        key: Acciones.FINALIZAR_PEDIDO,
-                        onClick: () => handleFinalizarCarrito(c),
-                        disabled: !isCarritoFinalizable(c),
-                    }
-                ]
-            })
-        }
-        return menus
-    },[])
+    const crearMenuAccionPedido = useCallback((c:ICarrito):ItemType[]=>[{
+        key: 'menuPedidos',
+        type: 'group',
+        label: 'Pedidos:',
+        children: [
+            {
+                label: 'Asignar Producto',
+                key: Acciones.ASIGNAR_PRODUCTO_A_CARRITO,
+                onClick: () => setCarritoIdViendo({id: c.id, abrirSelectProducto: true})
+            },
+            {
+                label: 'Ver Carrito',
+                key: Acciones.VER_LISTA_PRODUCTOS,
+                onClick: () => setCarritoIdViendo({id: c.id})
+            },
+            {
+                label: 'Finalizar',
+                key: Acciones.FINALIZAR_PEDIDO,
+                onClick: () => handleFinalizarCarrito(c),
+                disabled: !isCarritoFinalizable(c),
+            }
+        ]
+    }],[handleFinalizarCarrito])
     const configuracionColumnasSimplePedidos = useMemo<ConfiguracionColumnaSimple<ICarrito>[]>(()=>[
         {
             key: 'id',
@@ -156,10 +150,9 @@ export default function Operacion() {
         reservarMesa(m)
     },[reservarMesa])
     const crearMenuAccionMesa = useCallback((m:IMesa):ItemType[]=>{
-        // const estado = getStatusFromMesa(m)
-        const estado: EstadoCarrito|undefined = pedidosOriginales.find(p=>p.mesa_id === m.id)?.status
+        const pedidoAsignado: ICarrito|undefined = pedidosOriginales.find(p=>p.mesa_id === m.id)
         const menus: ItemType[] = []
-        if (!estado || !ESTADO_CARRITO_OCUPADO.includes(estado)) {
+        if (!pedidoAsignado) {
             menus.push({
                 key: 'menu1',
                 type: 'group',
@@ -177,8 +170,7 @@ export default function Operacion() {
                     },
                 ]
             })
-        }
-        if (estado && ESTADO_CARRITO_OCUPADO.includes(estado)) {
+        } else {
             menus.push({
                 key: 'menu2',
                 type: 'group',
@@ -261,9 +253,9 @@ export default function Operacion() {
     } = useTablaOfflineAuxiliar(mesas, configuracionColumnasSimple)
     const handleCarritoChange = useCallback((c: ICarrito)=>{
         return new Promise<void>(((resolve, reject) => {
-            pedidoUpdate(c,false,false)
+            pedidoUpdate(c,false,false, c.finalizado)
                 .then((cSubido)=>{
-                    setCarritoIdViendo({id:cSubido?.id})
+                    setCarritoIdViendo(c.finalizado ? {} : {id:cSubido?.id})
                     resolve()
                 })
                 .catch(reject)
@@ -284,8 +276,8 @@ export default function Operacion() {
     return <>
         {errorMesas || <TablaGenerica
             rowClassName={(m) => {
-                const estado: EstadoCarrito|undefined = pedidosOriginales.find(p=>p.mesa_id === m.id)?.status
-                return (!estado || !ESTADO_CARRITO_OCUPADO.includes(estado)) ? '' :  'table-row-dark'
+                const carritoAsignado: ICarrito|undefined = pedidosOriginales.find(p=>p.mesa_id === m.id)
+                return (!carritoAsignado) ? '' :  'table-row-dark'
             }}
             loading={isMesasLoading || isPedidosLoading}
             title='Estado de mesas'

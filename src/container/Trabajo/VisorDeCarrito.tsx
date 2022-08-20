@@ -3,7 +3,6 @@ import {
     getDeliveryFromCarrito,
     ICarrito,
     IMesa, isCarritoFinalizable,
-    isCarritoHasDelivery,
     productoCarritoCompare,
     productoCarritoPivotFromProducto
 } from "../../modelos/Carrito";
@@ -155,7 +154,7 @@ export default function VisorDeCarrito(arg: Argumentos) {
                                 onBlur={() => setFieldTouched('deliverySeleccionado')}
                             />}
                             <AntdSelectV2
-                                disabled={values.is_delivery}
+                                disabled={values.is_delivery || initialValues.finalizado}
                                 selectOptions={[{
                                     key: 0,
                                     value: '[Sin Mesa]'
@@ -177,7 +176,7 @@ export default function VisorDeCarrito(arg: Argumentos) {
                                 onBlur={() => setFieldTouched('mesa_id')}
                             />
                             <SwitchV2
-                                disabled={initialValues.pagado}
+                                disabled={initialValues.pagado || !(values.productos?.length ?? 0)}
                                 checked={values.pagado}
                                 label='Pagado'
                                 onChange={(d: boolean) => {
