@@ -1,5 +1,5 @@
 import {
-    addDeliveryToProductos,
+    addDeliveryToProductos, calcularCostoCarrito, calcularPrecioCarrito,
     getDeliveryFromCarrito,
     ICarrito,
     IMesa, isCarritoFinalizable,
@@ -75,8 +75,8 @@ export default function VisorDeCarrito(arg: Argumentos) {
             modalSelectCliente: false,
             modalSelectMesa: false
         })
-        const precio: number = values.productos?.reduce<number>((prev, curr) => prev + (curr.pivot?.cantidad ?? 1) * (curr?.pivot?.precio ?? curr.precio), 0) ?? 0
-        const costo: number = values.productos?.reduce<number>((prev, curr) => prev + (curr.pivot?.cantidad ?? 1) * (curr?.pivot?.costo ?? curr.costo), 0) ?? 0
+        const precio: number = calcularPrecioCarrito(values)
+        const costo: number = calcularCostoCarrito(values)
         const anadirProductosHandle = initialValues.pagado ? undefined : (() => setValues(v => ({
             ...v,
             modalSelectProducto: true

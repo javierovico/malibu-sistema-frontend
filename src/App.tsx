@@ -13,6 +13,7 @@ import {AuthContext} from "./context/AuthProvider";
 import {ItemType} from "antd/lib/menu/hooks/useItems";
 import {comprobarRol} from "./modelos/Usuario";
 import ListaProductoDemo from "./container/Administracion/ListaProductoDemo";
+import {useWindowSize} from "./utils/windowsSize";
 
 const {Header, Content, Footer} = Layout;
 
@@ -77,6 +78,7 @@ function App() {
         </a>),
         key: 'cerrar-sesion'
     }]),[logOut])
+    const size = useWindowSize();
     return (
         <Layout className="layout">
             <Header>
@@ -100,7 +102,7 @@ function App() {
                     </Col>
                 </Row>
             </Header>
-            <Content style={{padding: '0 50px'}}>
+            <Content style={{padding: (size.width && size.width < 600) ? '0 0px' : '0 50px'}}>
                 <Breadcrumb style={{margin: '16px 0'}}>
                     <Breadcrumb.Item>Inicio</Breadcrumb.Item>
                     {

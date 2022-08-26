@@ -428,3 +428,43 @@ export function addDeliveryToProductos(carrito: ICarrito, del?:IProducto): IProd
     }
     return nuevos;
 }
+
+export function calcularPrecioCarrito(values: ICarrito): number {
+    return values.productos?.reduce<number>((prev, curr) => prev + (curr.pivot?.cantidad ?? 1) * (curr?.pivot?.precio ?? curr.precio), 0) ?? 0
+}
+
+export function calcularCostoCarrito(values: ICarrito): number {
+    return values.productos?.reduce<number>((prev, curr) => prev + (curr.pivot?.cantidad ?? 1) * (curr?.pivot?.costo ?? curr.costo), 0) ?? 0
+}
+
+export enum EstadoStr {
+    ESTADO_FINALIZADO = 'Finalizado',
+    ESTADO_PENDIENTE_COCINA = 'En cocina',
+    ESTADO_PAGADO = 'Pagado',
+    ESTADO_PENDIENTE_PAGO = 'Pendiente de pago',
+    ESTADO_MODIFICADO = 'Modificado',
+    ESTADO_CREADO = 'Creado',
+}
+
+export function getEstadoStrFromPedido(pedido: ICarrito): EstadoStr {
+    if (pedido.finalizado) {
+        return EstadoStr.ESTADO_FINALIZADO
+    } else if(getCarritoPedidoPendiente(pedido)) {
+        return EstadoStr.ESTADO_PENDIENTE_COCINA
+    } else if(pedido.pagado) {
+        return EstadoStr.ESTADO_PAGADO
+    } else if(pedido.productos?.length) {
+        return EstadoStr.ESTADO_PENDIENTE_PAGO
+    } else {
+        return EstadoStr.ESTADO_CREADO
+    }
+}
+
+/**
+ * Determina si el carrito tiene pedidos pendientes de finalizacion
+ * @param pedido
+ * retorna true si tiene productos y si algunos de los productos tiene pivot.estado distinto de finalizado
+ */
+export function getCarritoPedidoPendiente(pedido: ICarrito): boolean {
+    return !!pedido.productos?.length && pedido.productos.some(prod => prod.pivot?.estado !== CarritoProductoEstado.CARRITO_PRODUCTO_ESTADO_FINALIZADO)
+}

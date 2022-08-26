@@ -1,0 +1,11 @@
+.col-card {
+    display: flex;
+}
+.flexible-card {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+.flexible-card .ant-card-body {
+    flex-grow: 1
+}

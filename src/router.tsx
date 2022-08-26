@@ -30,10 +30,23 @@ export const routes: TipoRuta[] = [
     {
         nombre: 'Operacion',
         link: '/operacion',
-        import2: () => import('./container/Trabajo/Operacion'),
-        import: 'container/Trabajo/Trabajo',
         protected: true,
-        rolRequerido: ROL_OPERADOR
+        hijos: [
+            {
+                nombre: 'Operacion Lista',
+                link: '/lista',
+                import2: () => import('./container/Trabajo/Operacion'),
+                protected: true,
+                rolRequerido: ROL_OPERADOR,
+            },
+            {
+                nombre: 'Operacion Caja',
+                link: '/caja',
+                import2: () => import('./container/Trabajo/OperacionCaja'),
+                protected: true,
+                rolRequerido: ROL_OPERADOR,
+            },
+        ]
     },
     {
         nombre: 'Cocina',
@@ -121,7 +134,7 @@ const Rutas = () => {
     const rutasUsadas = useMemo<RouteObject[]>(() => {
         const rutasDesplegadas: RouteObject[] = []
         const funcionHijas = (basePath: string, r: TipoRuta) => {
-            if (r.import) {
+            if (r.import || r.import2) {
                 /** Redirecciona a Login si es una ruta protegida y si no esta logueado, si esta logueado y si esta activa la redireccion, redirecciona tambien*/
                 const sinPermiso: boolean = !!(r.rolRequerido && (!user || !comprobarRol(user,r.rolRequerido)))
                 const protegido = r.protected && !loggedIn
