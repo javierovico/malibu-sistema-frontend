@@ -77,15 +77,15 @@ type AlgunosPar<Values> = {
     [K in keyof Values]?: Values[K];
 };
 
-export function useParametros<T>(itemsList: ParamsQuerys<T>): { paramsURL: T, setParamsToURL: {(arg: AlgunosPar<T>):void} } {
+export function useParametros<T>(itemsList: ParamsQuerys<T>): { paramsURL: T, setParamsToURL: {(arg: AlgunosPar<T>, reemplazar?:boolean):void} } {
     const [searchParams, setSearchParams] = useSearchParams();
     const value = getCurrentFromSearch<T>(searchParams, itemsList)
     const [paramsURL, dispatchParamsUrl] = useReducer<Reducer<T,ReducerArg<T>>>(reducerUrl,value)
     useEffect(()=>{
         dispatchParamsUrl({searchParams, itemsList})
     },[itemsList, searchParams])
-    const setParamsToURL = useCallback<{ (arg: AlgunosPar<T>): void }>((arg)=>{
-        setSearchParams(setSearchFromCurrent<T>({...paramsURL, ...arg}, itemsList))
+    const setParamsToURL = useCallback<{ (arg: AlgunosPar<T>, reemplazar?:boolean): void }>((arg, reemplazar)=>{
+        setSearchParams(setSearchFromCurrent<T>({...paramsURL, ...arg}, itemsList),{replace: reemplazar})
     },[itemsList, paramsURL, setSearchParams])
     return {
         paramsURL,
