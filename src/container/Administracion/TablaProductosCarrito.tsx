@@ -3,7 +3,7 @@ import React, {useCallback, useMemo} from "react";
 import {
     CARRITO_PRODUCTO_SUCESION_ESTADOS,
     CarritoProductoEstado,
-    IProducto, productoQuitable
+    IProducto, productoAvanzable, productoQuitable
 } from "../../modelos/Producto";
 import {ordenamientoSimple, useTablaOfflineAuxiliar} from "../../modelos/Generico";
 import {Button, Col, InputNumber, Modal, Row, Space, Tooltip} from "antd";
@@ -93,7 +93,7 @@ export default function TablaProductosCarrito(arg: ArgsProps) {
                             <IconText icon={DeleteOutlined} text=""/>
                         </Button>
                     </Tooltip>}
-                {avanzarProductoHandle && (!p.pivot?.estado || CarritoProductoEstado.CARRITO_PRODUCTO_ESTADO_FINALIZADO !== p.pivot.estado) &&
+                {avanzarProductoHandle && productoAvanzable(p) &&
                     <Tooltip title="Avanzar estado">
                         <Button
                             type="link"

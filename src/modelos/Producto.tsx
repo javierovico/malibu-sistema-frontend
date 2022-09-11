@@ -1,6 +1,7 @@
 import {ItemSorteado, Postable, useGenericModel} from "./Generico";
 import {IArchivo} from "./Archivo";
 import {TipoBusqueda} from "./Cliente";
+import {ICarrito} from "./Carrito";
 
 export const URL_GET_PRODUCTOS = 'producto'
 
@@ -143,6 +144,26 @@ interface ParametrosAPI {
  */
 export function productoQuitable(p: IProducto): boolean {
     return (!(p.pivot?.estado) || CARRITO_PRODUCTO_ESTADOS_CANCELABLES.includes(p.pivot?.estado) || !p.pivot.id)
+}
+
+export function productoAvanzable(p:IProducto): boolean {
+    return (!p.pivot?.estado || CarritoProductoEstado.CARRITO_PRODUCTO_ESTADO_FINALIZADO !== p.pivot.estado)
+}
+
+export function avanzarProducto(pM:IProducto, carrito: ICarrito): IProducto {
+    const indexAvance: number = CARRITO_PRODUCTO_SUCESION_ESTADOS.findIndex(se => se === pM.pivot?.estado) + 1
+    const nuevoPivot: PivotCarritoProducto = {
+        ...(pM.pivot ? pM.pivot : {
+            producto_id: pM.id ?? 0,
+            carrito_id: carrito.id,
+            costo: pM.costo,
+            precio: pM.precio,
+            cantidad: 1,
+            created_at: '',
+            updated_at: '',
+        }), estado: CARRITO_PRODUCTO_SUCESION_ESTADOS[indexAvance]
+    }
+    return {...pM, pivot: nuevoPivot}
 }
 
 export const useProductos = (page: number, perPage: number, sortBy?: ItemSorteado<string>[], itemsBusqueda?: Partial<QueryGetProductos>) => {

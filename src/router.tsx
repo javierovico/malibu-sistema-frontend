@@ -6,7 +6,7 @@ import {
     LOGIN_PAGE, PRODUCTO_ADMINISTRAR_PRODUCTO, ROL_ADMIN_PRODUCTOS, ROL_COCINERO, ROL_OPERADOR, SUBORDINADOS_PAGE,
 } from './settings/constant';
 import loadable from '@loadable/component'
-import {comprobarRol} from "./modelos/Usuario";
+import {comprobarRol, RolesDisponibles} from "./modelos/Usuario";
 
 export interface TipoRuta {
     nombre: string,
@@ -17,7 +17,7 @@ export interface TipoRuta {
     protected: boolean,
     ocultarOpcion?: boolean, // le decimos si queremos que esta ruta este oculta del menu
     redirectOnLoggedIn?: string,    //le decimos a donde redirigir si el usuario esta logueado
-    rolRequerido?: string
+    rolRequerido?: RolesDisponibles
 }
 
 export const routes: TipoRuta[] = [

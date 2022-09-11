@@ -1,18 +1,34 @@
-import {Card, Col, Modal, Row, Statistic, Tooltip} from "antd";
-import {calcularPrecioCarrito, getEstadoStrFromPedido, ICarrito, useCarrito} from "../../modelos/Carrito";
-import {useCallback, useEffect, useMemo, useState} from "react";
+import {Card, Col, Modal, notification, Row, Statistic, Tooltip} from "antd";
+import {calcularPrecioCarrito, getEstadoStrFromPedido, productoCarritoCompare, useCarrito} from "../../modelos/Carrito";
+import {useCallback, useContext, useEffect, useMemo, useState} from "react";
 import {formateadorNumero} from "../../utils/utils";
-import {EditOutlined, EllipsisOutlined, PlusOutlined, SettingOutlined, UnorderedListOutlined} from '@ant-design/icons';
+import {
+    EditOutlined,
+    EllipsisOutlined,
+    ExclamationCircleOutlined,
+    SettingOutlined,
+    UnorderedListOutlined
+} from '@ant-design/icons';
 import './OperacionCaja.css'
 import ModalVisorProductosCaja from "./ModalVisorProductosCaja";
-import {createItemNumber, createItemNumberOrNull, ParamsQuerys, useParametros} from "../../hook/hookQuery";
+import {createItemNumberOrNull, ParamsQuerys, useParametros} from "../../hook/hookQuery";
 import {useNavigate} from "react-router-dom";
+import {
+    avanzarProducto,
+    CARRITO_PRODUCTO_SUCESION_ESTADOS,
+    IProducto,
+    productoAvanzable,
+    productoQuitable
+} from "../../modelos/Producto";
+import {AuthContext} from "../../context/AuthProvider";
+import {comprobarRol, RolesDisponibles} from "../../modelos/Usuario";
 
 interface ParametrosOperacionCaja {
     productosCarritoShowing: number|null,
 }
 
 export default function OperacionCaja() {
+    const {user} = useContext(AuthContext)
     const {
         mesas,
         errorMesas,
@@ -23,7 +39,7 @@ export default function OperacionCaja() {
         pedidos: pedidosOriginales,
         deliveris
     } = useCarrito()
-    let navigate = useNavigate();
+    // let navigate = useNavigate();
     const itemList = useMemo((): ParamsQuerys<ParametrosOperacionCaja> =>({
         productosCarritoShowing: createItemNumberOrNull(0)
     }),[])
@@ -56,6 +72,86 @@ export default function OperacionCaja() {
         }, 1000)
         return () => clearInterval(interval)
     }, [])
+    const quitarProductoHandle = useCallback((p: IProducto) => {
+        if (visorProductoCarritoShowing) {
+            if (!productoQuitable(p)) {
+                notification['error']({
+                    message: 'No se puede quitar',
+                    description: "Producto `" + p.nombre + "` no se puede quitar porque ya está en estado `" + p.pivot?.estado + "`"
+                })
+            } else if (!user || !comprobarRol(user, RolesDisponibles.ROL_OPERADOR)) {
+                notification['error']({
+                    message: 'No se puede quitar',
+                    description: "El usuario no tiene permisos de " + RolesDisponibles.ROL_OPERADOR
+                })
+            } else {
+                Modal.confirm({
+                    title: '¿Quitar producto ' + p.nombre + '?',
+                    icon: <ExclamationCircleOutlined />,
+                    content: '',
+                    okText: 'Si',
+                    okType: 'danger',
+                    cancelText: 'No',
+                    onOk() {
+                        const nuevoPedido = {...visorProductoCarritoShowing, productos: [...(visorProductoCarritoShowing.productos??[]).filter(productoOriginal => !productoCarritoCompare(productoOriginal,p))]}
+                        pedidoUpdate(nuevoPedido)
+                            .then(()=>{
+                                notification['success']({
+                                    message: 'Quitado',
+                                    description: "Se quito el producto " + p.nombre
+                                })
+                            }).catch(e=>{
+                            notification['error']({
+                                message: 'Error',
+                                description: e.message
+                            })
+                        })
+                    },
+                });
+            }
+        }
+    },[pedidoUpdate, user, visorProductoCarritoShowing])
+    const avanzarProductoHandle = useCallback((p:IProducto) => {
+        if (visorProductoCarritoShowing) {
+            console.log('si')
+            if (!productoAvanzable(p)) {
+                notification['error']({
+                    message: 'No se puede avanzar',
+                    description: "Producto `" + p.nombre + "` ya esta en estado final `" + p.pivot?.estado + "`"
+                })
+            } else if (!user || !comprobarRol(user, RolesDisponibles.ROL_COCINERO)) {
+                notification['error']({
+                    message: 'No se puede avanzar',
+                    description: "El usuario no tiene permisos de " + RolesDisponibles.ROL_COCINERO
+                })
+            } else {
+                const estadoAvance: number = CARRITO_PRODUCTO_SUCESION_ESTADOS.findIndex(se => se === p.pivot?.estado) + 1
+                Modal.confirm({
+                    title: '¿Avanzar producto ' + p.nombre + ' a ' + CARRITO_PRODUCTO_SUCESION_ESTADOS[estadoAvance] + '?',
+                    icon: <ExclamationCircleOutlined />,
+                    content: '',
+                    okText: 'Si',
+                    okType: 'danger',
+                    cancelText: 'No',
+                    onOk() {
+                        const nuevoPedido = {...visorProductoCarritoShowing, productos: [...(visorProductoCarritoShowing.productos??[]).map(productoOriginal => productoCarritoCompare(productoOriginal,p) ? avanzarProducto(p, visorProductoCarritoShowing) : productoOriginal)]}
+                        pedidoUpdate(nuevoPedido)
+                            .then(()=>{
+                                notification['success']({
+                                    message: 'Quitado',
+                                    description: "Se avanzó el producto " + p.nombre
+                                })
+                            }).catch(e=>{
+                            notification['error']({
+                                message: 'Error',
+                                description: e.message
+                            })
+                        })
+                    },
+                });
+            }
+        }
+    },[])
     return <>
         <Statistic title="Transcurrido" value={calcTiempoTranscurrido(tiempoTranscurrido*1000)}/>
         <Row gutter={[10, 10]}>
@@ -80,6 +176,8 @@ export default function OperacionCaja() {
         <ModalVisorProductosCaja
             carrito={visorProductoCarritoShowing}
             onCancel={()=>setModalProductosShowing(undefined)}
+            quitarProductoHandle={quitarProductoHandle}
+            avanzarProductoHandle={avanzarProductoHandle}
         />
     </>
 }

@@ -23,6 +23,7 @@ import {
     SwitchV2
 } from "../../components/UI/Antd/AntdInputWithFormikTypescript";
 import {
+    avanzarProducto,
     CARRITO_PRODUCTO_SUCESION_ESTADOS,
     IProducto,
     PivotCarritoProducto,
@@ -86,25 +87,7 @@ export default function VisorDeCarrito(arg: Argumentos) {
             productos: v.productos?.filter(pF => !productoCarritoCompare(pF,p))
         })))
         const avanzarProductoHandle = (p: IProducto) => setValues(v => ({
-            ...v, productos: v.productos?.map(pM => {
-                if (productoCarritoCompare(pM,p)) {
-                    const indexAvance: number = CARRITO_PRODUCTO_SUCESION_ESTADOS.findIndex(se => se === pM.pivot?.estado) + 1
-                    const nuevoPivot: PivotCarritoProducto = {
-                        ...(pM.pivot ? pM.pivot : {
-                            producto_id: pM.id ?? 0,
-                            carrito_id: v.id,
-                            costo: pM.costo,
-                            precio: pM.precio,
-                            cantidad: 1,
-                            created_at: '',
-                            updated_at: '',
-                        }), estado: CARRITO_PRODUCTO_SUCESION_ESTADOS[indexAvance]
-                    }
-                    return {...pM, pivot: nuevoPivot}
-                } else {
-                    return pM
-                }
-            })
+            ...v, productos: v.productos?.map(productoOriginal => productoCarritoCompare(productoOriginal,p) ? avanzarProducto(p, v) : productoOriginal)
         }))
         const handleChangeCliente = initialValues.pagado ? undefined : (()=>setValues({...values, modalSelectCliente: true}))
         const cambiarCantidadHandle = (!initialValues.pagado) ? ((productoModificar: IProducto, nuevaCantidad: number) => setValues(v => ({

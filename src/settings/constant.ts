@@ -1,5 +1,7 @@
 // **************** ROUTE CONSTANT START **************************
 // General Page Section
+import {RolesDisponibles} from "../modelos/Usuario";
+
 export const HOME_PAGE = '/';
 export const SUBORDINADOS_PAGE = '/subordinados';
 export const AGENTS_PAGE = '/agents';
@@ -19,7 +21,7 @@ export const ERROR_CODE_NO_VALIDO = 'tkn_inv';
 
 //Permisos disponibles
 
-export const ROL_ADMIN_PRODUCTOS = 'admin_productos'
-export const ROL_VISOR_INGRESOS = 'visor_ingresos'
-export const ROL_OPERADOR = 'operador'
-export const ROL_COCINERO = 'cocinero'
+export const ROL_ADMIN_PRODUCTOS = RolesDisponibles.ROL_ADMIN_PRODUCTO
+export const ROL_VISOR_INGRESOS = RolesDisponibles.ROL_VISOR_INGRESOS
+export const ROL_OPERADOR = RolesDisponibles.ROL_OPERADOR
+export const ROL_COCINERO = RolesDisponibles.ROL_COCINERO
