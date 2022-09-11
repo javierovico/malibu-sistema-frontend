@@ -24,6 +24,7 @@ import {
 } from "../../modelos/Producto";
 import {AuthContext} from "../../context/AuthProvider";
 import {comprobarRol, RolesDisponibles} from "../../modelos/Usuario";
+import ModalAddProductoToCarrito from "./ModalAddProductoToCarrito";
 
 enum Acciones {
     NO_ACCION,
@@ -71,6 +72,10 @@ export default function OperacionCaja() {
     const setModalProductoAdd = useCallback((id: number|undefined)=>setParamsToURL({
         carritoOperacionId: id ?? 0,
         carritoOperacionAccion: id ? Acciones.AGREGAR_PRODUCTO : Acciones.NO_ACCION
+    }),[setParamsToURL])
+    const cerrarAccion = useCallback(() => setParamsToURL({
+        carritoOperacionId: 0,
+        carritoOperacionAccion: Acciones.NO_ACCION
     }),[setParamsToURL])
     const calcTiempoTranscurrido = useCallback((millis: number) => {
         const segundos = ('0' + Math.round((millis / 1000) % 60)).slice(-2)
@@ -188,9 +193,13 @@ export default function OperacionCaja() {
         </Row>
         <ModalVisorProductosCaja
             carrito={carritoOperacionAccion === Acciones.MOSTRAR_PRODUCTOS ? carritoActivo : undefined}
-            onCancel={()=>setModalProductosShowing(undefined)}
+            onCancel={cerrarAccion}
             quitarProductoHandle={quitarProductoHandle}
             avanzarProductoHandle={avanzarProductoHandle}
+        />
+        <ModalAddProductoToCarrito
+            carrito={carritoOperacionAccion === Acciones.AGREGAR_PRODUCTO ? carritoActivo : undefined}
+            onCancel={cerrarAccion}
         />
     </>
 }
