@@ -24,9 +24,7 @@ import {
 } from "../../components/UI/Antd/AntdInputWithFormikTypescript";
 import {
     avanzarProducto,
-    CARRITO_PRODUCTO_SUCESION_ESTADOS,
     IProducto,
-    PivotCarritoProducto,
     productoQuitable, TIPOS_PRODUCTOS_SELECCIONABLES
 } from "../../modelos/Producto";
 import TablaProductosCarrito from "../Administracion/TablaProductosCarrito";

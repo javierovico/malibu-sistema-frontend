@@ -3,16 +3,18 @@ import {calcularPrecioCarrito, getEstadoStrFromPedido, productoCarritoCompare, u
 import {useCallback, useContext, useEffect, useMemo, useState} from "react";
 import {formateadorNumero} from "../../utils/utils";
 import {
-    EditOutlined,
     EllipsisOutlined,
-    ExclamationCircleOutlined,
+    ExclamationCircleOutlined, PlusOutlined,
     SettingOutlined,
     UnorderedListOutlined
 } from '@ant-design/icons';
 import './OperacionCaja.css'
 import ModalVisorProductosCaja from "./ModalVisorProductosCaja";
-import {createItemNumberOrNull, ParamsQuerys, useParametros} from "../../hook/hookQuery";
-import {useNavigate} from "react-router-dom";
+import {
+    createItemNumber,
+    ParamsQuerys,
+    useParametros
+} from "../../hook/hookQuery";
 import {
     avanzarProducto,
     CARRITO_PRODUCTO_SUCESION_ESTADOS,
@@ -23,42 +25,53 @@ import {
 import {AuthContext} from "../../context/AuthProvider";
 import {comprobarRol, RolesDisponibles} from "../../modelos/Usuario";
 
+enum Acciones {
+    NO_ACCION,
+    MOSTRAR_PRODUCTOS,
+    AGREGAR_PRODUCTO,
+}
+
 interface ParametrosOperacionCaja {
-    productosCarritoShowing: number|null,
+    carritoOperacionId: number,
+    carritoOperacionAccion: Acciones,
 }
 
 export default function OperacionCaja() {
     const {user} = useContext(AuthContext)
     const {
-        mesas,
-        errorMesas,
-        isMesasLoading,
-        reservarMesa,
-        isPedidosLoading,
+        // mesas,
+        // errorMesas,
+        // isMesasLoading,
+        // reservarMesa,
+        // isPedidosLoading,
         pedidoUpdate,
         pedidos: pedidosOriginales,
-        deliveris
+        // deliveris,
     } = useCarrito()
     // let navigate = useNavigate();
     const itemList = useMemo((): ParamsQuerys<ParametrosOperacionCaja> =>({
-        productosCarritoShowing: createItemNumberOrNull(0)
+        carritoOperacionId: createItemNumber(0),
+        carritoOperacionAccion: {
+            defaultValue: Acciones.NO_ACCION,
+            queryToValue: a =>  isNaN(parseInt(a)) ? Acciones.NO_ACCION : parseInt(a),
+            valueToQuery: a => '' + a
+        }
     }),[])
     const {
         paramsURL,
         setParamsToURL
     } = useParametros<ParametrosOperacionCaja>(itemList)
+    const {carritoOperacionId, carritoOperacionAccion} = paramsURL
+    const carritoActivo = useMemo(()=> pedidosOriginales.find(p => p.id === carritoOperacionId), [carritoOperacionId, pedidosOriginales])
     const pedidos = useMemo(() => pedidosOriginales, [pedidosOriginales])      //Filtro de pedidos
-    // const [modalProductosShowing, setModalProductosShowing] = useState<number|undefined>(4)
-    const modalProductosShowing = useMemo(()=>paramsURL.productosCarritoShowing,[paramsURL.productosCarritoShowing])
-    const setModalProductosShowing = useCallback((id: number|undefined)=>{
-        setParamsToURL({productosCarritoShowing: id ?? null})
-        // if (id) {
-        //     setParamsToURL({productosCarritoShowing: id})
-        // } else {
-        //     navigate(-1)
-        // }
-    },[setParamsToURL])
-    const visorProductoCarritoShowing = useMemo(()=> modalProductosShowing ? pedidosOriginales.find(p => p.id === modalProductosShowing) : undefined, [modalProductosShowing, pedidosOriginales])
+    const setModalProductosShowing = useCallback((id: number|undefined)=>setParamsToURL({
+        carritoOperacionId: id ?? 0,
+        carritoOperacionAccion: id ? Acciones.MOSTRAR_PRODUCTOS : Acciones.NO_ACCION,
+    }),[setParamsToURL])
+    const setModalProductoAdd = useCallback((id: number|undefined)=>setParamsToURL({
+        carritoOperacionId: id ?? 0,
+        carritoOperacionAccion: id ? Acciones.AGREGAR_PRODUCTO : Acciones.NO_ACCION
+    }),[setParamsToURL])
     const calcTiempoTranscurrido = useCallback((millis: number) => {
         const segundos = ('0' + Math.round((millis / 1000) % 60)).slice(-2)
         const minutos = ('0' + Math.round((millis / 1000 / 60) % 60)).slice(-2)
@@ -73,7 +86,7 @@ export default function OperacionCaja() {
         return () => clearInterval(interval)
     }, [])
     const quitarProductoHandle = useCallback((p: IProducto) => {
-        if (visorProductoCarritoShowing) {
+        if (carritoActivo) {
             if (!productoQuitable(p)) {
                 notification['error']({
                     message: 'No se puede quitar',
@@ -93,7 +106,7 @@ export default function OperacionCaja() {
                     okType: 'danger',
                     cancelText: 'No',
                     onOk() {
-                        const nuevoPedido = {...visorProductoCarritoShowing, productos: [...(visorProductoCarritoShowing.productos??[]).filter(productoOriginal => !productoCarritoCompare(productoOriginal,p))]}
+                        const nuevoPedido = {...carritoActivo, productos: [...(carritoActivo.productos??[]).filter(productoOriginal => !productoCarritoCompare(productoOriginal,p))]}
                         pedidoUpdate(nuevoPedido)
                             .then(()=>{
                                 notification['success']({
@@ -110,9 +123,9 @@ export default function OperacionCaja() {
                 });
             }
         }
-    },[pedidoUpdate, user, visorProductoCarritoShowing])
+    },[pedidoUpdate, user, carritoActivo])
     const avanzarProductoHandle = useCallback((p:IProducto) => {
-        if (visorProductoCarritoShowing) {
+        if (carritoActivo) {
             console.log('si')
             if (!productoAvanzable(p)) {
                 notification['error']({
@@ -134,7 +147,7 @@ export default function OperacionCaja() {
                     okType: 'danger',
                     cancelText: 'No',
                     onOk() {
-                        const nuevoPedido = {...visorProductoCarritoShowing, productos: [...(visorProductoCarritoShowing.productos??[]).map(productoOriginal => productoCarritoCompare(productoOriginal,p) ? avanzarProducto(p, visorProductoCarritoShowing) : productoOriginal)]}
+                        const nuevoPedido = {...carritoActivo, productos: [...(carritoActivo.productos??[]).map(productoOriginal => productoCarritoCompare(productoOriginal,p) ? avanzarProducto(p, carritoActivo) : productoOriginal)]}
                         pedidoUpdate(nuevoPedido)
                             .then(()=>{
                                 notification['success']({
@@ -151,7 +164,7 @@ export default function OperacionCaja() {
                 });
             }
         }
-    },[])
+    },[pedidoUpdate, user, carritoActivo])
     return <>
         <Statistic title="Transcurrido" value={calcTiempoTranscurrido(tiempoTranscurrido*1000)}/>
         <Row gutter={[10, 10]}>
@@ -159,9 +172,9 @@ export default function OperacionCaja() {
                 <Card
                     className='flexible-card'
                     actions={[
-                        <Tooltip title={'Ver Productos'} key={'agregar'}><UnorderedListOutlined onClick={()=>setModalProductosShowing(p.id)}/></Tooltip>,
+                        <Tooltip title={'Ver Productos'} key='verProductos'><UnorderedListOutlined onClick={()=>setModalProductosShowing(p.id)}/></Tooltip>,
+                        <Tooltip title={'Agregar producto'} key='agregarProducto'><PlusOutlined onClick={()=>setModalProductoAdd(p.id)}/></Tooltip>,
                         <SettingOutlined key="setting"/>,
-                        <EditOutlined key="edit"/>,
                         <EllipsisOutlined key="ellipsis"/>,
                     ]}
                 >
@@ -174,7 +187,7 @@ export default function OperacionCaja() {
             </Col>))}
         </Row>
         <ModalVisorProductosCaja
-            carrito={visorProductoCarritoShowing}
+            carrito={carritoOperacionAccion === Acciones.MOSTRAR_PRODUCTOS ? carritoActivo : undefined}
             onCancel={()=>setModalProductosShowing(undefined)}
             quitarProductoHandle={quitarProductoHandle}
             avanzarProductoHandle={avanzarProductoHandle}

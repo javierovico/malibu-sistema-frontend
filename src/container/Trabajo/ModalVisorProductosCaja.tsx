@@ -1,8 +1,8 @@
 import {ICarrito, precioCarritoProducto} from "../../modelos/Carrito";
 import {Card, Col, Modal, Row, Tooltip, Typography} from "antd";
-import {DeleteOutlined, EditOutlined, EllipsisOutlined, FastForwardOutlined, SettingOutlined} from "@ant-design/icons";
+import {DeleteOutlined, EllipsisOutlined, FastForwardOutlined} from "@ant-design/icons";
 import {useMemo} from "react";
-import {CarritoProductoEstado, IProducto, productoQuitable} from "../../modelos/Producto";
+import {CarritoProductoEstado, IProducto} from "../../modelos/Producto";
 import {BaseType} from "antd/lib/typography/Base";
 import {formateadorNumero} from "../../utils/utils";
 import * as React from "react";
@@ -67,7 +67,7 @@ export default function ModalVisorProductosCaja({carrito, onCancel, quitarProduc
                 })}
             </Row>
         }
-    }, [carrito, quitarProductoHandle])
+    }, [avanzarProductoHandle, carrito, quitarProductoHandle])
     return <>
         <Modal  //Modal para mostrar los productos actuales
             title="Productos del carrito"

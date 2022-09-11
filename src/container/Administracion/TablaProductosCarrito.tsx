@@ -2,7 +2,6 @@ import TablaGenerica, {ConfiguracionColumnaSimple} from "../Trabajo/TablaGeneric
 import React, {useCallback, useMemo} from "react";
 import {
     CARRITO_PRODUCTO_SUCESION_ESTADOS,
-    CarritoProductoEstado,
     IProducto, productoAvanzable, productoQuitable
 } from "../../modelos/Producto";
 import {ordenamientoSimple, useTablaOfflineAuxiliar} from "../../modelos/Generico";
