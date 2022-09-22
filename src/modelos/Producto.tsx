@@ -44,6 +44,8 @@ export const PRODUCTO_TIPOS_ADMITIDOS: ITipoProducto[] = [
         descripcion: 'Costo Delivery'
     }
 ]
+//Hasta ahora todos los productos consumibles son los que no son delivery
+export const PRODUCTO_TIPOS_CONSUMIBLES: ITipoProducto[] = PRODUCTO_TIPOS_ADMITIDOS.filter(t=>t.code!== EnumTipoProducto.TIPO_DELIVERY)
 
 // export const CARRITO_PRODUCTO_ESTADO_INICIADO = 'iniciado'
 // export const CARRITO_PRODUCTO_ESTADO_PREPARACION = 'preparacion'

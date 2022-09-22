@@ -7,6 +7,8 @@ import {BaseType} from "antd/lib/typography/Base";
 import {formateadorNumero} from "../../utils/utils";
 import * as React from "react";
 
+import iconoComida from '../../img/2819383.png'
+
 const {Text} = Typography
 
 interface Argumentos {
@@ -42,14 +44,14 @@ export default function ModalVisorProductosCaja({carrito, onCancel, quitarProduc
                         <Tooltip title='Avanzar estado' key='next'><FastForwardOutlined onClick={()=>avanzarProductoHandle(p)}/></Tooltip>,
                         <EllipsisOutlined key="ellipsis"/>,
                     ]
-                    return <Col className='col-card' key={p.id} xs={24} sm={12} md={8} lg={6} xl={6}>
+                    return <Col className='col-card' key={p.pivot?.id??p.id} xs={24} sm={12} md={8} lg={6} xl={6}>
                         <Card
                             className='flexible-card'
                             actions={acciones}
                             cover={
                                 <img
                                     alt={p.nombre}
-                                    src={p.imagen?.url ?? 'https://gw.alipayobjects.com/zos/rmsportal/JiqGstEfoWAOHiTxclqi.png'}
+                                    src={p.imagen?.url ?? iconoComida}
                                 />
                             }
                         >

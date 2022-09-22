@@ -1,11 +1,19 @@
-.col-card {
+.col-card, .list-flexible .ant-row > div {
     display: flex;
 }
-.flexible-card {
+.flexible-card, .ant-row > div > .ant-col {
     display: flex;
     flex-direction: column;
     width: 100%;
 }
 .flexible-card .ant-card-body {
     flex-grow: 1
+}
+.height-100 { /*Nuevo agregado*/
+    height: 100%;
+}
+
+/*Para espacio entre paginacion y lista*/
+.paginacion-espaciada {
+    margin-bottom: 24px;
 }
