@@ -1,4 +1,4 @@
-import {Card, Col, Modal, notification, Row, Statistic, Tooltip} from "antd";
+import {Button, Card, Col, Modal, notification, Row, Statistic, Tooltip} from "antd";
 import {
     calcularPrecioCarrito,
     getEstadoStrFromPedido,
@@ -31,11 +31,14 @@ import {
 import {AuthContext} from "../../context/AuthProvider";
 import {comprobarRol, RolesDisponibles} from "../../modelos/Usuario";
 import ModalAddProductoToCarrito from "./ModalAddProductoToCarrito";
+import ModalVisorCarritoCaja from "./ModalVisorCarritoCaja";
 
 enum Acciones {
     NO_ACCION,
     MOSTRAR_PRODUCTOS,
     AGREGAR_PRODUCTO,
+    MODIFICAR_CARRITO,
+    AGREGAR_CARRITO,
 }
 
 interface ParametrosOperacionCaja {
@@ -78,6 +81,14 @@ export default function OperacionCaja() {
     const setModalProductoAdd = useCallback((id: number | undefined) => setParamsToURL({
         carritoOperacionId: id ?? 0,
         carritoOperacionAccion: id ? Acciones.AGREGAR_PRODUCTO : Acciones.NO_ACCION
+    }), [setParamsToURL])
+    const setModalCarritoShowing = useCallback((id: number | undefined) => setParamsToURL({
+        carritoOperacionId: id ?? 0,
+        carritoOperacionAccion: id ? Acciones.MODIFICAR_CARRITO : Acciones.NO_ACCION,
+    }), [setParamsToURL])
+    const setModalCarritoAdding = useCallback((agregando: boolean) => setParamsToURL({
+        carritoOperacionId: 0,
+        carritoOperacionAccion: agregando ? Acciones.AGREGAR_CARRITO : Acciones.NO_ACCION,
     }), [setParamsToURL])
     const cerrarAccion = useCallback(() => setParamsToURL({
         carritoOperacionId: 0,
@@ -182,7 +193,7 @@ export default function OperacionCaja() {
         }
     }, [pedidoUpdate, user, carritoActivo])
     const handleAddProducto = useCallback((productoAdd: IProducto, c: number): Promise<void> => {   // su promesa siempre retorna resolve a proposito
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
             if (carritoActivo && productoAdd.id) {
                 //Primero buscamos si el producto a agregar ya estaba en el carrito como producto quitable (que se puede modificar su cantidad)
                 const productoExistente = carritoActivo?.productos?.filter(p => productoQuitable(p))?.find(p => p.id === productoAdd.id)
@@ -218,7 +229,16 @@ export default function OperacionCaja() {
         })
     }, [carritoActivo, pedidoUpdate])
     return <>
-        <Statistic title="Transcurrido" value={calcTiempoTranscurrido(tiempoTranscurrido * 1000)}/>
+        <Row gutter={[10, 10]} justify='space-around'>
+            <Col className='col-card' key='estadistica' span={10}>
+                <Statistic title="Transcurrido" value={calcTiempoTranscurrido(tiempoTranscurrido * 1000)}/>
+            </Col>
+            <Col className='col-card' key='botonAgregar' span={10}>
+                <div style={{position: 'absolute', right: 0}}>
+                    <Button type="primary" size='large' onClick={() => setModalCarritoAdding(true)}>Agregar</Button>
+                </div>
+            </Col>
+        </Row>
         <Row gutter={[10, 10]}>
             {pedidos.map(p => (<Col className='col-card' key={p.id} xs={24} sm={12} md={8} lg={6} xl={6}>
                 <Card
@@ -228,7 +248,8 @@ export default function OperacionCaja() {
                             onClick={() => setModalProductosShowing(p.id)}/></Tooltip>,
                         <Tooltip title={'Agregar producto'} key='agregarProducto'><PlusOutlined
                             onClick={() => setModalProductoAdd(p.id)}/></Tooltip>,
-                        <SettingOutlined key="setting"/>,
+                        <Tooltip title={'Modificar carrito'} key='modificarProducto'><SettingOutlined
+                            onClick={() => setModalCarritoShowing(p.id)}/></Tooltip>,
                         <EllipsisOutlined key="ellipsis"/>,
                     ]}
                 >
@@ -251,6 +272,11 @@ export default function OperacionCaja() {
             carrito={carritoOperacionAccion === Acciones.AGREGAR_PRODUCTO ? carritoActivo : undefined}
             onCancel={cerrarAccion}
             handleAddProducto={handleAddProducto}
+        />
+        <ModalVisorCarritoCaja
+            carrito={carritoOperacionAccion === Acciones.MODIFICAR_CARRITO ? carritoActivo : undefined}
+            abrirModal={[Acciones.MODIFICAR_CARRITO, Acciones.AGREGAR_CARRITO].includes(carritoOperacionAccion)}
+            handleCerrar={() => setModalCarritoAdding(false)}
         />
     </>
 }
